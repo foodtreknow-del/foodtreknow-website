@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>FoodTrekNow Vendor Portal</title>
+<title>FoodTrekNow | Vendor & Customer Portal</title>
 <link rel="stylesheet" href="css/vendor.css" />
+<link rel="stylesheet" href="css/customer-account.css" />
 <style>.hidden-view{display:none!important}</style>
 </head>
 <body class="login-page">
@@ -24,8 +25,140 @@
       <button class="secondary-button full" type="button">Continue with Apple</button>
       <button id="demoLoginButton" class="secondary-button full" type="button">Fill Demo Login</button>
       <div class="demo-note"><strong>Demo login</strong><br />Email: vendor@foodtreknow.com<br />Password: demo123</div>
+      <div class="customer-entry">
+        <span>Looking for food?</span>
+        <button id="openCustomerPortalButton" class="customer-entry-button" type="button">Order as a Customer <span aria-hidden="true">→</span></button>
+      </div>
     </section>
   </main>
+</div>
+
+<div id="customerAuthView" class="hidden-view">
+  <main class="customer-auth-shell">
+    <header class="customer-auth-header">
+      <button id="backToVendorButton" class="customer-back-button" type="button" aria-label="Back to vendor login">← Vendor Login</button>
+      <div class="customer-wordmark"><span class="logo-mark small">FTN</span><strong>FoodTrekNow</strong></div>
+    </header>
+
+    <section id="customerWelcomePanel" class="customer-welcome-panel">
+      <div class="customer-welcome-copy">
+        <p class="eyebrow">Your next favorite meal is nearby</p>
+        <h1>Great local food.<br />Ready when you are.</h1>
+        <p>Save your favorite trucks, reorder go-to meals, and keep every pickup organized in one place.</p>
+        <div class="customer-auth-actions">
+          <button id="showCustomerSignInButton" class="primary-button customer-large-button" type="button">Sign In</button>
+          <button id="showCreateAccountButton" class="secondary-button customer-large-button" type="button">Create Account</button>
+          <button id="guestCheckoutButton" class="customer-text-link" type="button">Continue with Guest Checkout →</button>
+        </div>
+      </div>
+      <div class="customer-welcome-art" aria-hidden="true">
+        <div class="food-orbit food-orbit-one">🌮</div>
+        <div class="food-orbit food-orbit-two">🍔</div>
+        <div class="food-orbit food-orbit-three">🥤</div>
+        <div class="customer-truck-card">
+          <span class="truck-illustration">🚚</span>
+          <strong>Capital City Eats</strong>
+          <small>Open now · Ready in 15–20 min</small>
+        </div>
+      </div>
+    </section>
+
+    <section id="customerSignInPanel" class="customer-auth-card hidden-view">
+      <button class="customer-panel-back" data-auth-back type="button">← Back</button>
+      <p class="eyebrow">Customer Account</p>
+      <h1>Welcome back</h1>
+      <p class="muted">Sign in to see your orders, favorites, and saved details.</p>
+      <form id="customerSignInForm" novalidate>
+        <label for="customerSignInIdentifier">Email or Mobile Number</label>
+        <input id="customerSignInIdentifier" class="customer-input" type="text" autocomplete="username" required placeholder="you@example.com or (555) 555-0123" />
+        <label for="customerSignInPassword">Password</label>
+        <input id="customerSignInPassword" class="customer-input" type="password" autocomplete="current-password" required placeholder="Enter your password" />
+        <div class="customer-form-row">
+          <label class="customer-check-row"><input id="customerRememberMe" type="checkbox" /> Remember me</label>
+          <button id="showForgotPasswordButton" class="customer-text-link compact" type="button">Forgot Password?</button>
+        </div>
+        <p id="customerSignInMessage" class="form-message" aria-live="polite"></p>
+        <button class="primary-button full customer-large-button" type="submit">Sign In</button>
+      </form>
+      <p class="customer-auth-switch">New to FoodTrekNow? <button data-show-create type="button">Create an account</button></p>
+    </section>
+
+    <section id="customerCreatePanel" class="customer-auth-card customer-create-card hidden-view">
+      <button class="customer-panel-back" data-auth-back type="button">← Back</button>
+      <p class="eyebrow">Join FoodTrekNow</p>
+      <h1>Create your account</h1>
+      <p class="muted">Faster checkout, easy reorders, and all your food truck favorites.</p>
+      <form id="customerCreateForm" novalidate>
+        <div class="customer-form-grid">
+          <div><label for="createFirstName">First Name</label><input id="createFirstName" class="customer-input" type="text" maxlength="50" autocomplete="given-name" required /></div>
+          <div><label for="createLastName">Last Name</label><input id="createLastName" class="customer-input" type="text" maxlength="50" autocomplete="family-name" required /></div>
+          <div><label for="createMobile">Mobile Number</label><input id="createMobile" class="customer-input" type="tel" maxlength="20" autocomplete="tel" required placeholder="(555) 555-0123" /></div>
+          <div><label for="createEmail">Email Address</label><input id="createEmail" class="customer-input" type="email" maxlength="120" autocomplete="email" required placeholder="you@example.com" /></div>
+          <div><label for="createPassword">Password</label><input id="createPassword" class="customer-input" type="password" minlength="8" autocomplete="new-password" required placeholder="At least 8 characters" /></div>
+          <div><label for="createConfirmPassword">Confirm Password</label><input id="createConfirmPassword" class="customer-input" type="password" minlength="8" autocomplete="new-password" required /></div>
+        </div>
+        <label class="customer-check-row terms-row"><input id="createAcceptTerms" type="checkbox" required /> I accept the <button class="inline-link" type="button" data-info-message="Terms of Service placeholder">Terms of Service</button> and <button class="inline-link" type="button" data-info-message="Privacy Policy placeholder">Privacy Policy</button>.</label>
+        <p id="customerCreateMessage" class="form-message" aria-live="polite"></p>
+        <button class="primary-button full customer-large-button" type="submit">Create Account</button>
+      </form>
+      <p class="customer-auth-switch">Already have an account? <button data-show-signin type="button">Sign in</button></p>
+    </section>
+
+    <section id="customerForgotPanel" class="customer-auth-card hidden-view">
+      <button class="customer-panel-back" data-show-signin type="button">← Back to Sign In</button>
+      <p class="eyebrow">Account Recovery</p>
+      <h1>Reset your password</h1>
+      <p class="muted">Enter your email or mobile number. This prototype will show the future reset flow without sending a message.</p>
+      <form id="customerForgotForm">
+        <label for="customerForgotIdentifier">Email or Mobile Number</label>
+        <input id="customerForgotIdentifier" class="customer-input" type="text" required />
+        <p id="customerForgotMessage" class="customer-success-message" aria-live="polite"></p>
+        <button class="primary-button full customer-large-button" type="submit">Send Reset Instructions</button>
+      </form>
+    </section>
+
+    <section id="customerGuestPanel" class="customer-guest-panel hidden-view">
+      <div class="customer-guest-heading">
+        <div><button class="customer-panel-back" data-auth-back type="button">← Back</button><p class="eyebrow">Guest Checkout</p><h1>Capital City Eats</h1><p class="muted">Browse the live vendor menu. Sign in anytime to save your favorites and order history.</p></div>
+        <button class="primary-button" data-show-signin type="button">Sign In</button>
+      </div>
+      <div id="customerGuestMenu" class="customer-guest-menu"></div>
+    </section>
+  </main>
+</div>
+
+<div id="customerAccountView" class="hidden-view">
+  <div class="customer-app-shell">
+    <aside class="customer-sidebar">
+      <div class="customer-sidebar-brand"><span class="logo-mark small">FTN</span><div><strong>FoodTrekNow</strong><small>Customer Account</small></div></div>
+      <div id="customerMiniProfile" class="customer-mini-profile"></div>
+      <nav id="customerAccountNav" aria-label="Customer account">
+        <button class="customer-nav-link active" data-customer-page="overview" type="button"><span>⌂</span> Home</button>
+        <button class="customer-nav-link" data-customer-page="profile" type="button"><span>☺</span> Profile</button>
+        <button class="customer-nav-link" data-customer-page="addresses" type="button"><span>⌖</span> Addresses</button>
+        <button class="customer-nav-link" data-customer-page="favorites" type="button"><span>♥</span> Favorites</button>
+        <button class="customer-nav-link" data-customer-page="orders" type="button"><span>▤</span> Order History</button>
+        <button class="customer-nav-link" data-customer-page="payments" type="button"><span>▣</span> Payment Methods</button>
+        <button class="customer-nav-link" data-customer-page="notifications" type="button"><span>●</span> Notifications</button>
+        <button class="customer-nav-link" data-customer-page="settings" type="button"><span>⚙</span> Settings</button>
+      </nav>
+      <button id="customerSignOutButton" class="customer-signout-button" type="button">Sign Out</button>
+    </aside>
+    <main class="customer-main">
+      <header class="customer-mobile-header">
+        <div class="customer-wordmark"><span class="logo-mark small">FTN</span><strong>FoodTrekNow</strong></div>
+        <button id="customerMenuButton" class="customer-menu-button" type="button" aria-expanded="false" aria-controls="customerAccountNav">Menu</button>
+      </header>
+      <div id="customerVerificationBanner" class="verification-banner hidden-view">
+        <span>✉</span><div><strong>Verify your email address</strong><p>Verification is a placeholder for now. Supabase will handle delivery in a future phase.</p></div><button id="dismissVerificationButton" type="button" aria-label="Dismiss">×</button>
+      </div>
+      <div id="customerAccountContent"></div>
+    </main>
+  </div>
+  <div id="customerAccountModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="customerModalTitle">
+    <div class="modal-card customer-account-modal-card"><button id="closeCustomerAccountModal" class="modal-close" type="button" aria-label="Close">×</button><div id="customerAccountModalContent"></div></div>
+  </div>
+  <div id="customerToast" class="toast" aria-live="polite"></div>
 </div>
 
 <div id="dashboardView" class="hidden-view">
@@ -171,5 +304,6 @@
   <div id="toast" class="toast" aria-live="polite"></div>
 </div>
 <script src="js/app.js"></script>
+<script src="js/customer-account.js"></script>
 </body>
 </html>

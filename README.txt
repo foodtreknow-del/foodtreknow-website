@@ -13,3 +13,10 @@ New in this release:
 - Menu statistics
 - Menu saved locally in the browser for prototype testing
 - Existing dashboard, order workflow, pickup confirmation, and status counts retained
+
+Customer Account System:
+- Choose "Order as a Customer" from the vendor login screen
+- Create a local prototype customer account or continue as a guest
+- Customer accounts include profile, addresses, favorites, order history,
+  payment preferences, notifications, privacy settings, and account deletion
+- Customer authentication is local-only and prepared for a future Supabase adapter
