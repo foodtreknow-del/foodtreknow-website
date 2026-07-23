@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FoodTrekNow Vendor Portal</title>
+<link rel="stylesheet" href="css/vendor.css" />
+<style>.hidden-view{display:none!important}</style>
+</head>
+<body class="login-page">
+<div id="loginView">
+  <main class="login-shell">
+    <section class="brand-panel"><div class="logo-mark">FTN</div><h1>FoodTrekNow</h1><p>Vendor Portal</p></section>
+    <section class="login-card">
+      <h2>Welcome Back</h2><p class="muted">Sign in to manage your truck, orders, menu, and sales.</p>
+      <form id="loginForm" novalidate>
+        <label for="email">Email</label><input id="email" type="email" placeholder="vendor@foodtreknow.com" required />
+        <label for="password">Password</label><input id="password" type="password" placeholder="Enter password" required />
+        <div class="form-row"><label class="check-row"><input id="remember" type="checkbox" /> Remember me</label><button class="text-button" type="button">Forgot password?</button></div>
+        <p id="loginMessage" class="form-message" aria-live="polite"></p><button class="primary-button full" type="submit">Log In</button>
+      </form>
+      <div class="divider"><span>or</span></div>
+      <button class="secondary-button full" type="button">Continue with Google</button>
+      <button class="secondary-button full" type="button">Continue with Apple</button>
+      <button id="demoLoginButton" class="secondary-button full" type="button">Fill Demo Login</button>
+      <div class="demo-note"><strong>Demo login</strong><br />Email: vendor@foodtreknow.com<br />Password: demo123</div>
+    </section>
+  </main>
+</div>
+
+<div id="dashboardView" class="hidden-view">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><div class="logo-mark small">FTN</div><div><strong>FoodTrekNow</strong><span>Vendor Portal</span></div></div>
+      <nav>
+        <button class="nav-link active" data-page="dashboard">Dashboard</button>
+        <button class="nav-link" data-page="orders">Orders</button>
+        <button class="nav-link" data-page="menu">Menu</button>
+        <button class="nav-link" data-page="reports">Reports</button>
+        <button class="nav-link" data-page="settings">Settings</button>
+      </nav>
+      <button id="logoutButton" class="secondary-button full">Log Out</button>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div><p id="pageEyebrow" class="eyebrow">Vendor Dashboard</p><h1 id="pageTitle">Capital City Eats</h1></div>
+        <div class="topbar-actions">
+          <button id="soundToggleButton" class="secondary-button" type="button">🔔 Sound On</button><button id="simulateOrderButton" class="secondary-button">+ Simulate New Order</button>
+          <div class="status-control"><span id="statusDot" class="status-dot online"></span><span id="statusText">Online</span><label class="switch"><input id="onlineToggle" type="checkbox" checked /><span class="slider"></span></label></div>
+        </div>
+      </header>
+
+      <section id="dashboardPage" class="app-page">
+        <section class="summary-grid">
+          <article class="summary-card sales-summary"><span>Today's Sales</span><strong id="salesTotal">$0.00</strong></article>
+          <article class="summary-card new-summary"><span>New Orders</span><strong id="newSummaryCount">0</strong></article>
+          <article class="summary-card preparing-summary"><span>Preparing</span><strong id="preparingCount">0</strong></article>
+          <article class="summary-card ready-summary"><span>Ready</span><strong id="readyCount">0</strong></article>
+          <article class="summary-card pickedup-summary"><span>Picked Up</span><strong id="pickedUpCount">0</strong></article>
+          <article class="summary-card completed-summary"><span>Completed</span><strong id="completedCount">0</strong></article>
+        </section>
+        <section class="dashboard-grid">
+          <div class="panel workflow-panel panel-new"><div class="panel-heading"><div><p class="eyebrow">Incoming</p><h2>New Orders</h2></div><span id="newOrderCount" class="count-pill">0</span></div><div id="newOrders" class="order-list"></div></div>
+          <div class="panel workflow-panel panel-preparing"><div class="panel-heading"><div><p class="eyebrow">Kitchen</p><h2>Received / Preparing</h2></div></div><div id="preparingOrders" class="order-list"></div></div>
+          <div class="panel workflow-panel panel-ready"><div class="panel-heading"><div><p class="eyebrow">Pickup</p><h2>Ready for Pickup</h2></div></div><div id="readyOrders" class="order-list"></div></div>
+          <div class="panel workflow-panel panel-pickedup"><div class="panel-heading"><div><p class="eyebrow">Confirmed</p><h2>Picked Up</h2></div></div><div id="pickedUpOrders" class="order-list"></div></div>
+          <div class="panel workflow-panel panel-completed"><div class="panel-heading"><div><p class="eyebrow">Kitchen Completed</p><h2>Completed Orders</h2></div></div><div id="completedOrders" class="order-list compact"></div></div>
+        </section>
+      </section>
+
+      <section id="ordersPage" class="app-page hidden-view">
+        <div class="panel orders-workspace">
+          <div class="orders-toolbar">
+            <div class="filter-tabs" role="tablist">
+              <button class="filter-tab active" data-filter="all">All <span id="allCount">0</span></button>
+              <button class="filter-tab" data-filter="new">New <span id="tabNewCount">0</span></button>
+              <button class="filter-tab" data-filter="preparing">Preparing <span id="tabPreparingCount">0</span></button>
+              <button class="filter-tab" data-filter="ready">Ready <span id="tabReadyCount">0</span></button>
+              <button class="filter-tab" data-filter="pickedup">Picked Up <span id="tabPickedUpCount">0</span></button>
+              <button class="filter-tab" data-filter="completed">Completed <span id="tabCompletedCount">0</span></button>
+            </div>
+            <input id="orderSearch" class="search-input" type="search" placeholder="Search order number or customer" />
+          </div>
+          <div id="allOrdersList" class="order-list orders-page-list"></div>
+        </div>
+      </section>
+
+      <section id="menuPage" class="app-page hidden-view">
+        <section class="menu-stats-grid">
+          <article class="menu-stat-card"><span>Total Items</span><strong id="menuTotalCount">0</strong></article>
+          <article class="menu-stat-card"><span>Available</span><strong id="menuAvailableCount">0</strong></article>
+          <article class="menu-stat-card"><span>Sold Out</span><strong id="menuSoldOutCount">0</strong></article>
+          <article class="menu-stat-card"><span>Categories</span><strong id="menuCategoryCount">0</strong></article>
+        </section>
+        <div class="panel menu-workspace">
+          <div class="menu-toolbar">
+            <div>
+              <p class="eyebrow">Customer Menu</p>
+              <h2>Menu Items</h2>
+              <p class="muted">Add items, update prices, and control what customers can order.</p>
+            </div>
+            <div class="menu-toolbar-actions"><button id="manageCategoriesButton" class="secondary-button" type="button">Manage Categories</button><button id="previewCustomerMenuButton" class="secondary-button" type="button">Preview Customer Menu</button><button id="addMenuItemButton" class="primary-button" type="button">+ Add Menu Item</button></div>
+          </div>
+          <div class="menu-controls">
+            <input id="menuSearch" class="search-input" type="search" placeholder="Search menu items" />
+            <select id="menuCategoryFilter" class="menu-select"><option value="all">All Categories</option></select>
+            <select id="menuAvailabilityFilter" class="menu-select"><option value="all">All Availability</option><option value="available">Available</option><option value="soldout">Sold Out</option></select>
+          </div>
+          <div id="menuItemsGrid" class="menu-items-grid"></div>
+        </div>
+      </section>
+      <section id="reportsPage" class="app-page hidden-view"><div class="panel placeholder-panel"><h2>Sales Reports</h2><p class="muted">Basic report totals will be expanded in the next phase.</p></div></section>
+      <section id="settingsPage" class="app-page hidden-view"><div class="panel placeholder-panel"><h2>Vendor Settings</h2><p class="muted">Truck profile and notification settings will be added in the next phase.</p></div></section>
+    </main>
+  </div>
+
+  <div id="orderModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card"><button id="closeModal" class="modal-close" aria-label="Close">×</button><div id="modalContent"></div></div>
+  </div>
+  <div id="pickupModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="pickupTitle">
+    <div class="modal-card pickup-confirm-card">
+      <h2 id="pickupTitle">Confirm Order Pickup</h2>
+      <p><strong id="pickupOrderNumber"></strong> for <strong id="pickupCustomer"></strong></p>
+      <p class="muted">Ask the customer for the <strong>order number</strong> shown in their app.</p>
+      <label for="orderNumber">Order Number</label>
+      <input id="orderNumber" class="pickup-code-input" type="text" inputmode="numeric" maxlength="12" pattern="[0-9]+" placeholder="Enter order number" autocomplete="off" />
+      <p class="demo-code">Order number for this demo: <strong id="pickupDemoCode"></strong></p><button id="useDemoCodeButton" class="secondary-button" type="button">Use Order Number</button>
+      <p id="pickupError" class="form-message" aria-live="polite"></p>
+      <div class="pickup-modal-actions"><button id="cancelPickupButton" class="secondary-button" type="button">Cancel</button><button id="confirmPickupButton" class="primary-button" type="button">Confirm Pickup</button></div>
+    </div>
+  </div>
+
+  <div id="menuItemModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="menuItemModalTitle">
+    <div class="modal-card menu-item-modal-card">
+      <button id="closeMenuItemModal" class="modal-close" aria-label="Close">×</button>
+      <p class="eyebrow">Menu Management</p>
+      <h2 id="menuItemModalTitle">Add Menu Item</h2>
+      <form id="menuItemForm">
+        <input id="menuItemId" type="hidden" />
+        <div class="menu-form-grid">
+          <div class="menu-form-field full-row"><label for="menuItemName">Item Name</label><input id="menuItemName" type="text" required maxlength="80" placeholder="Example: Classic Cheeseburger" /></div>
+          <div class="menu-form-field"><label for="menuItemCategory">Category</label><select id="menuItemCategory" class="menu-select" required></select></div>
+          <div class="menu-form-field"><label for="menuItemPrice">Price</label><input id="menuItemPrice" type="number" required min="0" step="0.01" placeholder="0.00" /></div>
+          <div class="menu-form-field full-row"><label for="menuItemDescription">Description</label><textarea id="menuItemDescription" rows="3" maxlength="240" placeholder="Describe the item for customers"></textarea></div>
+          <div class="menu-form-field full-row"><label for="menuItemImage">Photo</label><input id="menuItemImage" type="file" accept="image/*" /><p class="field-help">Upload JPG, PNG, or WEBP. Images are saved in this browser for the prototype.</p></div>
+          <div class="menu-form-field"><label class="availability-check"><input id="menuItemAvailable" type="checkbox" checked /> Available for customers to order</label></div><div class="menu-form-field"><label class="availability-check"><input id="menuItemFeatured" type="checkbox" /> Featured item</label></div>
+        </div>
+        <p id="menuFormError" class="form-message" aria-live="polite"></p>
+        <div class="menu-form-actions"><button id="cancelMenuItemButton" class="secondary-button" type="button">Cancel</button><button class="primary-button" type="submit">Save Menu Item</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="categoryModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="categoryModalTitle">
+    <div class="modal-card category-modal-card">
+      <button id="closeCategoryModal" class="modal-close" aria-label="Close">×</button>
+      <h2 id="categoryModalTitle">Manage Categories</h2>
+      <form id="categoryForm" class="category-add-row"><input id="newCategoryName" type="text" maxlength="40" placeholder="New category name" required /><button class="primary-button" type="submit">Add Category</button></form>
+      <p id="categoryFormError" class="form-message"></p>
+      <div id="categoryList" class="category-list"></div>
+    </div>
+  </div>
+  <div id="customerPreviewModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="customerPreviewTitle">
+    <div class="modal-card customer-preview-card">
+      <button id="closeCustomerPreviewModal" class="modal-close" aria-label="Close">×</button>
+      <div class="customer-preview-header"><p class="eyebrow">Customer View</p><h2 id="customerPreviewTitle">Capital City Eats Menu</h2></div>
+      <div id="customerPreviewContent" class="customer-preview-content"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast" aria-live="polite"></div>
+</div>
+<script src="js/app.js"></script>
+</body>
+</html>
