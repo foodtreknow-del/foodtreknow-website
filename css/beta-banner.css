@@ -1,0 +1,152 @@
+.beta-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  width: calc(100% - 40px);
+  max-width: 1400px;
+  margin: 20px auto 0;
+  padding: 20px 22px;
+  border: 1px solid #f0d994;
+  border-radius: 18px;
+  background: #fff8e1;
+  box-shadow: 0 8px 24px rgba(92, 69, 13, 0.09);
+  color: #493b16;
+}
+
+.beta-banner-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 20px;
+}
+
+.beta-banner-copy h2 {
+  margin: 1px 0 9px;
+  color: #342b12;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.beta-banner-copy p {
+  margin: 0 0 6px;
+  max-width: 880px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.beta-banner-copy p:last-child {
+  margin-bottom: 0;
+}
+
+.beta-banner-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 1px;
+}
+
+.beta-feedback-button,
+.beta-dismiss-button {
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 11px;
+  font-weight: 850;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.beta-feedback-button {
+  border: 0;
+  background: #17241d;
+  color: #fff;
+}
+
+.beta-dismiss-button {
+  border: 1px solid #cfb96f;
+  background: rgba(255, 255, 255, 0.62);
+  color: #493b16;
+}
+
+.beta-feedback-button:hover,
+.beta-feedback-button:focus-visible {
+  background: #293a30;
+}
+
+.beta-dismiss-button:hover,
+.beta-dismiss-button:focus-visible {
+  background: #fff;
+}
+
+.beta-feedback-button:focus-visible,
+.beta-dismiss-button:focus-visible {
+  outline: 3px solid rgba(233, 95, 42, 0.28);
+  outline-offset: 2px;
+}
+
+.beta-feedback-modal-card {
+  max-width: 430px;
+  text-align: center;
+}
+
+.beta-feedback-modal-icon {
+  margin-bottom: 8px;
+  font-size: 34px;
+}
+
+.beta-feedback-modal-card h2 {
+  margin: 0 0 10px;
+}
+
+.beta-feedback-modal-card p {
+  margin: 0 0 22px;
+  color: var(--muted);
+}
+
+.beta-feedback-modal-card .primary-button {
+  min-width: 120px;
+}
+
+@media (max-width: 900px) {
+  .beta-banner {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .beta-banner-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .beta-banner {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    width: calc(100% - 24px);
+    margin-top: 12px;
+    padding: 17px;
+    border-radius: 15px;
+  }
+
+  .beta-banner-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .beta-banner-actions {
+    grid-column: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .beta-feedback-button,
+  .beta-dismiss-button {
+    width: 100%;
+    white-space: normal;
+  }
+}

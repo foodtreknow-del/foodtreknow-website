@@ -6,6 +6,8 @@ import vm from 'node:vm';
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const vendorSource = fs.readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
 const source = fs.readFileSync(new URL('../js/customer-account.js', import.meta.url), 'utf8');
+const betaBannerSource = fs.readFileSync(new URL('../js/beta-banner.js', import.meta.url), 'utf8');
+const betaBannerStyles = fs.readFileSync(new URL('../css/beta-banner.css', import.meta.url), 'utf8');
 
 class StorageMock {
   constructor() { this.values = new Map(); }
@@ -87,6 +89,7 @@ globalThis.setInterval = () => 0;
 
 vm.runInThisContext(vendorSource, { filename: 'app.js' });
 vm.runInThisContext(source, { filename: 'customer-account.js' });
+vm.runInThisContext(betaBannerSource, { filename: 'beta-banner.js' });
 
 test('vendor and customer modules initialize together without a startup error', () => {
   assert.ok(window.FoodTrekNowCustomerAuth);
@@ -116,6 +119,40 @@ test('customer account UI includes every required area and has unique static IDs
   assert.match(source, /TEMP_SESSION_KEY/);
   assert.match(source, /LocalCustomerAuthAdapter/);
   assert.match(source, /setAdapter\(adapter\)/);
+});
+
+test('beta banner is the first homepage content and includes responsive persisted interactions', () => {
+  assert.ok(html.indexOf('id="betaBanner"') < html.indexOf('id="loginView"'));
+  [
+    'FoodTrekNow Beta',
+    'Thank you for helping us test FoodTrekNow!',
+    "We're currently in our Beta Testing phase.",
+    "We'd love your feedback!",
+    'Thank you for being one of our early testers.',
+    'Dismiss',
+    '💬 Send Feedback',
+    'Feedback submission coming soon.'
+  ].forEach(text => assert.ok(html.includes(text), `Missing beta banner contract: ${text}`));
+  assert.match(betaBannerSource, /ftnBetaBannerDismissedV1/);
+  assert.match(betaBannerSource, /localStorage\.setItem/);
+  assert.match(betaBannerStyles, /background:\s*#fff8e1/i);
+  assert.match(betaBannerStyles, /@media \(max-width: 600px\)/);
+});
+
+test('beta banner dismissal persists and feedback placeholder opens and closes', async () => {
+  localStorage.clear();
+  element('betaBanner').classList.remove('hidden-view');
+  element('feedbackPlaceholderModal').classList.add('hidden');
+
+  await emit(element('openFeedbackModalButton'), 'click');
+  assert.equal(element('feedbackPlaceholderModal').classList.contains('hidden'), false);
+
+  await emit(element('confirmFeedbackModalButton'), 'click');
+  assert.equal(element('feedbackPlaceholderModal').classList.contains('hidden'), true);
+
+  await emit(element('dismissBetaBannerButton'), 'click');
+  assert.equal(localStorage.getItem('ftnBetaBannerDismissedV1'), 'true');
+  assert.equal(element('betaBanner').classList.contains('hidden-view'), true);
 });
 
 test('local auth adapter creates accounts with hashed passwords and required persisted collections', async () => {

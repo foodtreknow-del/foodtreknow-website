@@ -6,9 +6,35 @@
 <title>FoodTrekNow | Vendor & Customer Portal</title>
 <link rel="stylesheet" href="css/vendor.css" />
 <link rel="stylesheet" href="css/customer-account.css" />
+<link rel="stylesheet" href="css/beta-banner.css" />
 <style>.hidden-view{display:none!important}</style>
 </head>
 <body class="login-page">
+<section id="betaBanner" class="beta-banner" role="region" aria-labelledby="betaBannerTitle">
+  <div class="beta-banner-icon" aria-hidden="true">🚧</div>
+  <div class="beta-banner-copy">
+    <h2 id="betaBannerTitle">FoodTrekNow Beta</h2>
+    <p><strong>Thank you for helping us test FoodTrekNow!</strong></p>
+    <p>We're currently in our Beta Testing phase. Some features are still under development, and you may occasionally encounter bugs or unfinished functionality.</p>
+    <p>We'd love your feedback! Your suggestions will help us build the best food truck ordering experience possible.</p>
+    <p>Thank you for being one of our early testers.</p>
+  </div>
+  <div class="beta-banner-actions">
+    <button id="openFeedbackModalButton" class="beta-feedback-button" type="button">💬 Send Feedback</button>
+    <button id="dismissBetaBannerButton" class="beta-dismiss-button" type="button">Dismiss</button>
+  </div>
+</section>
+
+<div id="feedbackPlaceholderModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="feedbackPlaceholderTitle">
+  <div class="modal-card beta-feedback-modal-card">
+    <button id="closeFeedbackModalButton" class="modal-close" type="button" aria-label="Close feedback window">×</button>
+    <div class="beta-feedback-modal-icon" aria-hidden="true">💬</div>
+    <h2 id="feedbackPlaceholderTitle">Send Feedback</h2>
+    <p>Feedback submission coming soon.</p>
+    <button id="confirmFeedbackModalButton" class="primary-button" type="button">Got it</button>
+  </div>
+</div>
+
 <div id="loginView">
   <main class="login-shell">
     <section class="brand-panel"><div class="logo-mark">FTN</div><h1>FoodTrekNow</h1><p>Vendor Portal</p></section>
@@ -312,5 +338,6 @@
 </div>
 <script src="js/app.js"></script>
 <script src="js/customer-account.js"></script>
+<script src="js/beta-banner.js"></script>
 </body>
 </html>
