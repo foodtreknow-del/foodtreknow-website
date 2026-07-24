@@ -1,5 +1,14 @@
 # FoodTrekNow Vendor Platform v0.4.0
 
+## Phase 3.1 - Customer Home Experience Polish
+
+- Added a time-aware customer greeting and locally persisted preferred location selection
+- Added unified customer search across trucks, menu items, cuisines, and events
+- Added polished primary action cards, active-order and hungry states, event cards, favorite truck cards, recent orders, saved addresses, saved payment methods, and notification summaries
+- Added a fixed mobile navigation bar for Home, Explore, Events, Cart, and Profile
+- Preserved the vendor portal, customer account system, customer menu, cart and checkout pathways, order tracking, and browser-local persistence
+- Prepared customer preference data for a future Supabase adapter without adding backend services
+
 Added:
 - Category add, rename, delete, and drag-to-reorder
 - Menu item add, edit, delete, photo upload, and drag-to-reorder

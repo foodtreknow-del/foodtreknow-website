@@ -103,7 +103,10 @@ test('customer account UI includes every required area and has unique static IDs
     'Mobile Number', 'Email Address', 'Confirm Password', 'Remember me',
     'Forgot Password', 'Profile', 'Preferred Name', 'Addresses', 'Favorites',
     'Order History', 'Payment Methods', 'Notifications', 'Privacy Settings',
-    'Delete Account'
+    'Delete Account', 'Ready for something delicious?', 'Current Location',
+    'Search food trucks, menu items, cuisines, or events...', 'Order Food',
+    'Find Trucks', 'Events Near You', 'Favorite Trucks', 'Recent Orders',
+    'Add Address', 'Add Payment Method', 'Explore', 'Cart'
   ];
   const completeUiSource = `${html}\n${source}`;
   requiredText.forEach(text => assert.ok(completeUiSource.includes(text), `Missing UI contract: ${text}`));
@@ -133,6 +136,8 @@ test('local auth adapter creates accounts with hashed passwords and required per
   assert.ok(Array.isArray(account.favoriteOrders));
   assert.ok(Array.isArray(account.paymentMethods));
   assert.ok(Array.isArray(account.orders));
+  assert.deepEqual(account.paymentMethods.map(method => method.last4), ['1234', '9876']);
+  assert.equal(account.preferredLocation, null);
   assert.equal(account.preferences.notifications.orderUpdates, true);
   assert.equal(account.preferences.privacy.activityHistory, true);
 });
@@ -237,6 +242,28 @@ test('customer UI event layer mutates and persists account collections', async (
   assert.equal(account.paymentMethods.find(method => method.last4 === '4444').isDefault, true);
   assert.equal(account.preferences.notifications.promotions, false);
   assert.equal(account.preferences.privacy.personalizedOffers, true);
+});
+
+test('preferred customer location is saved locally from the home dashboard', async () => {
+  let account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  localStorage.setItem('ftnCustomerSessionV1', JSON.stringify({ accountId: account.id }));
+  await emit(element('openCustomerPortalButton'), 'click');
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ customerAction: 'change-location' }) });
+
+  element('customerLocationMethod').value = 'zip';
+  element('customerLocationCity').value = '';
+  element('customerLocationZip').value = '27601';
+  await emit(element('customerAccountModalContent'), 'submit', { preventDefault() {}, target: { id: 'customerLocationForm' } });
+
+  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  assert.deepEqual(account.preferredLocation, { method: 'zip', zip: '27601' });
+});
+
+test('roadmap marks Phase 3 and 3.1 complete and names Phase 4 next', () => {
+  const roadmap = fs.readFileSync(new URL('../PROJECT_ROADMAP.md', import.meta.url), 'utf8');
+  assert.match(roadmap, /\[x\] Phase 3 – Customer Account System/);
+  assert.match(roadmap, /\[x\] Phase 3\.1 – Customer Home Experience Polish/);
+  assert.match(roadmap, /Phase 4 – Live Order Processing/);
 });
 
 test('account deletion removes the local account', async () => {
