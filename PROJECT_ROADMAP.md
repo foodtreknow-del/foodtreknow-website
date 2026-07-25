@@ -12,9 +12,19 @@
   - Active order tracking with an empty “Hungry?” state
   - Nearby events, favorite trucks, recent orders, addresses, payment methods, and notifications
   - Production-quality responsive styling while preserving all vendor and customer workflows
+- [x] Phase 3.1 Revision 1 – Nearby Food Truck Search
+  - Saved-location search with a persistent 5–50 mile radius
+  - Today-only truck availability, nearest-first results, and map-ready layout
+- [x] Phase 3.2 – Complete Customer Ordering Experience
+  - Truck profiles accessible from nearby results, favorites, events, and search
+  - Full category-based menus with featured, special, popular, and sold-out items
+  - Customizable item detail with modifiers, quantity, instructions, and live pricing
+  - Persistent cart, professional checkout, order confirmation, and order-again flow
+  - Live customer tracking from order received through pickup
+  - Local ordering adapter prepared for future Supabase services
 
 ## Next Phase
 
-### Phase 4 – Live Order Processing
+### Phase 4 – Live Vendor & Customer Communication
 
-Connect the existing local-first customer, cart, checkout, vendor, and order-tracking flows to live order processing. Backend services and Supabase integration remain intentionally out of scope until this phase.
+Connect vendors and customers with live order updates, operational messaging, pickup coordination, and notification delivery. Backend services and Supabase integration remain intentionally deferred until this phase.

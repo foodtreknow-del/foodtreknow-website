@@ -6,6 +6,7 @@
 <title>FoodTrekNow | Vendor & Customer Portal</title>
 <link rel="stylesheet" href="css/vendor.css" />
 <link rel="stylesheet" href="css/customer-account.css" />
+<link rel="stylesheet" href="css/customer-ordering.css" />
 <link rel="stylesheet" href="css/beta-banner.css" />
 <style>.hidden-view{display:none!important}</style>
 </head>
@@ -185,7 +186,7 @@
     <button class="active" data-bottom-page="overview" type="button"><span>🏠</span><strong>Home</strong></button>
     <button data-bottom-target="explore" type="button"><span>🔍</span><strong>Explore</strong></button>
     <button data-bottom-target="events" type="button"><span>🎪</span><strong>Events</strong></button>
-    <button data-bottom-target="cart" type="button"><span>🛒</span><strong>Cart</strong></button>
+    <button id="customerCartNavButton" data-bottom-target="cart" type="button"><span>🛒</span><strong>Cart</strong><b id="customerCartCount" class="customer-cart-count hidden-view">0</b></button>
     <button data-bottom-page="profile" type="button"><span>👤</span><strong>Profile</strong></button>
   </nav>
   <div id="customerAccountModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="customerModalTitle">

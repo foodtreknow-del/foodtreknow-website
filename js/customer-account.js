@@ -31,9 +31,9 @@
   ];
   const NEARBY_RADIUS_OPTIONS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
   const EVENTS = [
-    { id: 'first-friday', date: 'AUG 01', name: 'First Friday Food Truck Rodeo', location: 'City Market Plaza', time: '5:00–9:00 PM', detail: '12 trucks · Live music' },
-    { id: 'riverfront-bites', date: 'AUG 09', name: 'Riverfront Bites & Beats', location: 'Riverfront Park', time: '3:00–8:00 PM', detail: '8 trucks · Family friendly' },
-    { id: 'night-market', date: 'AUG 16', name: 'Downtown Night Market', location: 'Fayetteville Street', time: '6:00–10:00 PM', detail: '16 trucks · Local makers' }
+    { id: 'first-friday', truckId: 'capital-city-eats', date: 'AUG 01', name: 'First Friday Food Truck Rodeo', location: 'City Market Plaza', time: '5:00–9:00 PM', detail: '12 trucks · Live music' },
+    { id: 'riverfront-bites', truckId: 'rolling-ember-bbq', date: 'AUG 09', name: 'Riverfront Bites & Beats', location: 'Riverfront Park', time: '3:00–8:00 PM', detail: '8 trucks · Family friendly' },
+    { id: 'night-market', truckId: 'taco-luna', date: 'AUG 16', name: 'Downtown Night Market', location: 'Fayetteville Street', time: '6:00–10:00 PM', detail: '16 trucks · Local makers' }
   ];
 
   const defaultMenu = [
@@ -43,6 +43,28 @@
     { id: 4, name: 'Seasoned Fries', category: 'Sides', price: 4.5, description: 'Crispy fries tossed in the truck’s signature seasoning.', available: true, image: '' },
     { id: 5, name: 'Sweet Potato Fries', category: 'Sides', price: 5.5, description: 'Crispy sweet potato fries with dipping sauce.', available: false, image: '' },
     { id: 6, name: 'Fresh Lemonade', category: 'Drinks', price: 4, description: 'Fresh-squeezed lemonade served cold.', available: true, image: '' }
+  ];
+
+  const ORDERING_MENU_ITEMS = [
+    { id: 'loaded-street-nachos', category: 'Appetizers', name: 'Loaded Street Nachos', description: 'House chips, queso, pico, crema, jalapeños, and your choice of protein.', price: 10.5, calories: 740, available: true, icon: '🧀', featured: true, special: false, popular: true },
+    { id: 'crispy-cauliflower-bites', category: 'Appetizers', name: 'Crispy Cauliflower Bites', description: 'Golden cauliflower with smoky ranch and scallions.', price: 8.5, calories: 420, available: true, icon: '🥦', featured: false, special: true, popular: false },
+    { id: 'capital-smash-burger', category: 'Entrees', name: 'Capital Smash Burger', description: 'Two crispy beef patties, American cheese, pickles, onions, and Trek sauce.', price: 13.5, calories: 890, available: true, icon: '🍔', featured: true, special: false, popular: true },
+    { id: 'firecracker-chicken-tacos', category: 'Entrees', name: 'Firecracker Chicken Tacos', description: 'Three griddled tacos with spicy chicken, slaw, pico, and lime crema.', price: 12.75, calories: 680, available: true, icon: '🌮', featured: true, special: true, popular: true },
+    { id: 'smokehouse-bbq-bowl', category: 'Entrees', name: 'Smokehouse BBQ Bowl', description: 'Slow-smoked pork, seasoned rice, street corn, slaw, and barbecue drizzle.', price: 14.25, calories: 820, available: true, icon: '🍲', featured: false, special: false, popular: true },
+    { id: 'garden-crunch-wrap', category: 'Entrees', name: 'Garden Crunch Wrap', description: 'Black beans, roasted vegetables, queso, lettuce, and salsa verde.', price: 11.5, calories: 620, available: false, icon: '🌯', featured: false, special: false, popular: false },
+    { id: 'trek-seasoned-fries', category: 'Sides', name: 'Trek Seasoned Fries', description: 'Crispy skin-on fries tossed with our signature road-trip seasoning.', price: 4.5, calories: 390, available: true, icon: '🍟', featured: false, special: false, popular: true },
+    { id: 'street-corn-cup', category: 'Sides', name: 'Street Corn Cup', description: 'Charred corn, cotija, lime crema, chile, and cilantro.', price: 5.25, calories: 310, available: true, icon: '🌽', featured: false, special: true, popular: false },
+    { id: 'churro-bites', category: 'Desserts', name: 'Cinnamon Churro Bites', description: 'Warm cinnamon-sugar churros with chocolate dipping sauce.', price: 6.5, calories: 510, available: true, icon: '🍩', featured: true, special: false, popular: true },
+    { id: 'banana-pudding-jar', category: 'Desserts', name: 'Banana Pudding Jar', description: 'Vanilla pudding, fresh banana, wafers, and whipped cream.', price: 6, calories: 460, available: true, icon: '🍌', featured: false, special: true, popular: false },
+    { id: 'fresh-lemonade', category: 'Drinks', name: 'Fresh-Squeezed Lemonade', description: 'Bright, cold lemonade made fresh throughout the day.', price: 4, calories: 180, available: true, icon: '🍋', featured: false, special: false, popular: true },
+    { id: 'sweet-tea', category: 'Drinks', name: 'Southern Sweet Tea', description: 'Fresh-brewed black tea served over ice with lemon.', price: 3.5, calories: 150, available: true, icon: '🥤', featured: false, special: false, popular: false }
+  ];
+
+  const ITEM_MODIFIER_GROUPS = [
+    { id: 'spice', name: 'Choose Spice Level', type: 'single', required: true, options: [{ id: 'mild', name: 'Mild', price: 0 }, { id: 'medium', name: 'Medium', price: 0 }, { id: 'hot', name: 'Hot', price: 0 }, { id: 'trek-hot', name: 'Trek Hot', price: 0.75 }] },
+    { id: 'protein', name: 'Choose Protein', type: 'single', required: true, options: [{ id: 'chicken', name: 'Grilled Chicken', price: 0 }, { id: 'beef', name: 'Seasoned Beef', price: 1.5 }, { id: 'pork', name: 'Smoked Pork', price: 2 }, { id: 'veggie', name: 'Roasted Vegetables', price: 0 }] },
+    { id: 'size', name: 'Choose Size', type: 'single', required: true, options: [{ id: 'regular', name: 'Regular', price: 0 }, { id: 'large', name: 'Large', price: 3.5 }] },
+    { id: 'extras', name: 'Make It Yours', type: 'multiple', required: false, options: [{ id: 'extra-cheese', name: 'Extra Cheese', price: 1.25 }, { id: 'no-onions', name: 'No Onions', price: 0 }, { id: 'extra-sauce', name: 'Extra Sauce', price: 0.75 }] }
   ];
 
   const seedOrders = () => [
@@ -174,6 +196,7 @@
         orders: seedOrders(),
         preferredLocation: null,
         nearbyRadiusMiles: 5,
+        cart: { truckId: null, items: [] },
         preferences: defaultPreferences()
       };
       return this.repository.save(account);
@@ -293,6 +316,38 @@
   };
   window.FoodTrekNowTruckData = TruckDataService;
 
+  class LocalCustomerOrderingAdapter {
+    ensureState(account) {
+      if (!account.cart || !Array.isArray(account.cart.items)) account.cart = { truckId: null, items: [] };
+      if (!Number.isFinite(Number(account.nearbyRadiusMiles))) account.nearbyRadiusMiles = 5;
+      return account;
+    }
+
+    saveCart(account, cart) {
+      account.cart = cart;
+      repository.save(account);
+      return cart;
+    }
+
+    placeOrder(account, order) {
+      account.orders.unshift(order);
+      account.cart = { truckId: null, items: [] };
+      repository.save(account);
+      return order;
+    }
+  }
+
+  // Ordering boundary: a future Supabase adapter can replace these local
+  // mutations while the profile, menu, cart, checkout, and tracking UI remains.
+  const CustomerOrderingService = {
+    adapter: new LocalCustomerOrderingAdapter(),
+    setAdapter(adapter) { this.adapter = adapter; },
+    ensureState(account) { return this.adapter.ensureState(account); },
+    saveCart(account, cart) { return this.adapter.saveCart(account, cart); },
+    placeOrder(account, order) { return this.adapter.placeOrder(account, order); }
+  };
+  window.FoodTrekNowOrdering = CustomerOrderingService;
+
   const loginView = document.getElementById('loginView');
   const dashboardView = document.getElementById('dashboardView');
   const authView = document.getElementById('customerAuthView');
@@ -303,6 +358,9 @@
   let currentAccount = null;
   let currentPage = 'overview';
   let orderHistoryFilter = 'current';
+  let selectedTruckId = TRUCK.id;
+  let selectedMenuItemId = null;
+  let lastPlacedOrderId = null;
 
   function readSession() {
     try {
@@ -349,7 +407,10 @@
   }
 
   function openCustomerAccount(account, page = 'overview') {
-    currentAccount = account;
+    currentAccount = CustomerOrderingService.ensureState(account);
+    let savedTruck = null;
+    try { savedTruck = JSON.parse(localStorage.getItem('ftnSelectedTruckV1') || 'null'); } catch {}
+    if (savedTruck?.truckId && TRUCKS.some(truck => truck.id === savedTruck.truckId)) selectedTruckId = savedTruck.truckId;
     currentPage = page;
     hidePrimaryViews();
     accountView.classList.remove('hidden-view');
@@ -369,6 +430,14 @@
     toast.classList.add('show');
     clearTimeout(window.ftnCustomerToast);
     window.ftnCustomerToast = setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  function updateCartBadge() {
+    const count = currentAccount?.cart?.items?.reduce((total, item) => total + Number(item.quantity || 0), 0) || 0;
+    const badge = document.getElementById('customerCartCount');
+    if (!badge) return;
+    badge.textContent = String(count);
+    badge.classList.toggle('hidden-view', count === 0);
   }
 
   function renderGuestMenu() {
@@ -394,6 +463,7 @@
     document.getElementById('customerMiniProfile').innerHTML = `${avatarMarkup(currentAccount)}<div><strong>${escapeHtml(name)} ${escapeHtml(currentAccount.lastName)}</strong><small>${escapeHtml(currentAccount.email)}</small></div>`;
     document.getElementById('customerVerificationBanner').classList.toggle('hidden-view', currentAccount.emailVerified || currentAccount.verificationDismissed);
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === currentPage));
+    updateCartBadge();
   }
 
   function pageHeader(eyebrow, title, description = '', action = '') {
@@ -421,7 +491,7 @@
   }
 
   function nearbyTruckCard(truck) {
-    return `<article class="nearby-truck-card">
+    return `<article class="nearby-truck-card" data-open-truck-profile="${truck.id}">
       <div class="nearby-truck-logo" aria-hidden="true">${truck.icon || '🚚'}</div>
       <div class="nearby-truck-main">
         <div class="nearby-truck-heading"><div><p>${escapeHtml(truck.cuisine)}</p><h2>${escapeHtml(truck.name)}</h2></div><span class="nearby-distance">${escapeHtml(truck.distanceLabel)}</span></div>
@@ -471,6 +541,237 @@
     </div>`;
   }
 
+  function selectedTruck() {
+    return TRUCKS.find(truck => truck.id === selectedTruckId) || TRUCK;
+  }
+
+  function menuForTruck() {
+    return ORDERING_MENU_ITEMS.map(item => ({ ...item, truckId: selectedTruck().id, modifierGroups: ITEM_MODIFIER_GROUPS }));
+  }
+
+  function truckExperienceDetails(truck) {
+    const location = resolveSampleCustomerLocation(currentAccount.preferredLocation);
+    const distance = distanceInMiles(location, truck);
+    const today = new Date();
+    const operatingToday = truck.operatingDays.includes(today.getDay());
+    const ratingOffset = Math.max(0, TRUCKS.findIndex(item => item.id === truck.id));
+    return {
+      distance,
+      distanceLabel: `${distance.toFixed(1)} mi away`,
+      driveTime: `${Math.max(4, Math.round(distance * 2.2))} min drive`,
+      status: operatingToday ? operatingStatus(truck, today) : 'Closed · Not operating today',
+      rating: (4.9 - ratingOffset * 0.1).toFixed(1),
+      reviews: 128 + ratingOffset * 37
+    };
+  }
+
+  function orderingItemCard(item, compact = false) {
+    return `<button class="ordering-item-card ${compact ? 'compact' : ''} ${item.available ? '' : 'sold-out'}" data-open-menu-item="${item.id}" type="button" ${item.available ? '' : 'disabled'}>
+      <span class="ordering-item-photo" aria-hidden="true">${item.icon}${item.available ? '' : '<b>Sold Out</b>'}</span>
+      <span class="ordering-item-copy"><small>${escapeHtml(item.category)}</small><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.description)}</span><em>${item.calories ? `${item.calories} cal · ` : ''}${customerMoney(item.price)}</em></span>
+    </button>`;
+  }
+
+  function renderTruckProfile() {
+    const truck = selectedTruck();
+    const details = truckExperienceDetails(truck);
+    const menu = menuForTruck();
+    const saved = currentAccount.favoriteTrucks.includes(truck.id);
+    const profileCollections = [
+      ['Featured Items', menu.filter(item => item.featured && item.available)],
+      ["Today's Specials", menu.filter(item => item.special && item.available)],
+      ['Popular Items', menu.filter(item => item.popular && item.available)]
+    ];
+    return `<div class="ordering-page truck-profile-page">
+      <button class="ordering-back-button" data-customer-page-back="nearby" type="button">← Nearby Trucks</button>
+      <section class="truck-profile-hero">
+        <div class="truck-profile-logo" aria-hidden="true">${truck.icon || '🚚'}</div>
+        <div class="truck-profile-identity"><p>${escapeHtml(truck.cuisine)}</p><h1>${escapeHtml(truck.name)}</h1><div class="truck-rating"><strong>★ ${details.rating}</strong><span>${details.reviews} reviews</span></div></div>
+        <button class="truck-profile-favorite ${saved ? 'saved' : ''}" data-toggle-truck-favorite="${truck.id}" type="button">${saved ? '♥ Favorited' : '♡ Favorite'}</button>
+        <div class="truck-profile-facts">
+          <span><small>Distance</small><strong>${escapeHtml(details.distanceLabel)}</strong></span>
+          <span><small>Drive Time</small><strong>${escapeHtml(details.driveTime)}</strong></span>
+          <span><small>Status & Hours</small><strong>${escapeHtml(details.status)}</strong></span>
+          <span><small>Pickup Time</small><strong>About ${truck.pickupMinutes} min</strong></span>
+          ${truck.currentEvent ? `<span><small>Current Event</small><strong>🎪 ${escapeHtml(truck.currentEvent)}</strong></span>` : ''}
+        </div>
+        <div class="truck-profile-actions">
+          <button class="primary-button" data-ordering-action="open-menu" type="button">Order Now</button>
+          <button class="secondary-button" data-ordering-action="directions" type="button">Directions</button>
+          <button class="secondary-button" data-ordering-action="call" type="button">Call</button>
+          <button class="secondary-button" data-ordering-action="share" type="button">Share</button>
+        </div>
+      </section>
+      ${profileCollections.map(([title, items]) => `<section class="ordering-showcase"><div class="ordering-section-heading"><div><p class="eyebrow">From the menu</p><h2>${title}</h2></div><button data-ordering-action="open-menu" type="button">View Full Menu →</button></div><div class="ordering-showcase-grid">${items.slice(0, 3).map(item => orderingItemCard(item, true)).join('')}</div></section>`).join('')}
+      <section class="truck-about-card"><div><p class="eyebrow">Our Story</p><h2>About This Truck</h2></div><p>${escapeHtml(truck.name)} serves bold, made-to-order ${truck.cuisine.toLowerCase()} with locally sourced ingredients and friendly neighborhood service. Follow today’s stop, order ahead, and pick up when your meal is ready.</p></section>
+    </div>`;
+  }
+
+  function renderTruckMenu() {
+    const truck = selectedTruck();
+    const menu = menuForTruck();
+    const categories = [...new Set(menu.map(item => item.category))];
+    const cartCount = currentAccount.cart.items.reduce((total, item) => total + item.quantity, 0);
+    return `<div class="ordering-page full-menu-page">
+      <header class="menu-experience-header">
+        <button class="ordering-back-button" data-customer-page-back="truckProfile" type="button">← Truck Profile</button>
+        <div><p class="eyebrow">${escapeHtml(truck.cuisine)}</p><h1>${escapeHtml(truck.name)} Menu</h1><p>Made fresh for pickup · About ${truck.pickupMinutes} minutes</p></div>
+        <button class="menu-cart-button" data-ordering-action="open-cart" type="button"><span>🛒</span> Cart <b>${cartCount}</b></button>
+      </header>
+      <nav class="menu-category-jump" aria-label="Menu categories">${categories.map(category => `<button data-menu-category="${escapeHtml(category)}" type="button">${escapeHtml(category)}</button>`).join('')}</nav>
+      <div class="full-menu-sections">${categories.map(category => `<section class="full-menu-category" data-menu-section="${escapeHtml(category)}"><div class="ordering-section-heading"><div><p class="eyebrow">Browse</p><h2>${escapeHtml(category)}</h2></div><span>${menu.filter(item => item.category === category).length} items</span></div><div class="full-menu-grid">${menu.filter(item => item.category === category).map(item => orderingItemCard(item)).join('')}</div></section>`).join('')}</div>
+    </div>`;
+  }
+
+  function modifierGroupMarkup(group) {
+    const inputType = group.type === 'multiple' ? 'checkbox' : 'radio';
+    return `<fieldset class="item-modifier-group"><legend>${escapeHtml(group.name)} ${group.required ? '<span>Required</span>' : '<small>Optional</small>'}</legend><div>${group.options.map((option, index) => `<label><input type="${inputType}" name="modifier-${group.id}" value="${option.id}" data-item-modifier data-modifier-group="${escapeHtml(group.name)}" data-modifier-name="${escapeHtml(option.name)}" data-modifier-price="${option.price}" ${group.type !== 'multiple' && index === 0 ? 'checked' : ''}><span><strong>${escapeHtml(option.name)}</strong>${option.price ? `<small>+${customerMoney(option.price)}</small>` : '<small>Included</small>'}</span></label>`).join('')}</div></fieldset>`;
+  }
+
+  function renderItemDetail() {
+    const item = menuForTruck().find(menuItem => menuItem.id === selectedMenuItemId) || menuForTruck()[0];
+    selectedMenuItemId = item.id;
+    return `<div class="ordering-page item-detail-page">
+      <button class="ordering-back-button" data-customer-page-back="truckMenu" type="button">← Full Menu</button>
+      <form id="customerItemDetailForm" class="item-detail-layout">
+        <section class="item-detail-visual"><div class="item-detail-photo" aria-hidden="true">${item.icon}</div><div><p class="eyebrow">${escapeHtml(item.category)}</p><h1>${escapeHtml(item.name)}</h1><p>${escapeHtml(item.description)}</p><div class="item-detail-base"><strong>${customerMoney(item.price)}</strong>${item.calories ? `<span>${item.calories} calories</span>` : ''}</div></div></section>
+        <section class="item-customizer">
+          <div class="item-customizer-heading"><div><p class="eyebrow">Make It Yours</p><h2>Customize Your Item</h2></div><span>Selections update your total</span></div>
+          ${item.modifierGroups.map(modifierGroupMarkup).join('')}
+          <label class="item-instructions"><strong>Special Instructions</strong><textarea id="itemSpecialInstructions" class="customer-textarea" rows="3" maxlength="240" placeholder="Allergies, preparation notes, or anything else we should know?"></textarea></label>
+          <div class="item-add-bar">
+            <div class="ordering-quantity"><button data-item-quantity-action="decrease" type="button" aria-label="Decrease quantity">−</button><input id="itemDetailQuantity" value="1" readonly aria-label="Quantity"><button data-item-quantity-action="increase" type="button" aria-label="Increase quantity">+</button></div>
+            <button class="primary-button item-add-button" type="submit">Add to Cart · <span id="itemDetailTotal">${customerMoney(item.price)}</span></button>
+          </div>
+        </section>
+      </form>
+    </div>`;
+  }
+
+  function selectedItemModifiers() {
+    return [...accountContent.querySelectorAll('[data-item-modifier]:checked')].map(input => ({
+      group: input.dataset.modifierGroup,
+      name: input.dataset.modifierName,
+      price: Number(input.dataset.modifierPrice || 0)
+    }));
+  }
+
+  function updateItemDetailPrice() {
+    const item = menuForTruck().find(menuItem => menuItem.id === selectedMenuItemId);
+    const quantityInput = document.getElementById('itemDetailQuantity');
+    const totalElement = document.getElementById('itemDetailTotal');
+    if (!item || !quantityInput || !totalElement) return;
+    const modifierTotal = selectedItemModifiers().reduce((total, modifier) => total + modifier.price, 0);
+    const total = (item.price + modifierTotal) * Math.max(1, Number(quantityInput.value || 1));
+    totalElement.textContent = customerMoney(total);
+  }
+
+  function cartItemUnitPrice(item) {
+    return Number(item.basePrice || item.price || 0) + (item.modifiers || []).reduce((total, modifier) => total + Number(modifier.price || 0), 0);
+  }
+
+  function cartTotals() {
+    const subtotal = currentAccount.cart.items.reduce((total, item) => total + cartItemUnitPrice(item) * Number(item.quantity || 0), 0);
+    const tax = Number((subtotal * 0.06).toFixed(2));
+    const serviceFee = subtotal ? 1.49 : 0;
+    return { subtotal, tax, serviceFee, total: Number((subtotal + tax + serviceFee).toFixed(2)) };
+  }
+
+  function cartItemMarkup(item) {
+    const modifiers = (item.modifiers || []).map(modifier => modifier.name).join(' · ');
+    return `<article class="ordering-cart-item">
+      <div class="cart-item-photo" aria-hidden="true">${item.icon || '🍽️'}</div>
+      <div class="cart-item-copy"><h3>${escapeHtml(item.name)}</h3>${modifiers ? `<p>${escapeHtml(modifiers)}</p>` : ''}${item.instructions ? `<small>“${escapeHtml(item.instructions)}”</small>` : ''}<button data-cart-remove="${item.id}" type="button">Remove</button></div>
+      <div class="cart-item-controls"><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong><div class="ordering-quantity small"><button data-cart-quantity="${item.id}" data-quantity-change="-1" type="button">−</button><span>${item.quantity}</span><button data-cart-quantity="${item.id}" data-quantity-change="1" type="button">+</button></div></div>
+    </article>`;
+  }
+
+  function renderCart() {
+    const cart = currentAccount.cart;
+    const truck = TRUCKS.find(item => item.id === cart.truckId) || selectedTruck();
+    const totals = cartTotals();
+    if (!cart.items.length) return `<div class="ordering-page"><button class="ordering-back-button" data-customer-page-back="truckMenu" type="button">← Continue Shopping</button><section class="ordering-empty-cart"><span>🛒</span><p class="eyebrow">Your Cart</p><h1>Ready when you are.</h1><p>Add something delicious from ${escapeHtml(truck.name)}.</p><button class="primary-button" data-ordering-action="continue-shopping" type="button">Browse the Menu</button></section></div>`;
+    return `<div class="ordering-page cart-page">
+      ${pageHeader('Your Order', 'Shopping Cart', `${escapeHtml(truck.name)} · ${cart.items.reduce((total, item) => total + item.quantity, 0)} items`, '<button class="ordering-text-danger" data-ordering-action="empty-cart" type="button">Empty Cart</button>')}
+      <div class="cart-layout"><section class="cart-items-panel">${cart.items.map(cartItemMarkup).join('')}<button class="secondary-button" data-ordering-action="continue-shopping" type="button">← Continue Shopping</button></section>
+      <aside class="order-summary-card"><h2>Order Summary</h2><div><span>Subtotal</span><strong>${customerMoney(totals.subtotal)}</strong></div><div><span>Taxes <small>estimate</small></span><strong>${customerMoney(totals.tax)}</strong></div><div><span>Service Fee <small>placeholder</small></span><strong>${customerMoney(totals.serviceFee)}</strong></div><div class="order-summary-total"><span>Estimated Total</span><strong>${customerMoney(totals.total)}</strong></div><p>Estimated pickup in about ${truck.pickupMinutes} minutes.</p><button class="primary-button full" data-ordering-action="checkout" type="button">Proceed to Checkout</button></aside></div>
+    </div>`;
+  }
+
+  function checkoutSummaryMarkup(totals) {
+    return `<div class="checkout-summary-lines"><div><span>Subtotal</span><strong>${customerMoney(totals.subtotal)}</strong></div><div><span>Estimated tax</span><strong>${customerMoney(totals.tax)}</strong></div><div><span>Service fee</span><strong>${customerMoney(totals.serviceFee)}</strong></div><div><span>Total</span><strong>${customerMoney(totals.total)}</strong></div></div>`;
+  }
+
+  function renderCheckout() {
+    const truck = TRUCKS.find(item => item.id === currentAccount.cart.truckId) || selectedTruck();
+    const totals = cartTotals();
+    const defaultPayment = currentAccount.paymentMethods.find(method => method.isDefault) || currentAccount.paymentMethods[0];
+    const defaultAddress = currentAccount.addresses.find(address => address.isDefault) || currentAccount.addresses[0];
+    return `<div class="ordering-page checkout-page">
+      <button class="ordering-back-button" data-customer-page-back="cart" type="button">← Back to Cart</button>
+      <form id="customerCheckoutForm"><div class="checkout-heading"><p class="eyebrow">Secure Checkout</p><h1>Review and Place Your Order</h1><p>${escapeHtml(truck.name)} · Pickup only</p></div>
+      <div class="checkout-layout"><div class="checkout-sections">
+        <section class="checkout-card"><span class="checkout-step">1</span><div><h2>Pickup Information</h2><p><strong>${escapeHtml(currentAccount.firstName)} ${escapeHtml(currentAccount.lastName)}</strong><br>${escapeHtml(currentAccount.mobile)} · ${escapeHtml(currentAccount.email)}</p></div></section>
+        <section class="checkout-card"><span class="checkout-step">2</span><div class="checkout-card-content"><h2>Pickup Time</h2><label class="checkout-choice"><input name="pickupTime" value="asap" type="radio" checked><span><strong>ASAP</strong><small>Ready in about ${truck.pickupMinutes} minutes</small></span></label><label class="checkout-choice disabled"><input name="pickupTime" value="later" type="radio" disabled><span><strong>Schedule Later</strong><small>Coming in a future update</small></span></label></div></section>
+        <section class="checkout-card"><span class="checkout-step">3</span><div class="checkout-card-content"><h2>Saved Address <small>Future Delivery</small></h2><p>${defaultAddress ? `${escapeHtml(defaultAddress.label)} · ${escapeHtml(defaultAddress.street)}, ${escapeHtml(defaultAddress.city)}` : 'Add a saved address from your profile when delivery becomes available.'}</p></div></section>
+        <section class="checkout-card"><span class="checkout-step">4</span><div class="checkout-card-content"><h2>Payment Method</h2>${defaultPayment ? `<label class="checkout-choice"><input name="paymentMethod" value="${defaultPayment.id}" type="radio" checked><span><strong>${escapeHtml(defaultPayment.brand)} ••••${escapeHtml(defaultPayment.last4)}</strong><small>${defaultPayment.isDefault ? 'Default payment method' : `Expires ${escapeHtml(defaultPayment.expiry)}`}</small></span></label>` : '<p>Pay at pickup (prototype).</p>'}<button class="checkout-link" data-customer-action="view-payments" type="button">Manage Payment Methods</button></div></section>
+        <section class="checkout-card checkout-fields"><span class="checkout-step">5</span><div class="checkout-card-content"><label for="checkoutPromoCode"><strong>Promo Code</strong></label><div class="promo-row"><input id="checkoutPromoCode" class="customer-input" placeholder="Enter code"><button class="secondary-button" data-ordering-action="apply-promo" type="button">Apply</button></div><label for="checkoutOrderNotes"><strong>Order Notes</strong></label><textarea id="checkoutOrderNotes" class="customer-textarea" rows="3" maxlength="300" placeholder="Notes for the truck team"></textarea><p id="checkoutMessage" class="form-message"></p></div></section>
+      </div><aside class="checkout-order-summary"><p class="eyebrow">Final Summary</p><h2>${escapeHtml(truck.name)}</h2>${currentAccount.cart.items.map(item => `<div class="checkout-item-line"><span>${item.quantity}× ${escapeHtml(item.name)}</span><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong></div>`).join('')}${checkoutSummaryMarkup(totals)}<button class="primary-button full" type="submit">Place Order</button><button class="secondary-button full" data-customer-page-back="cart" type="button">Back to Cart</button></aside></div></form>
+    </div>`;
+  }
+
+  function confirmationOrder() {
+    return currentAccount.orders.find(order => order.id === lastPlacedOrderId) || currentAccount.orders[0];
+  }
+
+  function renderOrderConfirmation() {
+    const order = confirmationOrder();
+    if (!order) return renderOverview();
+    const readyTime = new Date(order.estimatedReadyAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return `<div class="ordering-page confirmation-page"><section class="confirmation-card"><div class="confirmation-check">✓</div><p class="eyebrow">Order Successfully Placed</p><h1>Thanks, ${escapeHtml(currentAccount.preferredName || currentAccount.firstName)}!</h1><p>Your order is with ${escapeHtml(order.truckName)}.</p><div class="confirmation-number"><small>Order Number</small><strong>${escapeHtml(order.id)}</strong></div><div class="confirmation-details"><span><small>Estimated Ready Time</small><strong>${readyTime}</strong></span><span><small>Pickup Number</small><strong>#${order.pickupNumber}</strong></span><span><small>Pickup Instructions</small><strong>Show your pickup number at the truck window.</strong></span></div><div class="confirmation-actions"><button class="primary-button" data-ordering-action="track-order" type="button">Track My Order</button><button class="secondary-button" data-order-again="${escapeHtml(order.id)}" type="button">Order Again</button><button class="secondary-button" data-home-page="overview" type="button">Return Home</button></div></section></div>`;
+  }
+
+  function trackingStatusIndex(status) {
+    return ({ received: 0, new: 0, preparing: 1, ready: 2, pickedup: 3, completed: 3 })[status] ?? 0;
+  }
+
+  function renderLiveTracking() {
+    const order = confirmationOrder();
+    if (!order) return renderOrders();
+    const activeIndex = trackingStatusIndex(order.status);
+    const statuses = [['Order Received', 'We sent your order to the truck.'], ['Preparing', 'The kitchen is making your meal.'], ['Ready for Pickup', 'Head to the pickup window.'], ['Picked Up', 'Enjoy your FoodTrekNow order!']];
+    const readyTime = new Date(order.estimatedReadyAt || Date.now()).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return `<div class="ordering-page tracking-page">
+      <button class="ordering-back-button" data-home-page="overview" type="button">← Customer Home</button>
+      <section class="tracking-hero"><div><p class="eyebrow">Live Order Tracking</p><h1>${escapeHtml(order.truckName)}</h1><p>Order ${escapeHtml(order.id)}</p></div><div><small>Estimated Ready</small><strong>${readyTime}</strong></div><div><small>Pickup Number</small><strong>#${order.pickupNumber || String(order.id).replace(/\D/g, '').slice(-4)}</strong></div></section>
+      <section class="tracking-timeline">${statuses.map(([title, copy], index) => `<article class="${index < activeIndex ? 'complete' : index === activeIndex ? 'active' : ''}"><span>${index < activeIndex ? '✓' : index + 1}</span><div><small>${index === activeIndex ? 'Current Status' : index < activeIndex ? 'Complete' : 'Up Next'}</small><h2>${title}</h2><p>${copy}</p></div></article>`).join('')}</section>
+      <section class="tracking-pickup-card"><span>📍</span><div><p class="eyebrow">Pickup Instructions</p><h2>Meet us at the truck window</h2><p>Bring pickup number <strong>#${order.pickupNumber || String(order.id).replace(/\D/g, '').slice(-4)}</strong>. We’ll call your number when the order is ready.</p></div><button class="secondary-button" data-ordering-action="directions" type="button">Directions</button></section>
+    </div>`;
+  }
+
+  function syncPlacedOrderToVendor(order) {
+    const vendorStorageKey = 'ftnVendorOrdersV0231';
+    let vendorOrders = [];
+    try {
+      const saved = JSON.parse(localStorage.getItem(vendorStorageKey));
+      if (Array.isArray(saved)) vendorOrders = saved;
+    } catch {}
+    vendorOrders.unshift({
+      id: order.pickupNumber,
+      customer: currentAccount.preferredName || currentAccount.firstName,
+      items: order.items.map(item => ({ name: item.name, qty: item.qty, price: item.price })),
+      subtotal: order.subtotal,
+      tax: order.tax,
+      total: order.total,
+      status: 'new',
+      time: new Date(order.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      payment: order.paymentLabel,
+      paid: true,
+      createdAt: order.createdAt
+    });
+    localStorage.setItem(vendorStorageKey, JSON.stringify(vendorOrders));
+  }
+
   function activeOrderCard(order) {
     if (!order) return `<article class="customer-card customer-empty-order">
       <span class="home-card-icon" aria-hidden="true">🍽️</span>
@@ -488,13 +789,13 @@
         <i class="${ready ? 'complete' : ''}"></i>
         <div class="${ready ? 'complete' : ''}"><span>3</span><strong>Ready</strong></div>
       </div>
-      <button class="customer-small-button primary" data-order-details="${escapeHtml(order.id)}" type="button">Track Order</button>
+      <button class="customer-small-button primary" data-track-order="${escapeHtml(order.id)}" type="button">Track Order</button>
     </article>`;
   }
 
   function favoriteTruckHomeCard(truck) {
     const saved = currentAccount.favoriteTrucks.includes(truck.id);
-    return `<article class="home-truck-card">
+    return `<article class="home-truck-card" data-open-truck-profile="${truck.id}">
       <div class="home-truck-logo" aria-hidden="true">${truck.icon || '🚚'}</div>
       <div class="home-truck-copy"><div class="home-truck-title"><h3>${escapeHtml(truck.name)}</h3><button class="home-heart-button ${saved ? 'saved' : ''}" data-toggle-truck-favorite="${truck.id}" type="button" aria-label="${saved ? 'Remove' : 'Add'} ${escapeHtml(truck.name)} ${saved ? 'from' : 'to'} favorites">${saved ? '♥' : '♡'}</button></div><p>${escapeHtml(truck.cuisine)}</p><div class="truck-meta"><span class="${truck.status === 'Closed' ? 'closed' : ''}">${escapeHtml(truck.status)}</span><span>⏱ ${escapeHtml(truck.wait)}</span></div></div>
     </article>`;
@@ -517,6 +818,13 @@
     const renderers = {
       overview: renderOverview,
       nearby: renderNearbyTrucks,
+      truckProfile: renderTruckProfile,
+      truckMenu: renderTruckMenu,
+      itemDetail: renderItemDetail,
+      cart: renderCart,
+      checkout: renderCheckout,
+      confirmation: renderOrderConfirmation,
+      tracking: renderLiveTracking,
       profile: renderProfile,
       addresses: renderAddresses,
       favorites: renderFavorites,
@@ -526,8 +834,10 @@
       settings: renderSettings
     };
     accountContent.innerHTML = (renderers[page] || renderers.overview)();
+    updateCartBadge();
     document.querySelector('.customer-sidebar')?.classList.remove('open');
     document.getElementById('customerMenuButton').setAttribute('aria-expanded', 'false');
+    window.scrollTo(0, 0);
   }
 
   function renderOverview() {
@@ -570,7 +880,7 @@
 
       <section id="customerHomeEvents" class="home-section">
         <div class="home-section-heading"><div><p class="eyebrow">Make a plan</p><h2>Events Near You</h2></div><button class="home-link-button" data-home-target="all-events" type="button">View All Events →</button></div>
-        <div class="home-event-grid">${EVENTS.map(event => `<article class="home-event-card"><div class="event-date"><span>${event.date.split(' ')[0]}</span><strong>${event.date.split(' ')[1]}</strong></div><div><p>${escapeHtml(event.location)}</p><h3>${escapeHtml(event.name)}</h3><span>${escapeHtml(event.time)} · ${escapeHtml(event.detail)}</span></div><button data-home-event="${event.id}" type="button" aria-label="View ${escapeHtml(event.name)}">›</button></article>`).join('')}</div>
+        <div class="home-event-grid">${EVENTS.map(event => `<article class="home-event-card" data-home-event="${event.id}"><div class="event-date"><span>${event.date.split(' ')[0]}</span><strong>${event.date.split(' ')[1]}</strong></div><div><p>${escapeHtml(event.location)}</p><h3>${escapeHtml(event.name)}</h3><span>${escapeHtml(event.time)} · ${escapeHtml(event.detail)}</span></div><button data-home-event="${event.id}" type="button" aria-label="View ${escapeHtml(event.name)}">›</button></article>`).join('')}</div>
       </section>
 
       <section class="home-section">
@@ -624,13 +934,10 @@
   }
 
   function renderFavorites() {
-    const truckSaved = currentAccount.favoriteTrucks.includes(TRUCK.id);
+    const favoriteTrucks = TRUCKS.filter(truck => currentAccount.favoriteTrucks.includes(truck.id));
     const favoriteOrders = currentAccount.orders.filter(order => currentAccount.favoriteOrders.includes(order.id));
     return `${pageHeader('Saved for Later', 'Favorites', 'Keep favorite trucks and meals close at hand.')}
-      <section class="customer-card favorite-truck-card">
-        <div class="favorite-truck-art">🚚</div><div><p class="eyebrow">${escapeHtml(TRUCK.status)}</p><h2 class="customer-section-title">${escapeHtml(TRUCK.name)}</h2><p class="muted">${escapeHtml(TRUCK.cuisine)} · ${escapeHtml(TRUCK.wait)}</p></div>
-        <button class="heart-button ${truckSaved ? 'saved' : ''}" data-toggle-truck-favorite="${TRUCK.id}" type="button" aria-label="${truckSaved ? 'Remove' : 'Save'} favorite truck">♥</button>
-      </section>
+      <div class="customer-list">${favoriteTrucks.length ? favoriteTrucks.map(truck => `<section class="customer-card favorite-truck-card" data-open-truck-profile="${truck.id}"><div class="favorite-truck-art">${truck.icon || '🚚'}</div><div><p class="eyebrow">${escapeHtml(truck.status)}</p><h2 class="customer-section-title">${escapeHtml(truck.name)}</h2><p class="muted">${escapeHtml(truck.cuisine)} · ${escapeHtml(truck.wait)}</p></div><div class="customer-card-actions"><button class="customer-small-button primary" data-open-truck-profile="${truck.id}" type="button">View Truck</button><button class="heart-button saved" data-toggle-truck-favorite="${truck.id}" type="button" aria-label="Remove favorite truck">♥</button></div></section>`).join('') : '<div class="customer-card empty-customer-state"><span>♡</span><strong>No favorite trucks yet</strong><p>Explore nearby trucks and save the ones you love.</p></div>'}</div>
       <h2>Favorite Orders</h2>
       <div class="customer-list">${favoriteOrders.length ? favoriteOrders.map(order => favoriteOrderCard(order)).join('') : '<div class="customer-card empty-customer-state"><span>♡</span><strong>No favorite orders yet</strong><p>Open Order History and tap “Save Favorite” on a past meal.</p><button class="secondary-button" data-customer-action="view-orders" type="button">View Order History</button></div>'}</div>`;
   }
@@ -845,7 +1152,7 @@
     if (!targetButton) return;
     const target = targetButton.dataset.bottomTarget;
     if (target === 'cart') {
-      customerToast('Your cart stays available while you browse truck menus.');
+      renderCustomerPage('cart');
       return;
     }
     if (target === 'explore') {
@@ -922,8 +1229,9 @@
     if (nearbyOrder) {
       const truck = TRUCKS.find(item => item.id === nearbyOrder.dataset.nearbyOrder);
       if (truck) {
+        selectedTruckId = truck.id;
         localStorage.setItem('ftnSelectedTruckV1', JSON.stringify({ truckId: truck.id, selectedAt: Date.now() }));
-        customerToast(`${truck.name} selected. Its ordering menu will open here.`);
+        renderCustomerPage('truckProfile');
       }
       return;
     }
@@ -933,10 +1241,96 @@
       if (truck) customerToast(`Directions to ${truck.name} will be available with Google Maps.`);
       return;
     }
+    const pageBack = event.target.closest('[data-customer-page-back]');
+    if (pageBack) {
+      renderCustomerPage(pageBack.dataset.customerPageBack);
+      return;
+    }
+    const orderingAction = event.target.closest('[data-ordering-action]');
+    if (orderingAction) {
+      const action = orderingAction.dataset.orderingAction;
+      if (action === 'open-menu' || action === 'continue-shopping') {
+        if (currentAccount.cart.truckId && action === 'continue-shopping') selectedTruckId = currentAccount.cart.truckId;
+        renderCustomerPage('truckMenu');
+      } else if (action === 'open-cart') renderCustomerPage('cart');
+      else if (action === 'checkout' && currentAccount.cart.items.length) renderCustomerPage('checkout');
+      else if (action === 'empty-cart' && confirm('Empty every item from your cart?')) {
+        CustomerOrderingService.saveCart(currentAccount, { truckId: null, items: [] });
+        renderCustomerPage('cart');
+      } else if (action === 'track-order') renderCustomerPage('tracking');
+      else if (action === 'directions') customerToast(`Directions to ${selectedTruck().name} are coming with Google Maps.`);
+      else if (action === 'call') customerToast(`Calling ${selectedTruck().name} will be available soon.`);
+      else if (action === 'share') customerToast(`Sharing ${selectedTruck().name} will be available soon.`);
+      else if (action === 'apply-promo') customerToast('Promo code validation is coming soon.');
+      return;
+    }
+    const openTruck = event.target.closest('[data-open-truck-profile]');
+    if (openTruck) {
+      selectedTruckId = openTruck.dataset.openTruckProfile;
+      localStorage.setItem('ftnSelectedTruckV1', JSON.stringify({ truckId: selectedTruckId, selectedAt: Date.now() }));
+      renderCustomerPage('truckProfile');
+      return;
+    }
+    const openMenuItem = event.target.closest('[data-open-menu-item]');
+    if (openMenuItem) {
+      selectedMenuItemId = openMenuItem.dataset.openMenuItem;
+      renderCustomerPage('itemDetail');
+      return;
+    }
+    const categoryJump = event.target.closest('[data-menu-category]');
+    if (categoryJump) {
+      const section = accountContent.querySelector(`[data-menu-section="${categoryJump.dataset.menuCategory}"]`);
+      section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    const itemQuantity = event.target.closest('[data-item-quantity-action]');
+    if (itemQuantity) {
+      const quantityInput = document.getElementById('itemDetailQuantity');
+      const change = itemQuantity.dataset.itemQuantityAction === 'increase' ? 1 : -1;
+      quantityInput.value = String(Math.max(1, Math.min(20, Number(quantityInput.value || 1) + change)));
+      updateItemDetailPrice();
+      return;
+    }
+    const cartQuantity = event.target.closest('[data-cart-quantity]');
+    if (cartQuantity) {
+      const item = currentAccount.cart.items.find(cartItem => cartItem.id === cartQuantity.dataset.cartQuantity);
+      if (item) item.quantity = Math.max(1, Math.min(99, item.quantity + Number(cartQuantity.dataset.quantityChange || 0)));
+      CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
+      renderCustomerPage('cart');
+      return;
+    }
+    const cartRemove = event.target.closest('[data-cart-remove]');
+    if (cartRemove) {
+      currentAccount.cart.items = currentAccount.cart.items.filter(item => item.id !== cartRemove.dataset.cartRemove);
+      if (!currentAccount.cart.items.length) currentAccount.cart.truckId = null;
+      CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
+      renderCustomerPage('cart');
+      return;
+    }
+    const orderAgain = event.target.closest('[data-order-again]');
+    if (orderAgain) {
+      const order = currentAccount.orders.find(item => item.id === orderAgain.dataset.orderAgain);
+      if (order) {
+        selectedTruckId = order.truckId || TRUCK.id;
+        currentAccount.cart = { truckId: selectedTruckId, items: order.items.map(item => ({ ...item, id: uid('cart') })) };
+        CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
+        renderCustomerPage('cart');
+      }
+      return;
+    }
+    const trackOrder = event.target.closest('[data-track-order]');
+    if (trackOrder) {
+      lastPlacedOrderId = trackOrder.dataset.trackOrder;
+      renderCustomerPage('tracking');
+      return;
+    }
     const homeEvent = event.target.closest('[data-home-event]');
     if (homeEvent) {
       const eventItem = EVENTS.find(item => item.id === homeEvent.dataset.homeEvent);
-      if (eventItem) customerToast(`${eventItem.name} · ${eventItem.time}`);
+      if (eventItem) {
+        selectedTruckId = eventItem.truckId;
+        renderCustomerPage('truckProfile');
+      }
       return;
     }
     const orderFavorite = event.target.closest('[data-toggle-order-favorite]');
@@ -1007,6 +1401,10 @@
       renderCustomerPage('nearby');
       return;
     }
+    if (event.target.matches('[data-item-modifier]')) {
+      updateItemDetailPrice();
+      return;
+    }
     if (event.target.matches('[data-notification-setting]')) {
       currentAccount.preferences.notifications[event.target.dataset.notificationSetting] = event.target.checked;
       persistCurrentAccount();
@@ -1037,6 +1435,69 @@
   });
 
   accountContent.addEventListener('submit', async event => {
+    if (event.target.id === 'customerItemDetailForm') {
+      event.preventDefault();
+      const item = menuForTruck().find(menuItem => menuItem.id === selectedMenuItemId);
+      if (!item || !item.available) return;
+      if (currentAccount.cart.items.length && currentAccount.cart.truckId !== selectedTruckId && !confirm('Your cart contains items from another truck. Start a new cart?')) return;
+      if (currentAccount.cart.truckId !== selectedTruckId) currentAccount.cart = { truckId: selectedTruckId, items: [] };
+      const quantity = Math.max(1, Number(document.getElementById('itemDetailQuantity').value || 1));
+      const modifiers = selectedItemModifiers();
+      currentAccount.cart.items.push({
+        id: uid('cart'),
+        menuItemId: item.id,
+        name: item.name,
+        icon: item.icon,
+        basePrice: item.price,
+        price: item.price + modifiers.reduce((total, modifier) => total + modifier.price, 0),
+        quantity,
+        qty: quantity,
+        modifiers,
+        instructions: document.getElementById('itemSpecialInstructions').value.trim()
+      });
+      CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
+      renderCustomerPage('cart');
+      customerToast(`${item.name} added to your cart.`);
+      return;
+    }
+    if (event.target.id === 'customerCheckoutForm') {
+      event.preventDefault();
+      if (!currentAccount.cart.items.length) {
+        renderCustomerPage('cart');
+        return;
+      }
+      const truck = TRUCKS.find(item => item.id === currentAccount.cart.truckId) || selectedTruck();
+      const totals = cartTotals();
+      const pickupNumber = Math.floor(1000 + Math.random() * 9000);
+      const payment = accountContent.querySelector('input[name="paymentMethod"]:checked');
+      const order = {
+        id: `FTN-${pickupNumber}`,
+        pickupNumber,
+        truckId: truck.id,
+        truckName: truck.name,
+        status: 'received',
+        statusLabel: 'Order Received',
+        createdAt: Date.now(),
+        estimatedReadyAt: Date.now() + truck.pickupMinutes * 60 * 1000,
+        pickupInstructions: 'Show your pickup number at the truck window.',
+        items: currentAccount.cart.items.map(item => ({ ...item, qty: item.quantity, price: cartItemUnitPrice(item) })),
+        subtotal: totals.subtotal,
+        tax: totals.tax,
+        serviceFee: totals.serviceFee,
+        total: totals.total,
+        pickupTime: 'ASAP',
+        paymentMethodId: payment?.value || '',
+        paymentLabel: currentAccount.paymentMethods.find(method => method.id === payment?.value)?.brand || 'Pay at Pickup',
+        promoCode: document.getElementById('checkoutPromoCode').value.trim(),
+        orderNotes: document.getElementById('checkoutOrderNotes').value.trim()
+      };
+      CustomerOrderingService.placeOrder(currentAccount, order);
+      syncPlacedOrderToVendor(order);
+      lastPlacedOrderId = order.id;
+      selectedTruckId = truck.id;
+      renderCustomerPage('confirmation');
+      return;
+    }
     if (event.target.id === 'customerHomeSearch') {
       event.preventDefault();
       const input = document.getElementById('customerHomeSearchInput');
@@ -1055,7 +1516,7 @@
         truckMatches.length ? `${truckMatches.length} truck${truckMatches.length === 1 ? '' : 's'}` : '',
         menuMatches.length ? `${menuMatches.length} menu item${menuMatches.length === 1 ? '' : 's'}` : '',
         eventMatches.length ? `${eventMatches.length} event${eventMatches.length === 1 ? '' : 's'}` : ''
-      ].filter(Boolean).join(' · ') : 'Try a truck name, menu item, cuisine, city event, or “tacos”.'}</p></div><button data-home-target="${eventMatches.length && !truckMatches.length ? 'events' : 'explore'}" type="button">${total ? 'View matches' : 'Browse nearby'}</button></div>`;
+      ].filter(Boolean).join(' · ') : 'Try a truck name, menu item, cuisine, city event, or “tacos”.'}</p></div><button data-home-target="${eventMatches.length && !truckMatches.length ? 'events' : 'explore'}" type="button">${total ? 'View matches' : 'Browse nearby'}</button></div>${truckMatches.length ? `<div class="home-search-truck-matches">${truckMatches.map(truck => `<button data-open-truck-profile="${truck.id}" type="button"><span>${truck.icon || '🚚'}</span><span><strong>${escapeHtml(truck.name)}</strong><small>${escapeHtml(truck.cuisine)}</small></span><b>View Truck →</b></button>`).join('')}</div>` : ''}`;
       return;
     }
     if (event.target.id !== 'customerProfileForm') return;

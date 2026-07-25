@@ -8,6 +8,7 @@ const vendorSource = fs.readFileSync(new URL('../js/app.js', import.meta.url), '
 const source = fs.readFileSync(new URL('../js/customer-account.js', import.meta.url), 'utf8');
 const betaBannerSource = fs.readFileSync(new URL('../js/beta-banner.js', import.meta.url), 'utf8');
 const betaBannerStyles = fs.readFileSync(new URL('../css/beta-banner.css', import.meta.url), 'utf8');
+const orderingStyles = fs.readFileSync(new URL('../css/customer-ordering.css', import.meta.url), 'utf8');
 
 class StorageMock {
   constructor() { this.values = new Map(); }
@@ -111,7 +112,14 @@ test('customer account UI includes every required area and has unique static IDs
     'Find Trucks', 'Events Near You', 'Favorite Trucks', 'Recent Orders',
     'Add Address', 'Add Payment Method', 'Explore', 'Cart',
     'Find Food Trucks Near Your Location', 'Showing Trucks Within:',
-    'Drive time', 'Hours today', 'Estimated pickup', 'Order Now', 'Directions'
+    'Drive time', 'Hours today', 'Estimated pickup', 'Order Now', 'Directions',
+    'Featured Items', "Today's Specials", 'Popular Items', 'About This Truck',
+    'Appetizers', 'Entrees', 'Sides', 'Desserts', 'Drinks',
+    'Choose Spice Level', 'Choose Protein', 'Choose Size', 'Extra Cheese',
+    'No Onions', 'Extra Sauce', 'Special Instructions', 'Add to Cart',
+    'Shopping Cart', 'Service Fee', 'Proceed to Checkout', 'Pickup Information',
+    'Schedule Later', 'Promo Code', 'Place Order', 'Order Successfully Placed',
+    'Track My Order', 'Order Received', 'Ready for Pickup', 'Pickup Number'
   ];
   const completeUiSource = `${html}\n${source}`;
   requiredText.forEach(text => assert.ok(completeUiSource.includes(text), `Missing UI contract: ${text}`));
@@ -121,6 +129,9 @@ test('customer account UI includes every required area and has unique static IDs
   assert.match(source, /TEMP_SESSION_KEY/);
   assert.match(source, /LocalCustomerAuthAdapter/);
   assert.match(source, /setAdapter\(adapter\)/);
+  assert.match(source, /LocalCustomerOrderingAdapter/);
+  assert.match(source, /window\.FoodTrekNowOrdering/);
+  assert.match(orderingStyles, /@media\(max-width:760px\)/);
 });
 
 test('beta banner is the first homepage content and includes responsive persisted interactions', () => {
@@ -335,11 +346,59 @@ test('nearby truck search uses the saved location, filters today, sorts distance
   assert.equal(JSON.parse(localStorage.getItem('ftnSelectedTruckV1')).truckId, 'capital-city-eats');
 });
 
-test('roadmap marks Phase 3 and 3.1 complete and names Phase 4 next', () => {
+test('customer ordering journey persists cart, places an order, and opens live tracking', async () => {
+  let account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  localStorage.setItem('ftnCustomerSessionV1', JSON.stringify({ accountId: account.id }));
+  await emit(element('openCustomerPortalButton'), 'click');
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ nearbyOrder: 'capital-city-eats' }) });
+  assert.match(element('customerAccountContent').innerHTML, /About This Truck/);
+  assert.match(element('customerAccountContent').innerHTML, /★ 4\.9/);
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-menu' }) });
+  ['Appetizers', 'Entrees', 'Sides', 'Desserts', 'Drinks'].forEach(category => assert.match(element('customerAccountContent').innerHTML, new RegExp(category)));
+  assert.match(element('customerAccountContent').innerHTML, /Sold Out/);
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ openMenuItem: 'capital-smash-burger' }) });
+  assert.match(element('customerAccountContent').innerHTML, /Customize Your Item/);
+  assert.match(element('customerAccountContent').innerHTML, /Choose Spice Level/);
+  element('itemDetailQuantity').value = '2';
+  element('itemSpecialInstructions').value = 'Sauce on the side';
+  await emit(element('customerAccountContent'), 'submit', { preventDefault() {}, target: { id: 'customerItemDetailForm' } });
+
+  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  assert.equal(account.cart.items.length, 1);
+  assert.equal(account.cart.items[0].quantity, 2);
+  assert.equal(account.cart.items[0].instructions, 'Sauce on the side');
+  assert.match(element('customerAccountContent').innerHTML, /Proceed to Checkout/);
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'checkout' }) });
+  assert.match(element('customerAccountContent').innerHTML, /Review and Place Your Order/);
+  element('checkoutPromoCode').value = 'BETA10';
+  element('checkoutOrderNotes').value = 'Please include napkins';
+  await emit(element('customerAccountContent'), 'submit', { preventDefault() {}, target: { id: 'customerCheckoutForm' } });
+
+  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  const placedOrder = account.orders[0];
+  assert.equal(account.cart.items.length, 0);
+  assert.equal(placedOrder.status, 'received');
+  assert.equal(placedOrder.promoCode, 'BETA10');
+  assert.equal(placedOrder.orderNotes, 'Please include napkins');
+  assert.match(element('customerAccountContent').innerHTML, /Order Successfully Placed/);
+  assert.equal(JSON.parse(localStorage.getItem('ftnVendorOrdersV0231'))[0].id, placedOrder.pickupNumber);
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'track-order' }) });
+  assert.match(element('customerAccountContent').innerHTML, /Live Order Tracking/);
+  assert.match(element('customerAccountContent').innerHTML, /Order Received/);
+  assert.match(element('customerAccountContent').innerHTML, /Ready for Pickup/);
+});
+
+test('roadmap marks Phase 3.2 complete and names live communication as Phase 4', () => {
   const roadmap = fs.readFileSync(new URL('../PROJECT_ROADMAP.md', import.meta.url), 'utf8');
   assert.match(roadmap, /\[x\] Phase 3 – Customer Account System/);
   assert.match(roadmap, /\[x\] Phase 3\.1 – Customer Home Experience Polish/);
-  assert.match(roadmap, /Phase 4 – Live Order Processing/);
+  assert.match(roadmap, /\[x\] Phase 3\.2 – Complete Customer Ordering Experience/);
+  assert.match(roadmap, /Phase 4 – Live Vendor & Customer Communication/);
 });
 
 test('account deletion removes the local account', async () => {
