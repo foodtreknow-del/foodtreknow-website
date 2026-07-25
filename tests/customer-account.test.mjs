@@ -119,7 +119,7 @@ test('customer account UI includes every required area and has unique static IDs
     'No Onions', 'Extra Sauce', 'Special Instructions', 'Add to Cart',
     'Shopping Cart', 'Service Fee', 'Proceed to Checkout', 'Pickup Information',
     'Schedule Later', 'Promo Code', 'Place Order', 'Order Successfully Placed',
-    'Track My Order', 'Order Received', 'Ready for Pickup', 'Pickup Number'
+    'Track My Order', 'Order Received', 'Ready for Pickup', 'Order Number'
   ];
   const completeUiSource = `${html}\n${source}`;
   requiredText.forEach(text => assert.ok(completeUiSource.includes(text), `Missing UI contract: ${text}`));
@@ -370,6 +370,9 @@ test('customer ordering journey persists cart, places an order, and opens live t
   assert.equal(account.cart.items.length, 1);
   assert.equal(account.cart.items[0].quantity, 2);
   assert.equal(account.cart.items[0].instructions, 'Sauce on the side');
+  assert.ok(Number.isInteger(account.cart.orderNumber));
+  const cartOrderNumber = account.cart.orderNumber;
+  assert.match(element('customerAccountContent').innerHTML, new RegExp(`Order #${account.cart.orderNumber}`));
   assert.match(element('customerAccountContent').innerHTML, /Proceed to Checkout/);
 
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'checkout' }) });
@@ -380,17 +383,24 @@ test('customer ordering journey persists cart, places an order, and opens live t
 
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   const placedOrder = account.orders[0];
+  const permanentOrderNumber = placedOrder.id;
+  assert.equal(permanentOrderNumber, cartOrderNumber);
   assert.equal(account.cart.items.length, 0);
   assert.equal(placedOrder.status, 'received');
+  assert.equal(Object.hasOwn(placedOrder, 'pickupNumber'), false);
   assert.equal(placedOrder.promoCode, 'BETA10');
   assert.equal(placedOrder.orderNotes, 'Please include napkins');
   assert.match(element('customerAccountContent').innerHTML, /Order Successfully Placed/);
-  assert.equal(JSON.parse(localStorage.getItem('ftnVendorOrdersV0231'))[0].id, placedOrder.pickupNumber);
+  assert.match(element('customerAccountContent').innerHTML, new RegExp(`Order #${permanentOrderNumber}`));
+  assert.equal(JSON.parse(localStorage.getItem('ftnVendorOrdersV0231'))[0].id, permanentOrderNumber);
 
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'track-order' }) });
   assert.match(element('customerAccountContent').innerHTML, /Live Order Tracking/);
   assert.match(element('customerAccountContent').innerHTML, /Order Received/);
   assert.match(element('customerAccountContent').innerHTML, /Ready for Pickup/);
+  assert.match(element('customerAccountContent').innerHTML, new RegExp(`Order #${permanentOrderNumber}`));
+  assert.doesNotMatch(element('customerAccountContent').innerHTML, /Pickup Number/i);
+  assert.doesNotMatch(source, /const pickupNumber\s*=/);
 });
 
 test('roadmap marks Phase 3.2 complete and names live communication as Phase 4', () => {

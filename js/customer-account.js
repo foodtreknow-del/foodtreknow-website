@@ -5,6 +5,7 @@
   const PERSISTENT_SESSION_KEY = 'ftnCustomerSessionV1';
   const TEMP_SESSION_KEY = 'ftnCustomerSessionTempV1';
   const MENU_STORAGE_KEY = 'ftnVendorMenuV0400';
+  const ORDER_NUMBER_STORAGE_KEY = 'ftnLastOrderNumberV1';
   const TRUCK = {
     id: 'capital-city-eats',
     name: 'Capital City Eats',
@@ -116,6 +117,28 @@
   const customerMoney = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value) || 0);
   const formatDate = value => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const normalizePhone = value => String(value || '').replace(/\D/g, '');
+  const orderNumberValue = value => {
+    const match = String(value ?? '').match(/(\d+)$/);
+    return match ? Number(match[1]) : 0;
+  };
+  const orderNumberLabel = value => `Order #${orderNumberValue(value) || escapeHtml(value)}`;
+  function generateOrderNumber() {
+    let highest = Math.max(1046, Number(localStorage.getItem(ORDER_NUMBER_STORAGE_KEY)) || 0);
+    try {
+      const vendorOrders = JSON.parse(localStorage.getItem('ftnVendorOrdersV0231'));
+      if (Array.isArray(vendorOrders)) vendorOrders.forEach(order => { highest = Math.max(highest, orderNumberValue(order.id)); });
+    } catch {}
+    try {
+      const accounts = JSON.parse(localStorage.getItem(ACCOUNT_STORAGE_KEY));
+      if (Array.isArray(accounts)) accounts.forEach(account => {
+        (account.orders || []).forEach(order => { highest = Math.max(highest, orderNumberValue(order.id)); });
+        highest = Math.max(highest, orderNumberValue(account.cart?.orderNumber));
+      });
+    } catch {}
+    const nextOrderNumber = highest + 1;
+    localStorage.setItem(ORDER_NUMBER_STORAGE_KEY, String(nextOrderNumber));
+    return nextOrderNumber;
+  }
   const getInitials = account => `${account?.firstName?.[0] || ''}${account?.lastName?.[0] || ''}`.toUpperCase() || 'FT';
   const avatarMarkup = (account, large = false) => `<span class="customer-avatar${large ? ' large' : ''}">${account?.photo ? `<img src="${account.photo}" alt="">` : escapeHtml(getInitials(account))}</span>`;
 
@@ -319,7 +342,14 @@
   class LocalCustomerOrderingAdapter {
     ensureState(account) {
       if (!account.cart || !Array.isArray(account.cart.items)) account.cart = { truckId: null, items: [] };
+      account.orders = (account.orders || []).map(order => {
+        if (!Object.prototype.hasOwnProperty.call(order, 'pickupNumber')) return order;
+        const { pickupNumber, ...standardOrder } = order;
+        return standardOrder;
+      });
+      if (account.cart.items.length && !account.cart.orderNumber) account.cart.orderNumber = generateOrderNumber();
       if (!Number.isFinite(Number(account.nearbyRadiusMiles))) account.nearbyRadiusMiles = 5;
+      repository.save(account);
       return account;
     }
 
@@ -694,7 +724,7 @@
     return `<div class="ordering-page cart-page">
       ${pageHeader('Your Order', 'Shopping Cart', `${escapeHtml(truck.name)} · ${cart.items.reduce((total, item) => total + item.quantity, 0)} items`, '<button class="ordering-text-danger" data-ordering-action="empty-cart" type="button">Empty Cart</button>')}
       <div class="cart-layout"><section class="cart-items-panel">${cart.items.map(cartItemMarkup).join('')}<button class="secondary-button" data-ordering-action="continue-shopping" type="button">← Continue Shopping</button></section>
-      <aside class="order-summary-card"><h2>Order Summary</h2><div><span>Subtotal</span><strong>${customerMoney(totals.subtotal)}</strong></div><div><span>Taxes <small>estimate</small></span><strong>${customerMoney(totals.tax)}</strong></div><div><span>Service Fee <small>placeholder</small></span><strong>${customerMoney(totals.serviceFee)}</strong></div><div class="order-summary-total"><span>Estimated Total</span><strong>${customerMoney(totals.total)}</strong></div><p>Estimated pickup in about ${truck.pickupMinutes} minutes.</p><button class="primary-button full" data-ordering-action="checkout" type="button">Proceed to Checkout</button></aside></div>
+      <aside class="order-summary-card"><p class="order-number-banner"><small>Your permanent order number</small><strong>${orderNumberLabel(cart.orderNumber)}</strong></p><h2>Order Summary</h2><div><span>Subtotal</span><strong>${customerMoney(totals.subtotal)}</strong></div><div><span>Taxes <small>estimate</small></span><strong>${customerMoney(totals.tax)}</strong></div><div><span>Service Fee <small>placeholder</small></span><strong>${customerMoney(totals.serviceFee)}</strong></div><div class="order-summary-total"><span>Estimated Total</span><strong>${customerMoney(totals.total)}</strong></div><p>Estimated pickup in about ${truck.pickupMinutes} minutes.</p><button class="primary-button full" data-ordering-action="checkout" type="button">Proceed to Checkout</button></aside></div>
     </div>`;
   }
 
@@ -709,14 +739,14 @@
     const defaultAddress = currentAccount.addresses.find(address => address.isDefault) || currentAccount.addresses[0];
     return `<div class="ordering-page checkout-page">
       <button class="ordering-back-button" data-customer-page-back="cart" type="button">← Back to Cart</button>
-      <form id="customerCheckoutForm"><div class="checkout-heading"><p class="eyebrow">Secure Checkout</p><h1>Review and Place Your Order</h1><p>${escapeHtml(truck.name)} · Pickup only</p></div>
+      <form id="customerCheckoutForm"><div class="checkout-heading"><p class="eyebrow">Secure Checkout · ${orderNumberLabel(currentAccount.cart.orderNumber)}</p><h1>Review and Place Your Order</h1><p>${escapeHtml(truck.name)} · Pickup only</p></div>
       <div class="checkout-layout"><div class="checkout-sections">
         <section class="checkout-card"><span class="checkout-step">1</span><div><h2>Pickup Information</h2><p><strong>${escapeHtml(currentAccount.firstName)} ${escapeHtml(currentAccount.lastName)}</strong><br>${escapeHtml(currentAccount.mobile)} · ${escapeHtml(currentAccount.email)}</p></div></section>
         <section class="checkout-card"><span class="checkout-step">2</span><div class="checkout-card-content"><h2>Pickup Time</h2><label class="checkout-choice"><input name="pickupTime" value="asap" type="radio" checked><span><strong>ASAP</strong><small>Ready in about ${truck.pickupMinutes} minutes</small></span></label><label class="checkout-choice disabled"><input name="pickupTime" value="later" type="radio" disabled><span><strong>Schedule Later</strong><small>Coming in a future update</small></span></label></div></section>
         <section class="checkout-card"><span class="checkout-step">3</span><div class="checkout-card-content"><h2>Saved Address <small>Future Delivery</small></h2><p>${defaultAddress ? `${escapeHtml(defaultAddress.label)} · ${escapeHtml(defaultAddress.street)}, ${escapeHtml(defaultAddress.city)}` : 'Add a saved address from your profile when delivery becomes available.'}</p></div></section>
         <section class="checkout-card"><span class="checkout-step">4</span><div class="checkout-card-content"><h2>Payment Method</h2>${defaultPayment ? `<label class="checkout-choice"><input name="paymentMethod" value="${defaultPayment.id}" type="radio" checked><span><strong>${escapeHtml(defaultPayment.brand)} ••••${escapeHtml(defaultPayment.last4)}</strong><small>${defaultPayment.isDefault ? 'Default payment method' : `Expires ${escapeHtml(defaultPayment.expiry)}`}</small></span></label>` : '<p>Pay at pickup (prototype).</p>'}<button class="checkout-link" data-customer-action="view-payments" type="button">Manage Payment Methods</button></div></section>
         <section class="checkout-card checkout-fields"><span class="checkout-step">5</span><div class="checkout-card-content"><label for="checkoutPromoCode"><strong>Promo Code</strong></label><div class="promo-row"><input id="checkoutPromoCode" class="customer-input" placeholder="Enter code"><button class="secondary-button" data-ordering-action="apply-promo" type="button">Apply</button></div><label for="checkoutOrderNotes"><strong>Order Notes</strong></label><textarea id="checkoutOrderNotes" class="customer-textarea" rows="3" maxlength="300" placeholder="Notes for the truck team"></textarea><p id="checkoutMessage" class="form-message"></p></div></section>
-      </div><aside class="checkout-order-summary"><p class="eyebrow">Final Summary</p><h2>${escapeHtml(truck.name)}</h2>${currentAccount.cart.items.map(item => `<div class="checkout-item-line"><span>${item.quantity}× ${escapeHtml(item.name)}</span><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong></div>`).join('')}${checkoutSummaryMarkup(totals)}<button class="primary-button full" type="submit">Place Order</button><button class="secondary-button full" data-customer-page-back="cart" type="button">Back to Cart</button></aside></div></form>
+      </div><aside class="checkout-order-summary"><p class="order-number-banner"><small>Order Number</small><strong>${orderNumberLabel(currentAccount.cart.orderNumber)}</strong></p><p class="eyebrow">Final Summary</p><h2>${escapeHtml(truck.name)}</h2>${currentAccount.cart.items.map(item => `<div class="checkout-item-line"><span>${item.quantity}× ${escapeHtml(item.name)}</span><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong></div>`).join('')}${checkoutSummaryMarkup(totals)}<button class="primary-button full" type="submit">Place Order</button><button class="secondary-button full" data-customer-page-back="cart" type="button">Back to Cart</button></aside></div></form>
     </div>`;
   }
 
@@ -728,7 +758,7 @@
     const order = confirmationOrder();
     if (!order) return renderOverview();
     const readyTime = new Date(order.estimatedReadyAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    return `<div class="ordering-page confirmation-page"><section class="confirmation-card"><div class="confirmation-check">✓</div><p class="eyebrow">Order Successfully Placed</p><h1>Thanks, ${escapeHtml(currentAccount.preferredName || currentAccount.firstName)}!</h1><p>Your order is with ${escapeHtml(order.truckName)}.</p><div class="confirmation-number"><small>Order Number</small><strong>${escapeHtml(order.id)}</strong></div><div class="confirmation-details"><span><small>Estimated Ready Time</small><strong>${readyTime}</strong></span><span><small>Pickup Number</small><strong>#${order.pickupNumber}</strong></span><span><small>Pickup Instructions</small><strong>Show your pickup number at the truck window.</strong></span></div><div class="confirmation-actions"><button class="primary-button" data-ordering-action="track-order" type="button">Track My Order</button><button class="secondary-button" data-order-again="${escapeHtml(order.id)}" type="button">Order Again</button><button class="secondary-button" data-home-page="overview" type="button">Return Home</button></div></section></div>`;
+    return `<div class="ordering-page confirmation-page"><section class="confirmation-card"><div class="confirmation-check">✓</div><p class="eyebrow">Order Successfully Placed</p><h1>Thanks, ${escapeHtml(currentAccount.preferredName || currentAccount.firstName)}!</h1><p>Your order is with ${escapeHtml(order.truckName)}.</p><div class="confirmation-number"><small>Order Number · Use for pickup</small><strong>${orderNumberLabel(order.id)}</strong></div><div class="confirmation-details"><span><small>Estimated Ready Time</small><strong>${readyTime}</strong></span><span><small>Pickup Instructions</small><strong>Show ${orderNumberLabel(order.id)} at the truck window.</strong></span></div><div class="confirmation-actions"><button class="primary-button" data-ordering-action="track-order" type="button">Track My Order</button><button class="secondary-button" data-order-again="${escapeHtml(order.id)}" type="button">Order Again</button><button class="secondary-button" data-home-page="overview" type="button">Return Home</button></div></section></div>`;
   }
 
   function trackingStatusIndex(status) {
@@ -743,9 +773,9 @@
     const readyTime = new Date(order.estimatedReadyAt || Date.now()).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     return `<div class="ordering-page tracking-page">
       <button class="ordering-back-button" data-home-page="overview" type="button">← Customer Home</button>
-      <section class="tracking-hero"><div><p class="eyebrow">Live Order Tracking</p><h1>${escapeHtml(order.truckName)}</h1><p>Order ${escapeHtml(order.id)}</p></div><div><small>Estimated Ready</small><strong>${readyTime}</strong></div><div><small>Pickup Number</small><strong>#${order.pickupNumber || String(order.id).replace(/\D/g, '').slice(-4)}</strong></div></section>
+      <section class="tracking-hero"><div><p class="eyebrow">Live Order Tracking</p><h1>${escapeHtml(order.truckName)}</h1><p>${orderNumberLabel(order.id)}</p></div><div><small>Estimated Ready</small><strong>${readyTime}</strong></div><div><small>Order Number</small><strong>#${orderNumberValue(order.id)}</strong></div></section>
       <section class="tracking-timeline">${statuses.map(([title, copy], index) => `<article class="${index < activeIndex ? 'complete' : index === activeIndex ? 'active' : ''}"><span>${index < activeIndex ? '✓' : index + 1}</span><div><small>${index === activeIndex ? 'Current Status' : index < activeIndex ? 'Complete' : 'Up Next'}</small><h2>${title}</h2><p>${copy}</p></div></article>`).join('')}</section>
-      <section class="tracking-pickup-card"><span>📍</span><div><p class="eyebrow">Pickup Instructions</p><h2>Meet us at the truck window</h2><p>Bring pickup number <strong>#${order.pickupNumber || String(order.id).replace(/\D/g, '').slice(-4)}</strong>. We’ll call your number when the order is ready.</p></div><button class="secondary-button" data-ordering-action="directions" type="button">Directions</button></section>
+      <section class="tracking-pickup-card"><span>📍</span><div><p class="eyebrow">Pickup Instructions</p><h2>Meet us at the truck window</h2><p>Bring <strong>${orderNumberLabel(order.id)}</strong>. We’ll call your order number when it is ready.</p></div><button class="secondary-button" data-ordering-action="directions" type="button">Directions</button></section>
     </div>`;
   }
 
@@ -757,7 +787,7 @@
       if (Array.isArray(saved)) vendorOrders = saved;
     } catch {}
     vendorOrders.unshift({
-      id: order.pickupNumber,
+      id: order.id,
       customer: currentAccount.preferredName || currentAccount.firstName,
       items: order.items.map(item => ({ name: item.name, qty: item.qty, price: item.price })),
       subtotal: order.subtotal,
@@ -781,7 +811,7 @@
     const preparing = ['preparing', 'ready'].includes(order.status);
     const ready = order.status === 'ready';
     return `<article class="customer-card customer-current-order home-active-order">
-      <div class="active-order-heading"><div><p class="eyebrow">Active Order</p><h2>${escapeHtml(order.statusLabel)}</h2><p>${escapeHtml(order.truckName)} · ${escapeHtml(order.id)}</p></div><span class="status-live-dot">Live</span></div>
+      <div class="active-order-heading"><div><p class="eyebrow">Active Order</p><h2>${escapeHtml(order.statusLabel)}</h2><p>${escapeHtml(order.truckName)} · ${orderNumberLabel(order.id)}</p></div><span class="status-live-dot">Live</span></div>
       <div class="home-order-track" aria-label="Order progress">
         <div class="complete"><span>✓</span><strong>Received</strong></div>
         <i class="complete"></i>
@@ -885,7 +915,7 @@
 
       <section class="home-section">
         <div class="home-section-heading"><div><p class="eyebrow">Order it again</p><h2>Recent Orders</h2></div><button class="home-link-button" data-customer-action="view-orders" type="button">View Order History →</button></div>
-        <div class="home-recent-orders">${pastOrders.slice(0, 3).map(order => `<article class="home-recent-order"><div class="recent-order-logo">🚚</div><div><h3>${escapeHtml(order.truckName)}</h3><p>${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</p><span>${formatDate(order.createdAt)} · ${customerMoney(order.total)}</span></div><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button></article>`).join('') || '<div class="customer-card empty-customer-state"><strong>No recent orders yet</strong><p>Your past pickups will appear here.</p></div>'}</div>
+        <div class="home-recent-orders">${pastOrders.slice(0, 3).map(order => `<article class="home-recent-order"><div class="recent-order-logo">🚚</div><div><h3>${escapeHtml(order.truckName)} · ${orderNumberLabel(order.id)}</h3><p>${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</p><span>${formatDate(order.createdAt)} · ${customerMoney(order.total)}</span></div><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button></article>`).join('') || '<div class="customer-card empty-customer-state"><strong>No recent orders yet</strong><p>Your past pickups will appear here.</p></div>'}</div>
       </section>
 
       <div class="home-two-column">
@@ -943,7 +973,7 @@
   }
 
   function favoriteOrderCard(order) {
-    return `<article class="customer-card customer-order-card"><div><p class="eyebrow">${formatDate(order.createdAt)}</p><h3>${escapeHtml(order.truckName)}</h3><div class="order-item-summary">${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</div></div><div><div class="order-total">${customerMoney(order.total)}</div><div class="customer-card-actions"><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button><button class="customer-small-button danger" data-toggle-order-favorite="${escapeHtml(order.id)}" type="button">Remove</button></div></div></article>`;
+    return `<article class="customer-card customer-order-card"><div><p class="eyebrow">${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><h3>${escapeHtml(order.truckName)}</h3><div class="order-item-summary">${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</div></div><div><div class="order-total">${customerMoney(order.total)}</div><div class="customer-card-actions"><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button><button class="customer-small-button danger" data-toggle-order-favorite="${escapeHtml(order.id)}" type="button">Remove</button></div></div></article>`;
   }
 
   function renderOrders() {
@@ -957,7 +987,7 @@
 
   function orderHistoryCard(order) {
     const isFavorite = currentAccount.favoriteOrders.includes(order.id);
-    return `<article class="customer-card customer-order-card"><div><span class="status-pill ${order.status === 'completed' ? 'past' : ''}">${escapeHtml(order.statusLabel)}</span><h3>${escapeHtml(order.truckName)} · ${escapeHtml(order.id)}</h3><p class="muted">${formatDate(order.createdAt)}</p><div class="order-item-summary">${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</div></div><div><div class="order-total">${customerMoney(order.total)}</div><div class="customer-card-actions"><button class="customer-small-button" data-order-details="${escapeHtml(order.id)}" type="button">Order Details</button>${order.status === 'completed' ? `<button class="customer-small-button" data-receipt="${escapeHtml(order.id)}" type="button">Receipt</button><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button><button class="customer-small-button" data-toggle-order-favorite="${escapeHtml(order.id)}" type="button">${isFavorite ? '♥ Saved' : '♡ Save Favorite'}</button>` : ''}</div></div></article>`;
+    return `<article class="customer-card customer-order-card"><div><span class="status-pill ${order.status === 'completed' ? 'past' : ''}">${escapeHtml(order.statusLabel)}</span><h3>${escapeHtml(order.truckName)} · ${orderNumberLabel(order.id)}</h3><p class="muted">${formatDate(order.createdAt)}</p><div class="order-item-summary">${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</div></div><div><div class="order-total">${customerMoney(order.total)}</div><div class="customer-card-actions"><button class="customer-small-button" data-order-details="${escapeHtml(order.id)}" type="button">Order Details</button>${order.status === 'completed' ? `<button class="customer-small-button" data-receipt="${escapeHtml(order.id)}" type="button">Receipt</button><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button><button class="customer-small-button" data-toggle-order-favorite="${escapeHtml(order.id)}" type="button">${isFavorite ? '♥ Saved' : '♡ Save Favorite'}</button>` : ''}</div></div></article>`;
   }
 
   function renderPayments() {
@@ -970,13 +1000,14 @@
 
   function renderNotifications() {
     const preferences = currentAccount.preferences.notifications;
+    const latestOrder = currentAccount.orders[0];
     const rows = [
       ['orderUpdates', 'Order Updates', 'Status changes, pickup readiness, and order confirmations.'],
       ['promotions', 'Promotions', 'Occasional offers and FoodTrekNow news.'],
       ['favoriteTrucks', 'Favorite Truck Notifications', 'Opening hours, new menu items, and availability from saved trucks.'],
       ['push', 'Push Notifications', 'UI-only preference until push delivery is connected.']
     ];
-    return `${pageHeader('Stay in the Loop', 'Notifications', 'Choose which updates you would like to receive.')}<section class="customer-card">${rows.map(([key, title, copy]) => `<div class="setting-row"><div><strong>${title}</strong><small>${copy}</small></div><label class="customer-switch" aria-label="${title}"><input type="checkbox" data-notification-setting="${key}" ${preferences[key] ? 'checked' : ''}><span></span></label></div>`).join('')}</section>`;
+    return `${pageHeader('Stay in the Loop', 'Notifications', 'Choose which updates you would like to receive.')}${latestOrder ? `<section class="customer-card order-notification-card"><p class="eyebrow">Latest Order Update</p><h2>${orderNumberLabel(latestOrder.id)} · ${escapeHtml(latestOrder.statusLabel)}</h2><p>${escapeHtml(latestOrder.truckName)} is keeping this same number through pickup.</p></section>` : ''}<section class="customer-card">${rows.map(([key, title, copy]) => `<div class="setting-row"><div><strong>${title}</strong><small>${copy}</small></div><label class="customer-switch" aria-label="${title}"><input type="checkbox" data-notification-setting="${key}" ${preferences[key] ? 'checked' : ''}><span></span></label></div>`).join('')}</section>`;
   }
 
   function renderSettings() {
@@ -1045,7 +1076,7 @@
   function orderModal(order, receiptOnly = false) {
     if (!order) return;
     const itemLines = order.items.map(item => `<div class="receipt-line"><span>${item.qty} × ${escapeHtml(item.name)}</span><strong>${customerMoney(item.qty * item.price)}</strong></div>`).join('');
-    openModal(`<div class="customer-receipt"><div class="receipt-brand"><p class="eyebrow">${receiptOnly ? 'Receipt' : 'Order Details'}</p><h2 id="customerModalTitle">${escapeHtml(order.truckName)}</h2><p>Order ${escapeHtml(order.id)} · ${formatDate(order.createdAt)}</p><span class="status-pill ${order.status === 'completed' ? 'past' : ''}">${escapeHtml(order.statusLabel)}</span></div><h3>Items</h3>${itemLines}<div class="receipt-line"><span>Subtotal</span><strong>${customerMoney(order.subtotal)}</strong></div><div class="receipt-line"><span>Tax</span><strong>${customerMoney(order.tax)}</strong></div><div class="receipt-line receipt-total"><strong>Total</strong><strong>${customerMoney(order.total)}</strong></div><p class="muted">${receiptOnly ? 'Paid · Customer receipt view' : 'Pickup status updates appear in your account and notification preferences.'}</p>${order.status === 'completed' ? `<button class="primary-button full" data-reorder="${escapeHtml(order.id)}" type="button">Reorder This Meal</button>` : ''}</div>`);
+    openModal(`<div class="customer-receipt"><div class="receipt-brand"><p class="eyebrow">${receiptOnly ? 'Receipt' : 'Order Details'}</p><h2 id="customerModalTitle">${escapeHtml(order.truckName)}</h2><p>${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><span class="status-pill ${order.status === 'completed' ? 'past' : ''}">${escapeHtml(order.statusLabel)}</span></div><h3>Items</h3>${itemLines}<div class="receipt-line"><span>Subtotal</span><strong>${customerMoney(order.subtotal)}</strong></div><div class="receipt-line"><span>Tax</span><strong>${customerMoney(order.tax)}</strong></div><div class="receipt-line receipt-total"><strong>Total</strong><strong>${customerMoney(order.total)}</strong></div><p class="muted">${receiptOnly ? 'Paid · Customer receipt view' : 'Pickup status updates appear in your account and notification preferences.'}</p>${order.status === 'completed' ? `<button class="primary-button full" data-reorder="${escapeHtml(order.id)}" type="button">Reorder This Meal</button>` : ''}</div>`);
   }
 
   function deleteAccountModal() {
@@ -1253,7 +1284,11 @@
         if (currentAccount.cart.truckId && action === 'continue-shopping') selectedTruckId = currentAccount.cart.truckId;
         renderCustomerPage('truckMenu');
       } else if (action === 'open-cart') renderCustomerPage('cart');
-      else if (action === 'checkout' && currentAccount.cart.items.length) renderCustomerPage('checkout');
+      else if (action === 'checkout' && currentAccount.cart.items.length) {
+        if (!currentAccount.cart.orderNumber) currentAccount.cart.orderNumber = generateOrderNumber();
+        CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
+        renderCustomerPage('checkout');
+      }
       else if (action === 'empty-cart' && confirm('Empty every item from your cart?')) {
         CustomerOrderingService.saveCart(currentAccount, { truckId: null, items: [] });
         renderCustomerPage('cart');
@@ -1312,7 +1347,7 @@
       const order = currentAccount.orders.find(item => item.id === orderAgain.dataset.orderAgain);
       if (order) {
         selectedTruckId = order.truckId || TRUCK.id;
-        currentAccount.cart = { truckId: selectedTruckId, items: order.items.map(item => ({ ...item, id: uid('cart') })) };
+        currentAccount.cart = { truckId: selectedTruckId, orderNumber: generateOrderNumber(), items: order.items.map(item => ({ ...item, id: uid('cart') })) };
         CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
         renderCustomerPage('cart');
       }
@@ -1377,9 +1412,10 @@
   function reorderMeal(orderId) {
     const source = currentAccount.orders.find(order => order.id === orderId);
     if (!source) return;
+    const { pickupNumber: legacyPickupNumber, ...sourceWithoutPickupNumber } = source;
     const copy = {
-      ...source,
-      id: `FTN-${String(Date.now()).slice(-6)}`,
+      ...sourceWithoutPickupNumber,
+      id: generateOrderNumber(),
       status: 'new',
       statusLabel: 'Order Received',
       createdAt: Date.now(),
@@ -1387,6 +1423,7 @@
     };
     currentAccount.orders.unshift(copy);
     persistCurrentAccount();
+    syncPlacedOrderToVendor(copy);
     closeModal();
     orderHistoryFilter = 'current';
     renderCustomerPage('orders');
@@ -1440,7 +1477,8 @@
       const item = menuForTruck().find(menuItem => menuItem.id === selectedMenuItemId);
       if (!item || !item.available) return;
       if (currentAccount.cart.items.length && currentAccount.cart.truckId !== selectedTruckId && !confirm('Your cart contains items from another truck. Start a new cart?')) return;
-      if (currentAccount.cart.truckId !== selectedTruckId) currentAccount.cart = { truckId: selectedTruckId, items: [] };
+      if (currentAccount.cart.truckId !== selectedTruckId) currentAccount.cart = { truckId: selectedTruckId, orderNumber: generateOrderNumber(), items: [] };
+      if (!currentAccount.cart.orderNumber) currentAccount.cart.orderNumber = generateOrderNumber();
       const quantity = Math.max(1, Number(document.getElementById('itemDetailQuantity').value || 1));
       const modifiers = selectedItemModifiers();
       currentAccount.cart.items.push({
@@ -1468,18 +1506,16 @@
       }
       const truck = TRUCKS.find(item => item.id === currentAccount.cart.truckId) || selectedTruck();
       const totals = cartTotals();
-      const pickupNumber = Math.floor(1000 + Math.random() * 9000);
       const payment = accountContent.querySelector('input[name="paymentMethod"]:checked');
       const order = {
-        id: `FTN-${pickupNumber}`,
-        pickupNumber,
+        id: currentAccount.cart.orderNumber || generateOrderNumber(),
         truckId: truck.id,
         truckName: truck.name,
         status: 'received',
         statusLabel: 'Order Received',
         createdAt: Date.now(),
         estimatedReadyAt: Date.now() + truck.pickupMinutes * 60 * 1000,
-        pickupInstructions: 'Show your pickup number at the truck window.',
+        pickupInstructions: `Show ${orderNumberLabel(currentAccount.cart.orderNumber)} at the truck window.`,
         items: currentAccount.cart.items.map(item => ({ ...item, qty: item.quantity, price: cartItemUnitPrice(item) })),
         subtotal: totals.subtotal,
         tax: totals.tax,
@@ -1496,6 +1532,7 @@
       lastPlacedOrderId = order.id;
       selectedTruckId = truck.id;
       renderCustomerPage('confirmation');
+      customerToast(`${orderNumberLabel(order.id)} was placed successfully.`);
       return;
     }
     if (event.target.id === 'customerHomeSearch') {
