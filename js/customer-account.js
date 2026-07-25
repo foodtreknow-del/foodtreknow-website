@@ -10,14 +10,26 @@
     name: 'Capital City Eats',
     cuisine: 'American favorites · Burgers · Tacos',
     status: 'Open now',
-    wait: '15–20 min'
+    wait: '15–20 min',
+    icon: '🚚',
+    latitude: 35.7812,
+    longitude: -78.6388,
+    operatingDays: [0, 1, 2, 3, 4, 5, 6],
+    opensAt: '10:30 AM',
+    closesAt: '8:00 PM',
+    pickupMinutes: 15,
+    currentEvent: 'Downtown Lunch Stop'
   };
 
   const TRUCKS = [
     TRUCK,
-    { id: 'rolling-ember-bbq', name: 'Rolling Ember BBQ', cuisine: 'Smoked BBQ · Southern', status: 'Open now', wait: '20–25 min', icon: '🔥' },
-    { id: 'taco-luna', name: 'Taco Luna', cuisine: 'Mexican · Street tacos', status: 'Closed', wait: 'Opens at 5:00 PM', icon: '🌮' }
+    { id: 'rolling-ember-bbq', name: 'Rolling Ember BBQ', cuisine: 'Smoked BBQ · Southern', status: 'Open now', wait: '20–25 min', icon: '🔥', latitude: 35.806, longitude: -78.655, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '11:00 AM', closesAt: '9:00 PM', pickupMinutes: 20, currentEvent: '' },
+    { id: 'taco-luna', name: 'Taco Luna', cuisine: 'Mexican · Street tacos', status: 'Open now', wait: '12–18 min', icon: '🌮', latitude: 35.842, longitude: -78.672, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '12:00 PM', closesAt: '10:00 PM', pickupMinutes: 12, currentEvent: 'Oakwood Night Market' },
+    { id: 'triangle-dumpling-co', name: 'Triangle Dumpling Co.', cuisine: 'Asian fusion · Dumplings', status: 'Open now', wait: '18–24 min', icon: '🥟', latitude: 35.92, longitude: -78.78, operatingDays: [1, 2, 3, 4, 5, 6], opensAt: '11:30 AM', closesAt: '8:30 PM', pickupMinutes: 18, currentEvent: '' },
+    { id: 'oak-city-sweets', name: 'Oak City Sweets', cuisine: 'Desserts · Coffee', status: 'Open now', wait: '8–12 min', icon: '🧁', latitude: 35.7, longitude: -78.62, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '8:00 AM', closesAt: '6:00 PM', pickupMinutes: 8, currentEvent: 'Moore Square Makers Market' },
+    { id: 'carolina-coastal-kitchen', name: 'Carolina Coastal Kitchen', cuisine: 'Seafood · Coastal', status: 'Open now', wait: '22–30 min', icon: '🦐', latitude: 36.05, longitude: -78.85, operatingDays: [0, 3, 4, 5, 6], opensAt: '11:00 AM', closesAt: '8:00 PM', pickupMinutes: 22, currentEvent: '' }
   ];
+  const NEARBY_RADIUS_OPTIONS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
   const EVENTS = [
     { id: 'first-friday', date: 'AUG 01', name: 'First Friday Food Truck Rodeo', location: 'City Market Plaza', time: '5:00–9:00 PM', detail: '12 trucks · Live music' },
     { id: 'riverfront-bites', date: 'AUG 09', name: 'Riverfront Bites & Beats', location: 'Riverfront Park', time: '3:00–8:00 PM', detail: '8 trucks · Family friendly' },
@@ -161,6 +173,7 @@
         ],
         orders: seedOrders(),
         preferredLocation: null,
+        nearbyRadiusMiles: 5,
         preferences: defaultPreferences()
       };
       return this.repository.save(account);
@@ -204,6 +217,81 @@
     deleteAccount(accountId) { return this.adapter.deleteAccount(accountId); }
   };
   window.FoodTrekNowCustomerAuth = CustomerAuthService;
+
+  const SAMPLE_LOCATION_CENTERS = {
+    raleigh: { latitude: 35.7796, longitude: -78.6382 },
+    cary: { latitude: 35.7915, longitude: -78.7811 },
+    durham: { latitude: 35.994, longitude: -78.8986 }
+  };
+
+  function resolveSampleCustomerLocation(savedLocation) {
+    const location = savedLocation || { method: 'current', label: 'Current Location' };
+    if (location.method === 'city') {
+      const city = String(location.city || '').toLowerCase();
+      const center = city.includes('durham') ? SAMPLE_LOCATION_CENTERS.durham : city.includes('cary') ? SAMPLE_LOCATION_CENTERS.cary : SAMPLE_LOCATION_CENTERS.raleigh;
+      return { ...center, label: location.city || 'Saved City' };
+    }
+    if (location.method === 'zip') {
+      const zip = String(location.zip || '');
+      const center = zip.startsWith('277') ? SAMPLE_LOCATION_CENTERS.durham : zip.startsWith('27513') ? SAMPLE_LOCATION_CENTERS.cary : SAMPLE_LOCATION_CENTERS.raleigh;
+      return { ...center, label: `ZIP ${zip}` };
+    }
+    return { ...SAMPLE_LOCATION_CENTERS.raleigh, label: location.label || 'Current Location' };
+  }
+
+  function distanceInMiles(origin, destination) {
+    const toRadians = degrees => degrees * Math.PI / 180;
+    const earthRadiusMiles = 3958.8;
+    const latitudeChange = toRadians(destination.latitude - origin.latitude);
+    const longitudeChange = toRadians(destination.longitude - origin.longitude);
+    const a = Math.sin(latitudeChange / 2) ** 2
+      + Math.cos(toRadians(origin.latitude)) * Math.cos(toRadians(destination.latitude)) * Math.sin(longitudeChange / 2) ** 2;
+    return earthRadiusMiles * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function timeInMinutes(time) {
+    const match = String(time).match(/^(\d{1,2}):(\d{2})\s+(AM|PM)$/i);
+    if (!match) return 0;
+    let hour = Number(match[1]) % 12;
+    if (match[3].toUpperCase() === 'PM') hour += 12;
+    return hour * 60 + Number(match[2]);
+  }
+
+  function operatingStatus(truck, date) {
+    const nowMinutes = date.getHours() * 60 + date.getMinutes();
+    if (nowMinutes < timeInMinutes(truck.opensAt)) return `Opens today at ${truck.opensAt}`;
+    if (nowMinutes < timeInMinutes(truck.closesAt)) return `Open · Closes ${truck.closesAt}`;
+    return `Closed · Closed at ${truck.closesAt}`;
+  }
+
+  class LocalTruckDataAdapter {
+    searchNearby({ location, radiusMiles, date = new Date() }) {
+      return TRUCKS
+        .filter(truck => truck.operatingDays.includes(date.getDay()))
+        .map(truck => {
+          const distance = distanceInMiles(location, truck);
+          return {
+            ...truck,
+            distance,
+            distanceLabel: `${distance.toFixed(1)} mi`,
+            driveTime: `${Math.max(4, Math.round(distance * 2.2))} min drive`,
+            operatingStatus: operatingStatus(truck, date),
+            pickupLabel: `About ${truck.pickupMinutes} min`
+          };
+        })
+        .filter(truck => truck.distance <= radiusMiles)
+        .sort((first, second) => first.distance - second.distance);
+    }
+  }
+
+  // Truck data boundary: replace this local adapter with a Supabase-backed
+  // adapter in a future phase without changing the nearby-truck screen.
+  const TruckDataService = {
+    adapter: new LocalTruckDataAdapter(),
+    setAdapter(adapter) { this.adapter = adapter; },
+    searchNearby(query) { return this.adapter.searchNearby(query); }
+  };
+  window.FoodTrekNowTruckData = TruckDataService;
 
   const loginView = document.getElementById('loginView');
   const dashboardView = document.getElementById('dashboardView');
@@ -327,6 +415,62 @@
     return location.label || 'Current Location';
   }
 
+  function selectedNearbyRadius() {
+    const savedRadius = Number(currentAccount.nearbyRadiusMiles);
+    return NEARBY_RADIUS_OPTIONS.includes(savedRadius) ? savedRadius : 5;
+  }
+
+  function nearbyTruckCard(truck) {
+    return `<article class="nearby-truck-card">
+      <div class="nearby-truck-logo" aria-hidden="true">${truck.icon || '🚚'}</div>
+      <div class="nearby-truck-main">
+        <div class="nearby-truck-heading"><div><p>${escapeHtml(truck.cuisine)}</p><h2>${escapeHtml(truck.name)}</h2></div><span class="nearby-distance">${escapeHtml(truck.distanceLabel)}</span></div>
+        <div class="nearby-truck-details">
+          <span><small>Drive time</small><strong>🚗 ${escapeHtml(truck.driveTime)}</strong></span>
+          <span><small>Hours today</small><strong>${escapeHtml(truck.operatingStatus)}</strong></span>
+          <span><small>Estimated pickup</small><strong>⏱ ${escapeHtml(truck.pickupLabel)}</strong></span>
+        </div>
+        ${truck.currentEvent ? `<div class="nearby-event-note"><span aria-hidden="true">🎪</span><div><small>Current Event</small><strong>${escapeHtml(truck.currentEvent)}</strong></div></div>` : ''}
+      </div>
+      <div class="nearby-truck-actions">
+        <button class="primary-button" data-nearby-order="${truck.id}" type="button">Order Now</button>
+        <button class="secondary-button" data-nearby-directions="${truck.id}" type="button">Directions</button>
+      </div>
+    </article>`;
+  }
+
+  function renderNearbyTrucks() {
+    const radius = selectedNearbyRadius();
+    const location = resolveSampleCustomerLocation(currentAccount.preferredLocation);
+    const trucks = TruckDataService.searchNearby({ location, radiusMiles: radius });
+    const radiusOptions = NEARBY_RADIUS_OPTIONS.map(option => `<option value="${option}" ${option === radius ? 'selected' : ''}>${option}</option>`).join('');
+    const pins = trucks.slice(0, 5).map((truck, index) => `<span class="nearby-map-pin pin-${index + 1}" title="${escapeHtml(truck.name)}">${index + 1}</span>`).join('');
+    return `<div class="nearby-search-page">
+      ${pageHeader('Explore Nearby', 'Find Food Trucks Near Your Location', `Using ${escapeHtml(preferredLocationLabel())}`, '<button class="secondary-button" data-home-page="overview" type="button">← Back to Home</button>')}
+      <section class="nearby-search-controls" aria-label="Nearby truck search controls">
+        <div><span class="nearby-location-icon" aria-hidden="true">📍</span><span><small>Searching near</small><strong>${escapeHtml(location.label)}</strong></span><button data-customer-action="change-location" type="button">Change Location</button></div>
+        <label for="nearbyRadiusSelect"><span>Showing Trucks Within:</span><span class="nearby-radius-input"><select id="nearbyRadiusSelect" data-nearby-radius aria-label="Search radius in miles">${radiusOptions}</select><strong>Miles</strong></span></label>
+      </section>
+
+      <div class="nearby-search-layout">
+        <aside id="nearbyMapContainer" class="nearby-map-shell" data-map-provider="google-maps" data-map-ready="false" aria-label="Future map area">
+          <div class="nearby-map-heading"><strong>Map Preview</strong><span>Live map coming in a future phase</span></div>
+          <div class="nearby-map-canvas">
+            <div class="nearby-map-road road-one"></div><div class="nearby-map-road road-two"></div><div class="nearby-map-road road-three"></div>
+            ${pins}
+            <div class="nearby-map-center" title="Your saved location"><span>📍</span><strong>You</strong></div>
+          </div>
+          <div class="nearby-map-footer"><span>${trucks.length} truck${trucks.length === 1 ? '' : 's'} shown</span><span>${radius}-mile radius</span></div>
+        </aside>
+
+        <section class="nearby-results" aria-live="polite">
+          <div class="nearby-results-heading"><div><p class="eyebrow">Nearest First</p><h2>${trucks.length} truck${trucks.length === 1 ? '' : 's'} operating today</h2></div><span>Within ${radius} miles</span></div>
+          <div class="nearby-truck-list">${trucks.length ? trucks.map(nearbyTruckCard).join('') : `<div class="customer-card nearby-empty-state"><span>🚚</span><h2>No operating trucks within ${radius} miles</h2><p>Increase your search radius to see more food trucks.</p></div>`}</div>
+        </section>
+      </div>
+    </div>`;
+  }
+
   function activeOrderCard(order) {
     if (!order) return `<article class="customer-card customer-empty-order">
       <span class="home-card-icon" aria-hidden="true">🍽️</span>
@@ -372,6 +516,7 @@
     document.querySelectorAll('[data-bottom-page]').forEach(button => button.classList.toggle('active', button.dataset.bottomPage === page));
     const renderers = {
       overview: renderOverview,
+      nearby: renderNearbyTrucks,
       profile: renderProfile,
       addresses: renderAddresses,
       favorites: renderFavorites,
@@ -703,8 +848,12 @@
       customerToast('Your cart stays available while you browse truck menus.');
       return;
     }
+    if (target === 'explore') {
+      renderCustomerPage('nearby');
+      return;
+    }
     renderCustomerPage('overview');
-    setTimeout(() => document.getElementById(target === 'events' ? 'customerHomeEvents' : 'customerHomeExplore')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+    setTimeout(() => document.getElementById('customerHomeEvents')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
   });
   document.getElementById('dismissVerificationButton').addEventListener('click', () => {
     currentAccount.verificationDismissed = true;
@@ -759,10 +908,29 @@
     const homeTarget = event.target.closest('[data-home-target]');
     if (homeTarget) {
       const target = homeTarget.dataset.homeTarget;
+      if (target === 'explore' || target === 'order') {
+        renderCustomerPage('nearby');
+        if (target === 'order') customerToast('Choose a nearby truck to start your order.');
+        return;
+      }
       const sectionId = target === 'events' || target === 'all-events' ? 'customerHomeEvents' : 'customerHomeExplore';
       document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (target === 'order') customerToast('Choose a favorite truck to start your order.');
       if (target === 'all-events') customerToast('More local events are coming soon.');
+      return;
+    }
+    const nearbyOrder = event.target.closest('[data-nearby-order]');
+    if (nearbyOrder) {
+      const truck = TRUCKS.find(item => item.id === nearbyOrder.dataset.nearbyOrder);
+      if (truck) {
+        localStorage.setItem('ftnSelectedTruckV1', JSON.stringify({ truckId: truck.id, selectedAt: Date.now() }));
+        customerToast(`${truck.name} selected. Its ordering menu will open here.`);
+      }
+      return;
+    }
+    const nearbyDirections = event.target.closest('[data-nearby-directions]');
+    if (nearbyDirections) {
+      const truck = TRUCKS.find(item => item.id === nearbyDirections.dataset.nearbyDirections);
+      if (truck) customerToast(`Directions to ${truck.name} will be available with Google Maps.`);
       return;
     }
     const homeEvent = event.target.closest('[data-home-event]');
@@ -832,6 +1000,13 @@
   }
 
   accountContent.addEventListener('change', event => {
+    if (event.target.matches('[data-nearby-radius]')) {
+      const radius = Number(event.target.value);
+      currentAccount.nearbyRadiusMiles = NEARBY_RADIUS_OPTIONS.includes(radius) ? radius : 5;
+      persistCurrentAccount();
+      renderCustomerPage('nearby');
+      return;
+    }
     if (event.target.matches('[data-notification-setting]')) {
       currentAccount.preferences.notifications[event.target.dataset.notificationSetting] = event.target.checked;
       persistCurrentAccount();
@@ -973,7 +1148,7 @@
           : { method: 'current', label: 'Current Location' };
       persistCurrentAccount();
       closeModal();
-      renderCustomerPage('overview');
+      renderCustomerPage(currentPage === 'nearby' ? 'nearby' : 'overview');
       customerToast('Preferred location saved.');
     }
     if (event.target.id === 'customerPaymentForm') {

@@ -109,7 +109,9 @@ test('customer account UI includes every required area and has unique static IDs
     'Delete Account', 'Ready for something delicious?', 'Current Location',
     'Search food trucks, menu items, cuisines, or events...', 'Order Food',
     'Find Trucks', 'Events Near You', 'Favorite Trucks', 'Recent Orders',
-    'Add Address', 'Add Payment Method', 'Explore', 'Cart'
+    'Add Address', 'Add Payment Method', 'Explore', 'Cart',
+    'Find Food Trucks Near Your Location', 'Showing Trucks Within:',
+    'Drive time', 'Hours today', 'Estimated pickup', 'Order Now', 'Directions'
   ];
   const completeUiSource = `${html}\n${source}`;
   requiredText.forEach(text => assert.ok(completeUiSource.includes(text), `Missing UI contract: ${text}`));
@@ -175,6 +177,7 @@ test('local auth adapter creates accounts with hashed passwords and required per
   assert.ok(Array.isArray(account.orders));
   assert.deepEqual(account.paymentMethods.map(method => method.last4), ['1234', '9876']);
   assert.equal(account.preferredLocation, null);
+  assert.equal(account.nearbyRadiusMiles, 5);
   assert.equal(account.preferences.notifications.orderUpdates, true);
   assert.equal(account.preferences.privacy.activityHistory, true);
 });
@@ -294,6 +297,42 @@ test('preferred customer location is saved locally from the home dashboard', asy
 
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.deepEqual(account.preferredLocation, { method: 'zip', zip: '27601' });
+});
+
+test('nearby truck search uses the saved location, filters today, sorts distance, and persists radius', async () => {
+  let account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  localStorage.setItem('ftnCustomerSessionV1', JSON.stringify({ accountId: account.id }));
+  await emit(element('openCustomerPortalButton'), 'click');
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ homeTarget: 'explore' }) });
+
+  const nearbyMarkup = element('customerAccountContent').innerHTML;
+  assert.match(nearbyMarkup, /Using ZIP 27601/);
+  assert.match(nearbyMarkup, /data-map-provider="google-maps"/);
+  assert.match(nearbyMarkup, /data-map-ready="false"/);
+  assert.match(nearbyMarkup, /Within 5 miles/);
+  [5, 10, 15, 20, 25, 30, 35, 40, 45, 50].forEach(radius => assert.match(nearbyMarkup, new RegExp(`<option value="${radius}"`)));
+  assert.ok(nearbyMarkup.indexOf('Capital City Eats') < nearbyMarkup.indexOf('Rolling Ember BBQ'), 'nearest truck should be listed first');
+  assert.match(source, /\.filter\(truck => truck\.operatingDays\.includes\(date\.getDay\(\)\)\)/);
+  assert.match(source, /\.sort\(\(first, second\) => first\.distance - second\.distance\)/);
+  assert.ok(window.FoodTrekNowTruckData);
+  assert.equal(typeof window.FoodTrekNowTruckData.setAdapter, 'function');
+  const sundayResults = window.FoodTrekNowTruckData.searchNearby({
+    location: { latitude: 35.7796, longitude: -78.6382 },
+    radiusMiles: 50,
+    date: new Date(2026, 6, 26, 12, 0)
+  });
+  assert.equal(sundayResults.some(truck => truck.id === 'triangle-dumpling-co'), false);
+  assert.ok(sundayResults.every((truck, index) => index === 0 || sundayResults[index - 1].distance <= truck.distance));
+
+  await emit(element('customerAccountContent'), 'change', {
+    target: { value: '25', matches: selector => selector === '[data-nearby-radius]' }
+  });
+  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  assert.equal(account.nearbyRadiusMiles, 25);
+  assert.match(element('customerAccountContent').innerHTML, /Within 25 miles/);
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ nearbyOrder: 'capital-city-eats' }) });
+  assert.equal(JSON.parse(localStorage.getItem('ftnSelectedTruckV1')).truckId, 'capital-city-eats');
 });
 
 test('roadmap marks Phase 3 and 3.1 complete and names Phase 4 next', () => {
