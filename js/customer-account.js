@@ -88,6 +88,13 @@
     [4, 'trek-seasoned-fries'],
     [6, 'fresh-lemonade']
   ]);
+  const STANDARD_DRINK_OPTIONS = [
+    { name: 'Coca-Cola', description: 'Classic Coca-Cola served ice cold.', price: 3.5, icon: '🥤' },
+    { name: 'Diet Coke', description: 'Zero-sugar Diet Coke served ice cold.', price: 3.5, icon: '🥤' },
+    { name: 'Sprite', description: 'Crisp lemon-lime soda served ice cold.', price: 3.5, icon: '🥤' },
+    { name: 'Bottled Water', description: 'Cold purified bottled water.', price: 2.5, icon: '💧' },
+    { name: 'Unsweetened Iced Tea', description: 'Fresh-brewed black tea served over ice with lemon.', price: 3.5, icon: '🧋' }
+  ];
   function buildTruckMenu(truckId, items) {
     return items.map(([category, name, description, price, icon, available = true], index) => ({
       id: `${truckId}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`,
@@ -1111,6 +1118,37 @@
     return { Appetizers: '🥨', Entrees: '🍽️', Sides: '🍟', Desserts: '🍰', Drinks: '🥤' }[category] || '🍽️';
   }
 
+  function ensureMinimumDrinkOptions(menu, truckId) {
+    const completeMenu = menu.map(item => ({ ...item, truckId }));
+    const existingDrinkNames = new Set(
+      completeMenu
+        .filter(item => item.category === 'Drinks')
+        .map(item => item.name.trim().toLowerCase())
+    );
+    let drinkCount = existingDrinkNames.size;
+    for (const drink of STANDARD_DRINK_OPTIONS) {
+      if (drinkCount >= 5) break;
+      if (existingDrinkNames.has(drink.name.toLowerCase())) continue;
+      completeMenu.push({
+        id: `${truckId}-drink-${drink.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`,
+        truckId,
+        category: 'Drinks',
+        name: drink.name,
+        description: drink.description,
+        price: drink.price,
+        calories: null,
+        available: true,
+        icon: drink.icon,
+        featured: false,
+        special: false,
+        popular: false
+      });
+      existingDrinkNames.add(drink.name.toLowerCase());
+      drinkCount += 1;
+    }
+    return completeMenu;
+  }
+
   function menuForTruck(truckId = selectedTruck().id) {
     const baseMenu = ORDERING_MENU_ITEMS.map(item => ({ ...item, truckId }));
     if (truckId !== TRUCK.id) {
@@ -1120,7 +1158,7 @@
         ...(TRUCK_ADDITIONAL_ENTREES[truckId] || []),
         ...(TRUCK_MENU_EXTRAS[truckId] || [])
       ];
-      return (cuisineMenu.length ? cuisineMenu : ORDERING_MENU_ITEMS).map(item => ({ ...item, truckId }));
+      return ensureMinimumDrinkOptions(cuisineMenu.length ? cuisineMenu : ORDERING_MENU_ITEMS, truckId);
     }
 
     const vendorMenu = readVendorMenu();
@@ -1165,7 +1203,7 @@
           popular: false
         };
       });
-    return [...connectedMenu, ...vendorOnlyItems];
+    return ensureMinimumDrinkOptions([...connectedMenu, ...vendorOnlyItems], truckId);
   }
 
   function truckExperienceDetails(truck) {
@@ -1196,52 +1234,28 @@
   }
 
   function renderTruckProfile() {
-    const truck = selectedTruck();
-    const details = truckExperienceDetails(truck);
-    const menu = menuForTruck();
-    const saved = currentAccount.favoriteTrucks.includes(truck.id);
-    const profileCollections = [
-      ['Featured Items', menu.filter(item => item.featured && item.available)],
-      ["Today's Specials", menu.filter(item => item.special && item.available)],
-      ['Popular Items', menu.filter(item => item.popular && item.available)]
-    ];
-    return `<div class="ordering-page truck-profile-page">
-      <button class="ordering-back-button" data-customer-page-back="nearby" type="button">← Nearby Trucks</button>
-      <section class="truck-profile-hero">
-        <div class="truck-profile-logo" aria-hidden="true">${truck.icon || '🚚'}</div>
-        <div class="truck-profile-identity"><p>${escapeHtml(truck.cuisine)}</p><h1>${escapeHtml(truck.name)}</h1><div class="truck-rating"><strong>★ ${details.rating}</strong><span>${details.reviews} reviews</span></div></div>
-        <button class="truck-profile-favorite ${saved ? 'saved' : ''}" data-toggle-truck-favorite="${truck.id}" type="button">${saved ? '♥ Favorited' : '♡ Favorite'}</button>
-        <div class="truck-profile-facts">
-          <span><small>Distance</small><strong>${escapeHtml(details.distanceLabel)}</strong></span>
-          <span><small>Drive Time</small><strong>${escapeHtml(details.driveTime)}</strong></span>
-          <span><small>Status & Hours</small><strong>${escapeHtml(details.status)}</strong></span>
-          <span><small>Pickup Time</small><strong>About ${truck.pickupMinutes} min</strong></span>
-          ${truck.currentEvent ? `<span><small>Current Event</small><strong>🎪 ${escapeHtml(truck.currentEvent)}</strong></span>` : ''}
-        </div>
-        <div class="truck-profile-actions">
-          <button class="primary-button" data-ordering-action="open-menu" type="button">Order Now</button>
-          <button class="secondary-button" data-ordering-action="directions" type="button">Directions</button>
-          <button class="secondary-button" data-ordering-action="call" type="button">Call</button>
-          <button class="secondary-button" data-ordering-action="share" type="button">Share</button>
-        </div>
-      </section>
-      ${profileCollections.map(([title, items]) => `<section class="ordering-showcase"><div class="ordering-section-heading"><div><p class="eyebrow">From the menu</p><h2>${title}</h2></div><button data-ordering-action="open-menu" type="button">View Full Menu →</button></div><div class="ordering-showcase-grid">${items.slice(0, 3).map(item => orderingItemCard(item, true)).join('')}</div></section>`).join('')}
-      <section class="truck-about-card"><div><p class="eyebrow">Our Story</p><h2>About This Truck</h2></div><p>${escapeHtml(truck.name)} serves bold, made-to-order ${truck.cuisine.toLowerCase()} with locally sourced ingredients and friendly neighborhood service. Follow today’s stop, order ahead, and pick up when your meal is ready.</p></section>
-    </div>`;
+    return renderTruckMenu();
   }
 
   function renderTruckMenu() {
     const truck = selectedTruck();
     const menu = menuForTruck();
+    const saved = currentAccount.favoriteTrucks.includes(truck.id);
     const categories = [...new Set(menu.map(item => item.category))];
     const hasThisTruckCart = currentAccount.cart.truckId === truck.id;
     const cartCount = hasThisTruckCart ? currentAccount.cart.items.reduce((total, item) => total + item.quantity, 0) : 0;
     const cartSubtotal = hasThisTruckCart ? cartTotals().subtotal : 0;
     return `<div class="ordering-page full-menu-page">
       <header class="menu-experience-header">
-        <button class="ordering-back-button" data-customer-page-back="truckProfile" type="button">← Truck Profile</button>
+        <button class="ordering-back-button" data-customer-page-back="nearby" type="button">← Nearby Trucks</button>
         <div><p class="eyebrow">${escapeHtml(truck.cuisine)}</p><h1>${escapeHtml(truck.name)} Menu</h1><p>Tap an item to add it · Keep scrolling while you build your order</p></div>
         <button class="menu-cart-button" data-ordering-action="open-cart" type="button"><span>🛒</span> Cart <b data-live-cart-count>${cartCount}</b></button>
+        <div class="menu-truck-tools">
+          <button class="${saved ? 'saved' : ''}" data-toggle-truck-favorite="${truck.id}" type="button">${saved ? '♥ Favorited' : '♡ Favorite'}</button>
+          <button data-ordering-action="directions" type="button">Directions</button>
+          <button data-ordering-action="call" type="button">Call</button>
+          <button data-ordering-action="share" type="button">Share</button>
+        </div>
       </header>
       <nav class="menu-category-jump" aria-label="Menu categories">${categories.map(category => `<button data-menu-category="${escapeHtml(category)}" type="button">${escapeHtml(category)}</button>`).join('')}</nav>
       <div class="full-menu-sections">${categories.map(category => `<section class="full-menu-category" data-menu-section="${escapeHtml(category)}"><div class="ordering-section-heading"><div><p class="eyebrow">Browse</p><h2>${escapeHtml(category)}</h2></div><span>${menu.filter(item => item.category === category).length} items</span></div><div class="full-menu-grid">${menu.filter(item => item.category === category).map(item => orderingItemCard(item)).join('')}</div></section>`).join('')}</div>
@@ -1931,7 +1945,7 @@
       if (truck) {
         selectedTruckId = truck.id;
         localStorage.setItem('ftnSelectedTruckV1', JSON.stringify({ truckId: truck.id, selectedAt: Date.now() }));
-        renderCustomerPage('truckProfile');
+        renderCustomerPage('truckMenu');
       }
       return;
     }
@@ -1977,7 +1991,7 @@
     if (openTruck) {
       selectedTruckId = openTruck.dataset.openTruckProfile;
       localStorage.setItem('ftnSelectedTruckV1', JSON.stringify({ truckId: selectedTruckId, selectedAt: Date.now() }));
-      renderCustomerPage('truckProfile');
+      renderCustomerPage('truckMenu');
       return;
     }
     const addMenuItemButton = event.target.closest('[data-add-menu-item]');
@@ -2042,7 +2056,7 @@
       const eventItem = EVENTS.find(item => item.id === homeEvent.dataset.homeEvent);
       if (eventItem) {
         selectedTruckId = eventItem.truckId;
-        renderCustomerPage('truckProfile');
+        renderCustomerPage('truckMenu');
       }
       return;
     }

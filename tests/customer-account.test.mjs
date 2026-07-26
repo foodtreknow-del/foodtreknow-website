@@ -115,7 +115,6 @@ test('customer account UI includes every required area and has unique static IDs
     'Add Address', 'Add Payment Method', 'Explore', 'My Cart', 'Cart',
     'Find Food Trucks Near Your Location', 'Showing Trucks Within:',
     'Drive time', 'Hours today', 'Estimated pickup', 'Order Now', 'Directions',
-    'Featured Items', "Today's Specials", 'Popular Items', 'About This Truck',
     'Appetizers', 'Entrees', 'Sides', 'Desserts', 'Drinks',
     'Choose a size', 'Tap an item to add it', 'Add to Cart', 'Item Notes',
     'No onions', 'Extra pickles', 'Well done', 'Cut in half',
@@ -406,7 +405,6 @@ test('twenty sample trucks open distinct cuisine-specific menus', async () => {
 
   for (const [truckId, expectedItem] of expectedMenus) {
     await emit(element('customerAccountContent'), 'click', { target: actionTarget({ nearbyOrder: truckId }) });
-    await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-menu' }) });
     const menuMarkup = element('customerAccountContent').innerHTML;
     assert.match(menuMarkup, new RegExp(expectedItem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.match(menuMarkup, /data-menu-section="Entrees"/);
@@ -415,6 +413,9 @@ test('twenty sample trucks open distinct cuisine-specific menus', async () => {
     const entreeSection = menuMarkup.match(/data-menu-section="Entrees"[\s\S]*?<\/section>/)?.[0] || '';
     const entreeItemIds = [...entreeSection.matchAll(/data-add-menu-item="([^"]+)"/g)].map(match => match[1]);
     assert.ok(entreeItemIds.length >= 5, `${truckId} should provide at least five entrées`);
+    const drinkSection = menuMarkup.match(/data-menu-section="Drinks"[\s\S]*?<\/section>/)?.[0] || '';
+    const drinkItemIds = [...drinkSection.matchAll(/data-add-menu-item="([^"]+)"/g)].map(match => match[1]);
+    assert.ok(drinkItemIds.length >= 5, `${truckId} should provide at least five drinks`);
     const menuItemIds = [...menuMarkup.matchAll(/data-add-menu-item="([^"]+)"/g)].map(match => match[1]).sort();
     assert.ok(menuItemIds.length >= 13, `${truckId} should provide a full menu with at least thirteen selections`);
     menuSignatures.push(menuItemIds.join('|'));
@@ -438,10 +439,8 @@ test('customer ordering journey persists cart, places an order, and opens live t
   await emit(element('openCustomerPortalButton'), 'click');
 
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ nearbyOrder: 'capital-city-eats' }) });
-  assert.match(element('customerAccountContent').innerHTML, /About This Truck/);
-  assert.match(element('customerAccountContent').innerHTML, /★ 4\.9/);
-
-  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-menu' }) });
+  assert.match(element('customerAccountContent').innerHTML, /Capital City Eats Menu/);
+  assert.doesNotMatch(element('customerAccountContent').innerHTML, /Featured Items|Today’s Specials|Popular Items/);
   ['Appetizers', 'Entrees', 'Sides', 'Desserts', 'Drinks'].forEach(category => assert.match(element('customerAccountContent').innerHTML, new RegExp(category)));
   assert.match(element('customerAccountContent').innerHTML, /Sold Out/);
 
