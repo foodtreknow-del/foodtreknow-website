@@ -8,6 +8,7 @@ const vendorSource = fs.readFileSync(new URL('../js/app.js', import.meta.url), '
 const source = fs.readFileSync(new URL('../js/customer-account.js', import.meta.url), 'utf8');
 const betaBannerSource = fs.readFileSync(new URL('../js/beta-banner.js', import.meta.url), 'utf8');
 const betaBannerStyles = fs.readFileSync(new URL('../css/beta-banner.css', import.meta.url), 'utf8');
+const accountStyles = fs.readFileSync(new URL('../css/customer-account.css', import.meta.url), 'utf8');
 const orderingStyles = fs.readFileSync(new URL('../css/customer-ordering.css', import.meta.url), 'utf8');
 
 class StorageMock {
@@ -134,6 +135,17 @@ test('customer account UI includes every required area and has unique static IDs
   assert.match(orderingStyles, /@media\(max-width:760px\)/);
   assert.doesNotMatch(source, /Choose Spice Level|Choose Protein|Extra Sauce/);
   assert.match(orderingStyles, /floating-cart-summary/);
+});
+
+test('homepage prioritizes customer ordering before the vendor login action', () => {
+  const customerActionIndex = html.indexOf('Order as a Customer');
+  const vendorActionIndex = html.indexOf('Vendor Log In');
+  assert.ok(customerActionIndex >= 0);
+  assert.ok(vendorActionIndex > customerActionIndex);
+  assert.match(html, /customer-entry customer-entry-primary/);
+  assert.match(html, /class="vendor-login-button full"/);
+  assert.match(accountStyles, /\.customer-entry-button\{[^}]*background:var\(--brand\)/);
+  assert.match(accountStyles, /\.vendor-login-button\{[^}]*background:#17241d/);
 });
 
 test('beta banner is the first homepage content and includes responsive persisted interactions', () => {

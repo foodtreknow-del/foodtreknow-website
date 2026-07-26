@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>FoodTrekNow | Vendor & Customer Portal</title>
 <link rel="stylesheet" href="css/vendor.css" />
-<link rel="stylesheet" href="css/customer-account.css" />
+<link rel="stylesheet" href="css/customer-account.css?v=customer-priority-1" />
 <link rel="stylesheet" href="css/customer-ordering.css" />
 <link rel="stylesheet" href="css/beta-banner.css" />
 <style>.hidden-view{display:none!important}</style>
@@ -40,22 +40,23 @@
   <main class="login-shell">
     <section class="brand-panel"><div class="logo-mark">FTN</div><h1>FoodTrekNow</h1><p>Vendor Portal</p></section>
     <section class="login-card">
-      <h2>Welcome Back</h2><p class="muted">Sign in to manage your truck, orders, menu, and sales.</p>
+      <div class="customer-entry customer-entry-primary">
+        <span>Looking for something delicious?</span>
+        <button id="openCustomerPortalButton" class="customer-entry-button" type="button">Order as a Customer <span aria-hidden="true">→</span></button>
+      </div>
+      <h2>Vendor Portal</h2><p class="muted">Sign in to manage your truck, orders, menu, and sales.</p>
       <form id="loginForm" novalidate>
         <label for="email">Email</label><input id="email" type="email" placeholder="vendor@foodtreknow.com" required />
         <label for="password">Password</label><input id="password" type="password" placeholder="Enter password" required />
         <div class="form-row"><label class="check-row"><input id="remember" type="checkbox" /> Remember me</label><button class="text-button" type="button">Forgot password?</button></div>
-        <p id="loginMessage" class="form-message" aria-live="polite"></p><button class="primary-button full" type="submit">Log In</button>
+        <p id="loginMessage" class="form-message" aria-live="polite"></p>
       </form>
       <div class="divider"><span>or</span></div>
       <button class="secondary-button full" type="button">Continue with Google</button>
       <button class="secondary-button full" type="button">Continue with Apple</button>
       <button id="demoLoginButton" class="secondary-button full" type="button">Fill Demo Login</button>
       <div class="demo-note"><strong>Demo login</strong><br />Email: vendor@foodtreknow.com<br />Password: demo123</div>
-      <div class="customer-entry">
-        <span>Looking for food?</span>
-        <button id="openCustomerPortalButton" class="customer-entry-button" type="button">Order as a Customer <span aria-hidden="true">→</span></button>
-      </div>
+      <button class="vendor-login-button full" type="submit" form="loginForm">Vendor Log In</button>
     </section>
   </main>
 </div>
