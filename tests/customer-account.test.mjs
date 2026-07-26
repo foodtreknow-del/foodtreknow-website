@@ -115,8 +115,8 @@ test('customer account UI includes every required area and has unique static IDs
     'Drive time', 'Hours today', 'Estimated pickup', 'Order Now', 'Directions',
     'Featured Items', "Today's Specials", 'Popular Items', 'About This Truck',
     'Appetizers', 'Entrees', 'Sides', 'Desserts', 'Drinks',
-    'Choose Spice Level', 'Choose Protein', 'Choose Size', 'Extra Cheese',
-    'No Onions', 'Extra Sauce', 'Special Instructions', 'Add to Cart',
+    'Choose a size', 'Tap an item to add it', 'Add to Cart', 'Item Notes',
+    'No onions', 'Extra pickles', 'Well done', 'Cut in half',
     'Shopping Cart', 'Service Fee', 'Proceed to Checkout', 'Pickup Information',
     'Schedule Later', 'Promo Code', 'Place Order', 'Order Successfully Placed',
     'Track My Order', 'Order Received', 'Ready for Pickup', 'Order Number'
@@ -132,6 +132,8 @@ test('customer account UI includes every required area and has unique static IDs
   assert.match(source, /LocalCustomerOrderingAdapter/);
   assert.match(source, /window\.FoodTrekNowOrdering/);
   assert.match(orderingStyles, /@media\(max-width:760px\)/);
+  assert.doesNotMatch(source, /Choose Spice Level|Choose Protein|Extra Sauce/);
+  assert.match(orderingStyles, /floating-cart-summary/);
 });
 
 test('beta banner is the first homepage content and includes responsive persisted interactions', () => {
@@ -359,21 +361,44 @@ test('customer ordering journey persists cart, places an order, and opens live t
   ['Appetizers', 'Entrees', 'Sides', 'Desserts', 'Drinks'].forEach(category => assert.match(element('customerAccountContent').innerHTML, new RegExp(category)));
   assert.match(element('customerAccountContent').innerHTML, /Sold Out/);
 
-  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ openMenuItem: 'capital-smash-burger' }) });
-  assert.match(element('customerAccountContent').innerHTML, /Customize Your Item/);
-  assert.match(element('customerAccountContent').innerHTML, /Choose Spice Level/);
-  element('itemDetailQuantity').value = '2';
-  element('itemSpecialInstructions').value = 'Sauce on the side';
-  await emit(element('customerAccountContent'), 'submit', { preventDefault() {}, target: { id: 'customerItemDetailForm' } });
+  assert.match(element('customerAccountContent').innerHTML, /floating-cart-summary/);
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
 
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items.length, 1);
   assert.equal(account.cart.items[0].quantity, 2);
-  assert.equal(account.cart.items[0].instructions, 'Sauce on the side');
+  assert.equal(account.cart.items[0].instructions, '');
+  assert.match(element('customerAccountContent').innerHTML, /Capital City Eats Menu/);
+  assert.doesNotMatch(element('customerAccountContent').innerHTML, /Shopping Cart/);
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'fresh-lemonade' }) });
+  assert.match(element('customerAccountModalContent').innerHTML, /One quick choice/);
+  assert.match(element('customerAccountModalContent').innerHTML, /Choose a size/);
+  element('requiredMenuItemId').value = 'fresh-lemonade';
+  const originalModalQuerySelectorAll = element('customerAccountModalContent').querySelectorAll;
+  element('customerAccountModalContent').querySelectorAll = selector => selector === '[data-required-choice]:checked'
+    ? [{ dataset: { choiceGroup: 'Choose a size', choiceName: 'Regular', choicePrice: '0' } }]
+    : [];
+  await emit(element('customerAccountModalContent'), 'submit', { preventDefault() {}, target: { id: 'requiredMenuItemForm' } });
+  element('customerAccountModalContent').querySelectorAll = originalModalQuerySelectorAll;
+
+  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  assert.equal(account.cart.items.length, 2);
+  assert.equal(account.cart.items.find(item => item.menuItemId === 'fresh-lemonade').modifiers[0].name, 'Regular');
   assert.ok(Number.isInteger(account.cart.orderNumber));
   const cartOrderNumber = account.cart.orderNumber;
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-cart' }) });
   assert.match(element('customerAccountContent').innerHTML, new RegExp(`Order #${account.cart.orderNumber}`));
   assert.match(element('customerAccountContent').innerHTML, /Proceed to Checkout/);
+  const burger = account.cart.items.find(item => item.menuItemId === 'capital-smash-burger');
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ cartNote: burger.id }) });
+  element('cartNoteItemId').value = burger.id;
+  element('cartItemNote').value = 'No onions, cut in half';
+  await emit(element('customerAccountModalContent'), 'submit', { preventDefault() {}, target: { id: 'customerCartItemNoteForm' } });
+  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  assert.equal(account.cart.items.find(item => item.id === burger.id).instructions, 'No onions, cut in half');
 
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'checkout' }) });
   assert.match(element('customerAccountContent').innerHTML, /Review and Place Your Order/);

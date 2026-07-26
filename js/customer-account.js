@@ -47,7 +47,7 @@
   ];
 
   const ORDERING_MENU_ITEMS = [
-    { id: 'loaded-street-nachos', category: 'Appetizers', name: 'Loaded Street Nachos', description: 'House chips, queso, pico, crema, jalapeños, and your choice of protein.', price: 10.5, calories: 740, available: true, icon: '🧀', featured: true, special: false, popular: true },
+    { id: 'loaded-street-nachos', category: 'Appetizers', name: 'Loaded Street Nachos', description: 'House chips, queso, pico, crema, jalapeños, and seasoned beef.', price: 10.5, calories: 740, available: true, icon: '🧀', featured: true, special: false, popular: true },
     { id: 'crispy-cauliflower-bites', category: 'Appetizers', name: 'Crispy Cauliflower Bites', description: 'Golden cauliflower with smoky ranch and scallions.', price: 8.5, calories: 420, available: true, icon: '🥦', featured: false, special: true, popular: false },
     { id: 'capital-smash-burger', category: 'Entrees', name: 'Capital Smash Burger', description: 'Two crispy beef patties, American cheese, pickles, onions, and Trek sauce.', price: 13.5, calories: 890, available: true, icon: '🍔', featured: true, special: false, popular: true },
     { id: 'firecracker-chicken-tacos', category: 'Entrees', name: 'Firecracker Chicken Tacos', description: 'Three griddled tacos with spicy chicken, slaw, pico, and lime crema.', price: 12.75, calories: 680, available: true, icon: '🌮', featured: true, special: true, popular: true },
@@ -57,15 +57,8 @@
     { id: 'street-corn-cup', category: 'Sides', name: 'Street Corn Cup', description: 'Charred corn, cotija, lime crema, chile, and cilantro.', price: 5.25, calories: 310, available: true, icon: '🌽', featured: false, special: true, popular: false },
     { id: 'churro-bites', category: 'Desserts', name: 'Cinnamon Churro Bites', description: 'Warm cinnamon-sugar churros with chocolate dipping sauce.', price: 6.5, calories: 510, available: true, icon: '🍩', featured: true, special: false, popular: true },
     { id: 'banana-pudding-jar', category: 'Desserts', name: 'Banana Pudding Jar', description: 'Vanilla pudding, fresh banana, wafers, and whipped cream.', price: 6, calories: 460, available: true, icon: '🍌', featured: false, special: true, popular: false },
-    { id: 'fresh-lemonade', category: 'Drinks', name: 'Fresh-Squeezed Lemonade', description: 'Bright, cold lemonade made fresh throughout the day.', price: 4, calories: 180, available: true, icon: '🍋', featured: false, special: false, popular: true },
+    { id: 'fresh-lemonade', category: 'Drinks', name: 'Fresh-Squeezed Lemonade', description: 'Bright, cold lemonade made fresh throughout the day.', price: 4, calories: 180, available: true, icon: '🍋', featured: false, special: false, popular: true, requiredChoices: [{ id: 'size', name: 'Choose a size', options: [{ id: 'regular', name: 'Regular', price: 0 }, { id: 'large', name: 'Large', price: 1.5 }] }] },
     { id: 'sweet-tea', category: 'Drinks', name: 'Southern Sweet Tea', description: 'Fresh-brewed black tea served over ice with lemon.', price: 3.5, calories: 150, available: true, icon: '🥤', featured: false, special: false, popular: false }
-  ];
-
-  const ITEM_MODIFIER_GROUPS = [
-    { id: 'spice', name: 'Choose Spice Level', type: 'single', required: true, options: [{ id: 'mild', name: 'Mild', price: 0 }, { id: 'medium', name: 'Medium', price: 0 }, { id: 'hot', name: 'Hot', price: 0 }, { id: 'trek-hot', name: 'Trek Hot', price: 0.75 }] },
-    { id: 'protein', name: 'Choose Protein', type: 'single', required: true, options: [{ id: 'chicken', name: 'Grilled Chicken', price: 0 }, { id: 'beef', name: 'Seasoned Beef', price: 1.5 }, { id: 'pork', name: 'Smoked Pork', price: 2 }, { id: 'veggie', name: 'Roasted Vegetables', price: 0 }] },
-    { id: 'size', name: 'Choose Size', type: 'single', required: true, options: [{ id: 'regular', name: 'Regular', price: 0 }, { id: 'large', name: 'Large', price: 3.5 }] },
-    { id: 'extras', name: 'Make It Yours', type: 'multiple', required: false, options: [{ id: 'extra-cheese', name: 'Extra Cheese', price: 1.25 }, { id: 'no-onions', name: 'No Onions', price: 0 }, { id: 'extra-sauce', name: 'Extra Sauce', price: 0.75 }] }
   ];
 
   const seedOrders = () => [
@@ -389,7 +382,6 @@
   let currentPage = 'overview';
   let orderHistoryFilter = 'current';
   let selectedTruckId = TRUCK.id;
-  let selectedMenuItemId = null;
   let lastPlacedOrderId = null;
 
   function readSession() {
@@ -576,7 +568,7 @@
   }
 
   function menuForTruck() {
-    return ORDERING_MENU_ITEMS.map(item => ({ ...item, truckId: selectedTruck().id, modifierGroups: ITEM_MODIFIER_GROUPS }));
+    return ORDERING_MENU_ITEMS.map(item => ({ ...item, truckId: selectedTruck().id }));
   }
 
   function truckExperienceDetails(truck) {
@@ -596,9 +588,13 @@
   }
 
   function orderingItemCard(item, compact = false) {
-    return `<button class="ordering-item-card ${compact ? 'compact' : ''} ${item.available ? '' : 'sold-out'}" data-open-menu-item="${item.id}" type="button" ${item.available ? '' : 'disabled'}>
+    const cartQuantity = currentAccount.cart.truckId === selectedTruckId
+      ? currentAccount.cart.items.filter(cartItem => cartItem.menuItemId === item.id).reduce((total, cartItem) => total + Number(cartItem.quantity || 0), 0)
+      : 0;
+    const requiresChoice = Boolean(item.requiredChoices?.length);
+    return `<button class="ordering-item-card ${compact ? 'compact' : ''} ${item.available ? '' : 'sold-out'}" data-add-menu-item="${item.id}" type="button" ${item.available ? '' : 'disabled'}>
       <span class="ordering-item-photo" aria-hidden="true">${item.icon}${item.available ? '' : '<b>Sold Out</b>'}</span>
-      <span class="ordering-item-copy"><small>${escapeHtml(item.category)}</small><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.description)}</span><em>${item.calories ? `${item.calories} cal · ` : ''}${customerMoney(item.price)}</em></span>
+      <span class="ordering-item-copy"><small>${escapeHtml(item.category)}</small><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.description)}</span><em>${item.calories ? `${item.calories} cal · ` : ''}${customerMoney(item.price)}</em><span class="menu-item-add-label">${requiresChoice ? 'Choose options' : '+ Add'}${cartQuantity ? `<b>${cartQuantity} in cart</b>` : ''}</span></span>
     </button>`;
   }
 
@@ -641,59 +637,85 @@
     const truck = selectedTruck();
     const menu = menuForTruck();
     const categories = [...new Set(menu.map(item => item.category))];
-    const cartCount = currentAccount.cart.items.reduce((total, item) => total + item.quantity, 0);
+    const hasThisTruckCart = currentAccount.cart.truckId === truck.id;
+    const cartCount = hasThisTruckCart ? currentAccount.cart.items.reduce((total, item) => total + item.quantity, 0) : 0;
+    const cartSubtotal = hasThisTruckCart ? cartTotals().subtotal : 0;
     return `<div class="ordering-page full-menu-page">
       <header class="menu-experience-header">
         <button class="ordering-back-button" data-customer-page-back="truckProfile" type="button">← Truck Profile</button>
-        <div><p class="eyebrow">${escapeHtml(truck.cuisine)}</p><h1>${escapeHtml(truck.name)} Menu</h1><p>Made fresh for pickup · About ${truck.pickupMinutes} minutes</p></div>
-        <button class="menu-cart-button" data-ordering-action="open-cart" type="button"><span>🛒</span> Cart <b>${cartCount}</b></button>
+        <div><p class="eyebrow">${escapeHtml(truck.cuisine)}</p><h1>${escapeHtml(truck.name)} Menu</h1><p>Tap an item to add it · Keep scrolling while you build your order</p></div>
+        <button class="menu-cart-button" data-ordering-action="open-cart" type="button"><span>🛒</span> Cart <b data-live-cart-count>${cartCount}</b></button>
       </header>
       <nav class="menu-category-jump" aria-label="Menu categories">${categories.map(category => `<button data-menu-category="${escapeHtml(category)}" type="button">${escapeHtml(category)}</button>`).join('')}</nav>
       <div class="full-menu-sections">${categories.map(category => `<section class="full-menu-category" data-menu-section="${escapeHtml(category)}"><div class="ordering-section-heading"><div><p class="eyebrow">Browse</p><h2>${escapeHtml(category)}</h2></div><span>${menu.filter(item => item.category === category).length} items</span></div><div class="full-menu-grid">${menu.filter(item => item.category === category).map(item => orderingItemCard(item)).join('')}</div></section>`).join('')}</div>
+      <aside class="floating-cart-summary ${cartCount ? 'has-items' : ''}" aria-live="polite">
+        <button class="floating-cart-review" data-ordering-action="open-cart" type="button"><span>🛒</span><span><small>Your order</small><strong><b data-live-cart-count>${cartCount}</b> <span data-live-cart-noun>item${cartCount === 1 ? '' : 's'}</span> · <b data-live-cart-total>${customerMoney(cartSubtotal)}</b></strong></span></button>
+        <button class="primary-button floating-checkout-button" data-ordering-action="checkout" type="button" ${cartCount ? '' : 'disabled'}>Checkout</button>
+      </aside>
     </div>`;
   }
 
-  function modifierGroupMarkup(group) {
-    const inputType = group.type === 'multiple' ? 'checkbox' : 'radio';
-    return `<fieldset class="item-modifier-group"><legend>${escapeHtml(group.name)} ${group.required ? '<span>Required</span>' : '<small>Optional</small>'}</legend><div>${group.options.map((option, index) => `<label><input type="${inputType}" name="modifier-${group.id}" value="${option.id}" data-item-modifier data-modifier-group="${escapeHtml(group.name)}" data-modifier-name="${escapeHtml(option.name)}" data-modifier-price="${option.price}" ${group.type !== 'multiple' && index === 0 ? 'checked' : ''}><span><strong>${escapeHtml(option.name)}</strong>${option.price ? `<small>+${customerMoney(option.price)}</small>` : '<small>Included</small>'}</span></label>`).join('')}</div></fieldset>`;
+  function requiredChoiceMarkup(choice) {
+    return `<fieldset class="required-choice-group"><legend>${escapeHtml(choice.name)} <span>Required</span></legend>${choice.options.map((option, index) => `<label><input type="radio" name="required-choice-${choice.id}" value="${option.id}" data-required-choice data-choice-group="${escapeHtml(choice.name)}" data-choice-name="${escapeHtml(option.name)}" data-choice-price="${option.price}" ${index === 0 ? 'checked' : ''}><span><strong>${escapeHtml(option.name)}</strong><small>${option.price ? `+${customerMoney(option.price)}` : 'Included'}</small></span></label>`).join('')}</fieldset>`;
   }
 
-  function renderItemDetail() {
-    const item = menuForTruck().find(menuItem => menuItem.id === selectedMenuItemId) || menuForTruck()[0];
-    selectedMenuItemId = item.id;
-    return `<div class="ordering-page item-detail-page">
-      <button class="ordering-back-button" data-customer-page-back="truckMenu" type="button">← Full Menu</button>
-      <form id="customerItemDetailForm" class="item-detail-layout">
-        <section class="item-detail-visual"><div class="item-detail-photo" aria-hidden="true">${item.icon}</div><div><p class="eyebrow">${escapeHtml(item.category)}</p><h1>${escapeHtml(item.name)}</h1><p>${escapeHtml(item.description)}</p><div class="item-detail-base"><strong>${customerMoney(item.price)}</strong>${item.calories ? `<span>${item.calories} calories</span>` : ''}</div></div></section>
-        <section class="item-customizer">
-          <div class="item-customizer-heading"><div><p class="eyebrow">Make It Yours</p><h2>Customize Your Item</h2></div><span>Selections update your total</span></div>
-          ${item.modifierGroups.map(modifierGroupMarkup).join('')}
-          <label class="item-instructions"><strong>Special Instructions</strong><textarea id="itemSpecialInstructions" class="customer-textarea" rows="3" maxlength="240" placeholder="Allergies, preparation notes, or anything else we should know?"></textarea></label>
-          <div class="item-add-bar">
-            <div class="ordering-quantity"><button data-item-quantity-action="decrease" type="button" aria-label="Decrease quantity">−</button><input id="itemDetailQuantity" value="1" readonly aria-label="Quantity"><button data-item-quantity-action="increase" type="button" aria-label="Increase quantity">+</button></div>
-            <button class="primary-button item-add-button" type="submit">Add to Cart · <span id="itemDetailTotal">${customerMoney(item.price)}</span></button>
-          </div>
-        </section>
-      </form>
-    </div>`;
+  function requiredOptionsModal(item) {
+    openModal(`<form id="requiredMenuItemForm" class="required-options-modal"><input id="requiredMenuItemId" type="hidden" value="${item.id}"><div class="required-options-heading"><span>${item.icon}</span><div><p class="eyebrow">One quick choice</p><h2 id="customerModalTitle">${escapeHtml(item.name)}</h2><p>${escapeHtml(item.description)}</p></div></div>${item.requiredChoices.map(requiredChoiceMarkup).join('')}<div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" type="submit">Add to Cart · ${customerMoney(item.price)}</button></div></form>`);
   }
 
-  function selectedItemModifiers() {
-    return [...accountContent.querySelectorAll('[data-item-modifier]:checked')].map(input => ({
-      group: input.dataset.modifierGroup,
-      name: input.dataset.modifierName,
-      price: Number(input.dataset.modifierPrice || 0)
+  function selectedRequiredChoices() {
+    return [...modalContent.querySelectorAll('[data-required-choice]:checked')].map(input => ({
+      group: input.dataset.choiceGroup,
+      name: input.dataset.choiceName,
+      price: Number(input.dataset.choicePrice || 0)
     }));
   }
 
-  function updateItemDetailPrice() {
-    const item = menuForTruck().find(menuItem => menuItem.id === selectedMenuItemId);
-    const quantityInput = document.getElementById('itemDetailQuantity');
-    const totalElement = document.getElementById('itemDetailTotal');
-    if (!item || !quantityInput || !totalElement) return;
-    const modifierTotal = selectedItemModifiers().reduce((total, modifier) => total + modifier.price, 0);
-    const total = (item.price + modifierTotal) * Math.max(1, Number(quantityInput.value || 1));
-    totalElement.textContent = customerMoney(total);
+  function addMenuItem(item, modifiers = []) {
+    if (!item || !item.available) return false;
+    if (currentAccount.cart.items.length && currentAccount.cart.truckId !== selectedTruckId && !confirm('Your cart contains items from another truck. Start a new cart?')) return false;
+    if (currentAccount.cart.truckId !== selectedTruckId) currentAccount.cart = { truckId: selectedTruckId, orderNumber: generateOrderNumber(), items: [] };
+    if (!currentAccount.cart.orderNumber) currentAccount.cart.orderNumber = generateOrderNumber();
+    const signature = modifiers.map(modifier => `${modifier.group}:${modifier.name}`).sort().join('|');
+    const existing = currentAccount.cart.items.find(cartItem => cartItem.menuItemId === item.id && (cartItem.modifiers || []).map(modifier => `${modifier.group}:${modifier.name}`).sort().join('|') === signature && !cartItem.instructions);
+    if (existing) {
+      existing.quantity += 1;
+      existing.qty = existing.quantity;
+    } else {
+      currentAccount.cart.items.push({
+        id: uid('cart'),
+        menuItemId: item.id,
+        name: item.name,
+        icon: item.icon,
+        basePrice: item.price,
+        price: item.price,
+        quantity: 1,
+        qty: 1,
+        modifiers,
+        instructions: ''
+      });
+    }
+    CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
+    updateContinuousMenuCart();
+    customerToast(`${item.name} added to your cart.`);
+    return true;
+  }
+
+  function updateContinuousMenuCart() {
+    const count = currentAccount.cart.truckId === selectedTruckId ? currentAccount.cart.items.reduce((total, item) => total + Number(item.quantity || 0), 0) : 0;
+    const subtotal = count ? cartTotals().subtotal : 0;
+    accountContent.querySelectorAll('[data-live-cart-count]').forEach(element => { element.textContent = String(count); });
+    accountContent.querySelectorAll('[data-live-cart-noun]').forEach(element => { element.textContent = count === 1 ? 'item' : 'items'; });
+    accountContent.querySelectorAll('[data-live-cart-total]').forEach(element => { element.textContent = customerMoney(subtotal); });
+    const summary = accountContent.querySelector('.floating-cart-summary');
+    if (summary) summary.classList.toggle('has-items', Boolean(count));
+    const checkoutButton = accountContent.querySelector('.floating-checkout-button');
+    if (checkoutButton) checkoutButton.disabled = !count;
+    updateCartBadge();
+  }
+
+  function cartItemNoteModal(item) {
+    openModal(`<form id="customerCartItemNoteForm" class="cart-note-modal"><input id="cartNoteItemId" type="hidden" value="${item.id}"><p class="eyebrow">Item Notes</p><h2 id="customerModalTitle">${escapeHtml(item.name)}</h2><p class="muted">Add a special request for this item. The truck will see it with your order.</p><label for="cartItemNote">Notes</label><textarea id="cartItemNote" class="customer-textarea" rows="4" maxlength="240" placeholder="No onions · Extra pickles · Well done · Cut in half">${escapeHtml(item.instructions || '')}</textarea><div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" type="submit">Save Notes</button></div></form>`);
   }
 
   function cartItemUnitPrice(item) {
@@ -711,7 +733,7 @@
     const modifiers = (item.modifiers || []).map(modifier => modifier.name).join(' · ');
     return `<article class="ordering-cart-item">
       <div class="cart-item-photo" aria-hidden="true">${item.icon || '🍽️'}</div>
-      <div class="cart-item-copy"><h3>${escapeHtml(item.name)}</h3>${modifiers ? `<p>${escapeHtml(modifiers)}</p>` : ''}${item.instructions ? `<small>“${escapeHtml(item.instructions)}”</small>` : ''}<button data-cart-remove="${item.id}" type="button">Remove</button></div>
+      <div class="cart-item-copy"><h3>${escapeHtml(item.name)}</h3>${modifiers ? `<p>${escapeHtml(modifiers)}</p>` : ''}${item.instructions ? `<small>“${escapeHtml(item.instructions)}”</small>` : ''}<div class="cart-item-links"><button data-cart-note="${item.id}" type="button">${item.instructions ? 'Edit Notes' : '+ Add Notes'}</button><button data-cart-remove="${item.id}" type="button">Remove</button></div></div>
       <div class="cart-item-controls"><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong><div class="ordering-quantity small"><button data-cart-quantity="${item.id}" data-quantity-change="-1" type="button">−</button><span>${item.quantity}</span><button data-cart-quantity="${item.id}" data-quantity-change="1" type="button">+</button></div></div>
     </article>`;
   }
@@ -789,7 +811,7 @@
     vendorOrders.unshift({
       id: order.id,
       customer: currentAccount.preferredName || currentAccount.firstName,
-      items: order.items.map(item => ({ name: item.name, qty: item.qty, price: item.price })),
+      items: order.items.map(item => ({ name: item.name, qty: item.qty, price: item.price, modifiers: item.modifiers || [], instructions: item.instructions || '' })),
       subtotal: order.subtotal,
       tax: order.tax,
       total: order.total,
@@ -850,7 +872,6 @@
       nearby: renderNearbyTrucks,
       truckProfile: renderTruckProfile,
       truckMenu: renderTruckMenu,
-      itemDetail: renderItemDetail,
       cart: renderCart,
       checkout: renderCheckout,
       confirmation: renderOrderConfirmation,
@@ -1306,10 +1327,11 @@
       renderCustomerPage('truckProfile');
       return;
     }
-    const openMenuItem = event.target.closest('[data-open-menu-item]');
-    if (openMenuItem) {
-      selectedMenuItemId = openMenuItem.dataset.openMenuItem;
-      renderCustomerPage('itemDetail');
+    const addMenuItemButton = event.target.closest('[data-add-menu-item]');
+    if (addMenuItemButton) {
+      const item = menuForTruck().find(menuItem => menuItem.id === addMenuItemButton.dataset.addMenuItem);
+      if (item?.requiredChoices?.length) requiredOptionsModal(item);
+      else addMenuItem(item);
       return;
     }
     const categoryJump = event.target.closest('[data-menu-category]');
@@ -1318,20 +1340,18 @@
       section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    const itemQuantity = event.target.closest('[data-item-quantity-action]');
-    if (itemQuantity) {
-      const quantityInput = document.getElementById('itemDetailQuantity');
-      const change = itemQuantity.dataset.itemQuantityAction === 'increase' ? 1 : -1;
-      quantityInput.value = String(Math.max(1, Math.min(20, Number(quantityInput.value || 1) + change)));
-      updateItemDetailPrice();
-      return;
-    }
     const cartQuantity = event.target.closest('[data-cart-quantity]');
     if (cartQuantity) {
       const item = currentAccount.cart.items.find(cartItem => cartItem.id === cartQuantity.dataset.cartQuantity);
       if (item) item.quantity = Math.max(1, Math.min(99, item.quantity + Number(cartQuantity.dataset.quantityChange || 0)));
       CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
       renderCustomerPage('cart');
+      return;
+    }
+    const cartNote = event.target.closest('[data-cart-note]');
+    if (cartNote) {
+      const item = currentAccount.cart.items.find(cartItem => cartItem.id === cartNote.dataset.cartNote);
+      if (item) cartItemNoteModal(item);
       return;
     }
     const cartRemove = event.target.closest('[data-cart-remove]');
@@ -1438,10 +1458,6 @@
       renderCustomerPage('nearby');
       return;
     }
-    if (event.target.matches('[data-item-modifier]')) {
-      updateItemDetailPrice();
-      return;
-    }
     if (event.target.matches('[data-notification-setting]')) {
       currentAccount.preferences.notifications[event.target.dataset.notificationSetting] = event.target.checked;
       persistCurrentAccount();
@@ -1472,32 +1488,6 @@
   });
 
   accountContent.addEventListener('submit', async event => {
-    if (event.target.id === 'customerItemDetailForm') {
-      event.preventDefault();
-      const item = menuForTruck().find(menuItem => menuItem.id === selectedMenuItemId);
-      if (!item || !item.available) return;
-      if (currentAccount.cart.items.length && currentAccount.cart.truckId !== selectedTruckId && !confirm('Your cart contains items from another truck. Start a new cart?')) return;
-      if (currentAccount.cart.truckId !== selectedTruckId) currentAccount.cart = { truckId: selectedTruckId, orderNumber: generateOrderNumber(), items: [] };
-      if (!currentAccount.cart.orderNumber) currentAccount.cart.orderNumber = generateOrderNumber();
-      const quantity = Math.max(1, Number(document.getElementById('itemDetailQuantity').value || 1));
-      const modifiers = selectedItemModifiers();
-      currentAccount.cart.items.push({
-        id: uid('cart'),
-        menuItemId: item.id,
-        name: item.name,
-        icon: item.icon,
-        basePrice: item.price,
-        price: item.price + modifiers.reduce((total, modifier) => total + modifier.price, 0),
-        quantity,
-        qty: quantity,
-        modifiers,
-        instructions: document.getElementById('itemSpecialInstructions').value.trim()
-      });
-      CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
-      renderCustomerPage('cart');
-      customerToast(`${item.name} added to your cart.`);
-      return;
-    }
     if (event.target.id === 'customerCheckoutForm') {
       event.preventDefault();
       if (!currentAccount.cart.items.length) {
@@ -1598,6 +1588,22 @@
 
   modalContent.addEventListener('submit', async event => {
     event.preventDefault();
+    if (event.target.id === 'requiredMenuItemForm') {
+      const item = menuForTruck().find(menuItem => menuItem.id === document.getElementById('requiredMenuItemId').value);
+      const choices = selectedRequiredChoices();
+      if (item && choices.length === item.requiredChoices.length && addMenuItem(item, choices)) closeModal();
+      return;
+    }
+    if (event.target.id === 'customerCartItemNoteForm') {
+      const item = currentAccount.cart.items.find(cartItem => cartItem.id === document.getElementById('cartNoteItemId').value);
+      if (!item) return;
+      item.instructions = document.getElementById('cartItemNote').value.trim();
+      CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
+      closeModal();
+      renderCustomerPage('cart');
+      customerToast(item.instructions ? 'Item notes saved.' : 'Item notes removed.');
+      return;
+    }
     if (event.target.id === 'customerAddressForm') {
       const id = document.getElementById('addressId').value || uid('address');
       const isDefault = document.getElementById('addressDefault').checked || currentAccount.addresses.length === 0;
