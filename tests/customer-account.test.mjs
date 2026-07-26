@@ -116,7 +116,7 @@ test('customer account UI includes every required area and has unique static IDs
     'Find Food Trucks Near Your Location', 'Showing Trucks Within:',
     'Drive time', 'Hours today', 'Estimated pickup', 'Order Now', 'Directions',
     'Appetizers', 'Entrees', 'Sides', 'Desserts', 'Drinks',
-    'Choose a size', 'Tap an item to add it', 'Add to Cart', 'Item Notes',
+    'Tap an item to add it', 'Add to Cart', 'Item Notes',
     'No onions', 'Extra pickles', 'Well done', 'Cut in half',
     'Shopping Cart', 'Service Fee', 'Proceed to Checkout', 'Pickup Information',
     'Schedule Later', 'Promo Code', 'Place Order', 'Order Successfully Placed',
@@ -466,19 +466,11 @@ test('customer ordering journey persists cart, places an order, and opens live t
   assert.doesNotMatch(element('customerAccountContent').innerHTML, /Shopping Cart/);
 
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'fresh-lemonade' }) });
-  assert.match(element('customerAccountModalContent').innerHTML, /One quick choice/);
-  assert.match(element('customerAccountModalContent').innerHTML, /Choose a size/);
-  element('requiredMenuItemId').value = 'fresh-lemonade';
-  const originalModalQuerySelectorAll = element('customerAccountModalContent').querySelectorAll;
-  element('customerAccountModalContent').querySelectorAll = selector => selector === '[data-required-choice]:checked'
-    ? [{ dataset: { choiceGroup: 'Choose a size', choiceName: 'Regular', choicePrice: '0' } }]
-    : [];
-  await emit(element('customerAccountModalContent'), 'submit', { preventDefault() {}, target: { id: 'requiredMenuItemForm' } });
-  element('customerAccountModalContent').querySelectorAll = originalModalQuerySelectorAll;
 
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items.length, 2);
-  assert.equal(account.cart.items.find(item => item.menuItemId === 'fresh-lemonade').modifiers[0].name, 'Regular');
+  assert.deepEqual(account.cart.items.find(item => item.menuItemId === 'fresh-lemonade').modifiers, []);
+  assert.doesNotMatch(element('customerAccountModalContent').innerHTML, /Choose a size/);
   assert.ok(Number.isInteger(account.cart.orderNumber));
   const cartOrderNumber = account.cart.orderNumber;
 
