@@ -98,6 +98,7 @@ test('vendor and customer modules initialize together without a startup error', 
   assert.ok(window.FoodTrekNowCustomerAuth);
   assert.ok(elements.get('loginForm').listeners.has('submit'));
   assert.ok(elements.get('openCustomerPortalButton').listeners.has('click'));
+  assert.match(html, /js\/customer-account\.js\?v=single-size-drinks-2/);
 });
 
 test('customer account UI includes every required area and has unique static IDs', () => {
@@ -461,6 +462,7 @@ test('customer ordering journey persists cart, places an order, and opens live t
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items[0].quantity, 2);
+  assert.equal(account.cart.items.some(item => item.menuItemId === 'fresh-lemonade'), false);
   assert.equal(account.cart.items[0].instructions, '');
   assert.match(element('customerAccountContent').innerHTML, /Capital City Eats Menu/);
   assert.doesNotMatch(element('customerAccountContent').innerHTML, /Shopping Cart/);
@@ -471,6 +473,14 @@ test('customer ordering journey persists cart, places an order, and opens live t
   assert.equal(account.cart.items.length, 2);
   assert.deepEqual(account.cart.items.find(item => item.menuItemId === 'fresh-lemonade').modifiers, []);
   assert.doesNotMatch(element('customerAccountModalContent').innerHTML, /Choose a size/);
+
+  const storedAccounts = JSON.parse(localStorage.getItem('ftnCustomerAccountsV1'));
+  const storedAccount = storedAccounts.find(item => item.id === account.id);
+  storedAccount.cart.items.find(item => item.menuItemId === 'fresh-lemonade').modifiers = [{ group: 'Choose a size', name: 'Regular', price: 0 }];
+  localStorage.setItem('ftnCustomerAccountsV1', JSON.stringify(storedAccounts));
+  await emit(element('openCustomerPortalButton'), 'click');
+  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  assert.deepEqual(account.cart.items.find(item => item.menuItemId === 'fresh-lemonade').modifiers, []);
   assert.ok(Number.isInteger(account.cart.orderNumber));
   const cartOrderNumber = account.cart.orderNumber;
 

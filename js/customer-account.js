@@ -838,6 +838,35 @@
   class LocalCustomerOrderingAdapter {
     ensureState(account) {
       if (!account.cart || !Array.isArray(account.cart.items)) account.cart = { truckId: null, items: [] };
+      if (account.cart.truckId && account.cart.items.length) {
+        const drinkItemIds = new Set(
+          menuForTruck(account.cart.truckId)
+            .filter(item => item.category === 'Drinks')
+            .map(item => item.id)
+        );
+        const migratedItems = new Map();
+        account.cart.items.forEach(item => {
+          const migratedItem = {
+            ...item,
+            modifiers: drinkItemIds.has(item.menuItemId)
+              ? (item.modifiers || []).filter(modifier => !String(modifier.group || '').toLowerCase().includes('size'))
+              : (item.modifiers || [])
+          };
+          const signature = [
+            migratedItem.menuItemId,
+            migratedItem.modifiers.map(modifier => `${modifier.group}:${modifier.name}`).sort().join('|'),
+            migratedItem.instructions || ''
+          ].join('::');
+          const existing = migratedItems.get(signature);
+          if (existing) {
+            existing.quantity = Math.min(99, Number(existing.quantity || 0) + Number(migratedItem.quantity || 0));
+            existing.qty = existing.quantity;
+          } else {
+            migratedItems.set(signature, migratedItem);
+          }
+        });
+        account.cart.items = [...migratedItems.values()];
+      }
       account.orders = (account.orders || []).map(order => {
         if (!Object.prototype.hasOwnProperty.call(order, 'pickupNumber')) return order;
         const { pickupNumber, ...standardOrder } = order;
