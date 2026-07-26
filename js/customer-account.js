@@ -4,6 +4,8 @@
   const ACCOUNT_STORAGE_KEY = 'ftnCustomerAccountsV1';
   const PERSISTENT_SESSION_KEY = 'ftnCustomerSessionV1';
   const TEMP_SESSION_KEY = 'ftnCustomerSessionTempV1';
+  const GUEST_STORAGE_KEY = 'ftnGuestCustomerV1';
+  const GUEST_SESSION_KEY = 'ftnGuestSessionActiveV1';
   const MENU_STORAGE_KEY = 'ftnVendorMenuV0400';
   const ORDER_NUMBER_STORAGE_KEY = 'ftnLastOrderNumberV1';
   const TRUCK = {
@@ -301,6 +303,11 @@
         highest = Math.max(highest, orderNumberValue(account.cart?.orderNumber));
       });
     } catch {}
+    try {
+      const guest = JSON.parse(localStorage.getItem(GUEST_STORAGE_KEY));
+      (guest?.orders || []).forEach(order => { highest = Math.max(highest, orderNumberValue(order.id)); });
+      highest = Math.max(highest, orderNumberValue(guest?.cart?.orderNumber));
+    } catch {}
     const nextOrderNumber = highest + 1;
     localStorage.setItem(ORDER_NUMBER_STORAGE_KEY, String(nextOrderNumber));
     return nextOrderNumber;
@@ -430,6 +437,42 @@
   };
   window.FoodTrekNowCustomerAuth = CustomerAuthService;
 
+  function saveCustomerState(account) {
+    if (!account) return account;
+    if (account.isGuest) {
+      localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(account));
+      return account;
+    }
+    return repository.save(account);
+  }
+
+  function readGuestCustomer() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(GUEST_STORAGE_KEY) || 'null'); } catch {}
+    return {
+      id: 'guest-local',
+      isGuest: true,
+      firstName: saved?.firstName || 'Guest',
+      lastName: saved?.lastName || '',
+      preferredName: saved?.preferredName || 'Guest',
+      mobile: saved?.mobile || '',
+      email: saved?.email || '',
+      photo: '',
+      emailVerified: true,
+      verificationDismissed: true,
+      addresses: saved?.addresses || [],
+      favoriteTrucks: saved?.favoriteTrucks || [],
+      favoriteOrders: saved?.favoriteOrders || [],
+      paymentMethods: saved?.paymentMethods || [],
+      orders: saved?.orders || [],
+      preferredLocation: saved?.preferredLocation || null,
+      nearbyRadiusMiles: Number(saved?.nearbyRadiusMiles) || 5,
+      cart: saved?.cart || { truckId: null, items: [] },
+      preferences: saved?.preferences || defaultPreferences(),
+      createdAt: saved?.createdAt || new Date().toISOString()
+    };
+  }
+
   const SAMPLE_LOCATION_CENTERS = {
     raleigh: { latitude: 35.7796, longitude: -78.6382 },
     cary: { latitude: 35.7915, longitude: -78.7811 },
@@ -515,20 +558,20 @@
       });
       if (account.cart.items.length && !account.cart.orderNumber) account.cart.orderNumber = generateOrderNumber();
       if (!Number.isFinite(Number(account.nearbyRadiusMiles))) account.nearbyRadiusMiles = 5;
-      repository.save(account);
+      saveCustomerState(account);
       return account;
     }
 
     saveCart(account, cart) {
       account.cart = cart;
-      repository.save(account);
+      saveCustomerState(account);
       return cart;
     }
 
     placeOrder(account, order) {
       account.orders.unshift(order);
       account.cart = { truckId: null, items: [] };
-      repository.save(account);
+      saveCustomerState(account);
       return order;
     }
 
@@ -544,7 +587,7 @@
         processedAt: order.cancelledAt,
         method: order.paymentLabel || 'Original payment method'
       };
-      repository.save(account);
+      saveCustomerState(account);
       return order;
     }
   }
@@ -618,6 +661,13 @@
     document.body.classList.add('login-page');
   }
 
+  function startGuestCheckout(page = 'nearby') {
+    clearSession();
+    sessionStorage.setItem(GUEST_SESSION_KEY, 'true');
+    openCustomerAccount(readGuestCustomer(), page);
+    customerToast('Guest checkout is ready. Choose a nearby truck to begin.');
+  }
+
   function openCustomerAccount(account, page = 'overview') {
     currentAccount = CustomerOrderingService.ensureState(account);
     let savedTruck = null;
@@ -626,6 +676,7 @@
     currentPage = page;
     hidePrimaryViews();
     accountView.classList.remove('hidden-view');
+    accountView.classList.toggle('guest-session', Boolean(currentAccount.isGuest));
     document.body.classList.remove('login-page');
     renderCustomerShell();
     renderCustomerPage(page);
@@ -633,7 +684,7 @@
   }
 
   function persistCurrentAccount() {
-    if (currentAccount) repository.save(currentAccount);
+    if (currentAccount) saveCustomerState(currentAccount);
   }
 
   function customerToast(message) {
@@ -672,8 +723,9 @@
 
   function renderCustomerShell() {
     const name = currentAccount.preferredName || currentAccount.firstName;
-    document.getElementById('customerMiniProfile').innerHTML = `${avatarMarkup(currentAccount)}<div><strong>${escapeHtml(name)} ${escapeHtml(currentAccount.lastName)}</strong><small>${escapeHtml(currentAccount.email)}</small></div>`;
+    document.getElementById('customerMiniProfile').innerHTML = `${avatarMarkup(currentAccount)}<div><strong>${escapeHtml(name)} ${escapeHtml(currentAccount.lastName)}</strong><small>${currentAccount.isGuest ? 'Guest checkout · Saved on this device' : escapeHtml(currentAccount.email)}</small></div>`;
     document.getElementById('customerVerificationBanner').classList.toggle('hidden-view', currentAccount.emailVerified || currentAccount.verificationDismissed);
+    document.getElementById('customerSignOutButton').textContent = currentAccount.isGuest ? 'Exit Guest Checkout' : 'Sign Out';
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === currentPage));
     updateCartBadge();
   }
@@ -1027,11 +1079,14 @@
     const totals = cartTotals();
     const defaultPayment = currentAccount.paymentMethods.find(method => method.isDefault) || currentAccount.paymentMethods[0];
     const defaultAddress = currentAccount.addresses.find(address => address.isDefault) || currentAccount.addresses[0];
+    const pickupInformation = currentAccount.isGuest
+      ? `<div class="checkout-card-content guest-pickup-fields"><h2>Pickup Information</h2><p>Enter the contact details the truck should use for this order.</p><label for="guestCheckoutName"><strong>Name</strong></label><input id="guestCheckoutName" class="customer-input" value="${escapeHtml(`${currentAccount.firstName || ''} ${currentAccount.lastName || ''}`.trim().replace(/^Guest$/, ''))}" autocomplete="name" required placeholder="Your name"><label for="guestCheckoutMobile"><strong>Mobile Number</strong></label><input id="guestCheckoutMobile" class="customer-input" type="tel" value="${escapeHtml(currentAccount.mobile)}" autocomplete="tel" required placeholder="(555) 555-0123"><label for="guestCheckoutEmail"><strong>Email Address</strong></label><input id="guestCheckoutEmail" class="customer-input" type="email" value="${escapeHtml(currentAccount.email)}" autocomplete="email" required placeholder="you@example.com"></div>`
+      : `<div><h2>Pickup Information</h2><p><strong>${escapeHtml(currentAccount.firstName)} ${escapeHtml(currentAccount.lastName)}</strong><br>${escapeHtml(currentAccount.mobile)} · ${escapeHtml(currentAccount.email)}</p></div>`;
     return `<div class="ordering-page checkout-page">
       <button class="ordering-back-button" data-customer-page-back="cart" type="button">← Back to Cart</button>
       <form id="customerCheckoutForm"><div class="checkout-heading"><p class="eyebrow">Secure Checkout · ${orderNumberLabel(currentAccount.cart.orderNumber)}</p><h1>Review and Place Your Order</h1><p>${escapeHtml(truck.name)} · Pickup only</p></div>
       <div class="checkout-layout"><div class="checkout-sections">
-        <section class="checkout-card"><span class="checkout-step">1</span><div><h2>Pickup Information</h2><p><strong>${escapeHtml(currentAccount.firstName)} ${escapeHtml(currentAccount.lastName)}</strong><br>${escapeHtml(currentAccount.mobile)} · ${escapeHtml(currentAccount.email)}</p></div></section>
+        <section class="checkout-card"><span class="checkout-step">1</span>${pickupInformation}</section>
         <section class="checkout-card"><span class="checkout-step">2</span><div class="checkout-card-content"><h2>Pickup Time</h2><label class="checkout-choice"><input name="pickupTime" value="asap" type="radio" checked><span><strong>ASAP</strong><small>Ready in about ${truck.pickupMinutes} minutes</small></span></label><label class="checkout-choice disabled"><input name="pickupTime" value="later" type="radio" disabled><span><strong>Schedule Later</strong><small>Coming in a future update</small></span></label></div></section>
         <section class="checkout-card"><span class="checkout-step">3</span><div class="checkout-card-content"><h2>Saved Address <small>Future Delivery</small></h2><p>${defaultAddress ? `${escapeHtml(defaultAddress.label)} · ${escapeHtml(defaultAddress.street)}, ${escapeHtml(defaultAddress.city)}` : 'Add a saved address from your profile when delivery becomes available.'}</p></div></section>
         <section class="checkout-card"><span class="checkout-step">4</span><div class="checkout-card-content"><h2>Payment Method</h2>${defaultPayment ? `<label class="checkout-choice"><input name="paymentMethod" value="${defaultPayment.id}" type="radio" checked><span><strong>${escapeHtml(defaultPayment.brand)} ••••${escapeHtml(defaultPayment.last4)}</strong><small>${defaultPayment.isDefault ? 'Default payment method' : `Expires ${escapeHtml(defaultPayment.expiry)}`}</small></span></label>` : '<p>Pay at pickup (prototype).</p>'}<button class="checkout-link" data-customer-action="view-payments" type="button">Manage Payment Methods</button></div></section>
@@ -1092,6 +1147,9 @@
     vendorOrders.unshift({
       id: order.id,
       customer: currentAccount.preferredName || currentAccount.firstName,
+      customerMobile: currentAccount.mobile,
+      customerEmail: currentAccount.email,
+      guestCheckout: Boolean(currentAccount.isGuest),
       items: order.items.map(item => ({ name: item.name, qty: item.qty, price: item.price, modifiers: item.modifiers || [], instructions: item.instructions || '' })),
       subtotal: order.subtotal,
       tax: order.tax,
@@ -1414,7 +1472,7 @@
   document.getElementById('backToVendorButton').addEventListener('click', showVendorLogin);
   document.getElementById('showCustomerSignInButton').addEventListener('click', () => showCustomerAuth('signin'));
   document.getElementById('showCreateAccountButton').addEventListener('click', () => showCustomerAuth('create'));
-  document.getElementById('guestCheckoutButton').addEventListener('click', () => showCustomerAuth('guest'));
+  document.getElementById('guestCheckoutButton').addEventListener('click', () => startGuestCheckout('nearby'));
   document.querySelectorAll('[data-auth-back]').forEach(button => button.addEventListener('click', () => showCustomerAuth()));
   document.querySelectorAll('[data-show-signin]').forEach(button => button.addEventListener('click', () => showCustomerAuth('signin')));
   document.querySelectorAll('[data-show-create]').forEach(button => button.addEventListener('click', () => showCustomerAuth('create')));
@@ -1482,9 +1540,11 @@
   });
 
   document.getElementById('customerSignOutButton').addEventListener('click', () => {
+    const wasGuest = Boolean(currentAccount?.isGuest);
     clearSession();
+    sessionStorage.removeItem(GUEST_SESSION_KEY);
     currentAccount = null;
-    showCustomerAuth('signin');
+    showCustomerAuth(wasGuest ? 'welcome' : 'signin');
   });
   document.getElementById('customerMenuButton').addEventListener('click', event => {
     const sidebar = document.querySelector('.customer-sidebar');
@@ -1811,6 +1871,22 @@
         customerToast('Availability changed. Remove sold-out items before checkout.');
         return;
       }
+      if (currentAccount.isGuest) {
+        const guestName = document.getElementById('guestCheckoutName').value.trim();
+        const guestMobile = document.getElementById('guestCheckoutMobile').value.trim();
+        const guestEmail = document.getElementById('guestCheckoutEmail').value.trim().toLowerCase();
+        if (!guestName || normalizePhone(guestMobile).length < 10 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) {
+          document.getElementById('checkoutMessage').textContent = 'Enter your name, a valid mobile number, and a valid email address.';
+          return;
+        }
+        const guestNameParts = guestName.split(/\s+/);
+        currentAccount.firstName = guestNameParts.shift();
+        currentAccount.lastName = guestNameParts.join(' ');
+        currentAccount.preferredName = currentAccount.firstName;
+        currentAccount.mobile = guestMobile;
+        currentAccount.email = guestEmail;
+        saveCustomerState(currentAccount);
+      }
       const truck = TRUCKS.find(item => item.id === currentAccount.cart.truckId) || selectedTruck();
       const totals = cartTotals();
       const payment = accountContent.querySelector('input[name="paymentMethod"]:checked');
@@ -1831,6 +1907,10 @@
         pickupTime: 'ASAP',
         paymentMethodId: payment?.value || '',
         paymentLabel: currentAccount.paymentMethods.find(method => method.id === payment?.value)?.brand || 'Pay at Pickup',
+        guestCheckout: Boolean(currentAccount.isGuest),
+        customerName: `${currentAccount.firstName} ${currentAccount.lastName}`.trim(),
+        customerMobile: currentAccount.mobile,
+        customerEmail: currentAccount.email,
         promoCode: document.getElementById('checkoutPromoCode').value.trim(),
         orderNotes: document.getElementById('checkoutOrderNotes').value.trim()
       };
@@ -2048,5 +2128,7 @@
     const account = repository.findById(session.accountId);
     if (account) openCustomerAccount(account);
     else clearSession();
+  } else if (sessionStorage.getItem(GUEST_SESSION_KEY) === 'true' && localStorage.getItem('ftnVendorLoggedIn') !== 'true') {
+    openCustomerAccount(readGuestCustomer(), 'nearby');
   }
 })();

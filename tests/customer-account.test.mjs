@@ -558,6 +558,48 @@ test('vendor saved availability controls the signed-in customer menu and checkou
   localStorage.removeItem('ftnVendorMenuV0400');
 });
 
+test('guest checkout browses nearby trucks, orders from a distinct menu, and persists the order', async () => {
+  localStorage.removeItem('ftnGuestCustomerV1');
+  await emit(element('guestCheckoutButton'), 'click');
+  assert.match(element('customerAccountContent').innerHTML, /Find Food Trucks Near Your Location/);
+  assert.equal(sessionStorage.getItem('ftnGuestSessionActiveV1'), 'true');
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ nearbyOrder: 'taco-luna' }) });
+  assert.match(element('customerAccountContent').innerHTML, /Taco Luna/);
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-menu' }) });
+  assert.match(element('customerAccountContent').innerHTML, /Birria Tacos/);
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'taco-luna-birria-tacos' }) });
+
+  let guest = JSON.parse(localStorage.getItem('ftnGuestCustomerV1'));
+  assert.equal(guest.isGuest, true);
+  assert.equal(guest.cart.items.length, 1);
+  assert.equal(guest.cart.items[0].name, 'Birria Tacos');
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-cart' }) });
+  assert.match(element('customerAccountContent').innerHTML, /Shopping Cart/);
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'checkout' }) });
+  assert.match(element('customerAccountContent').innerHTML, /Review and Place Your Order/);
+  assert.match(element('customerAccountContent').innerHTML, /guestCheckoutName/);
+
+  element('guestCheckoutName').value = 'Taylor Guest';
+  element('guestCheckoutMobile').value = '(919) 555-0188';
+  element('guestCheckoutEmail').value = 'taylor@example.com';
+  element('checkoutPromoCode').value = '';
+  element('checkoutOrderNotes').value = 'Guest order';
+  await emit(element('customerAccountContent'), 'submit', { preventDefault() {}, target: { id: 'customerCheckoutForm' } });
+
+  guest = JSON.parse(localStorage.getItem('ftnGuestCustomerV1'));
+  assert.equal(guest.cart.items.length, 0);
+  assert.equal(guest.orders[0].guestCheckout, true);
+  assert.equal(guest.orders[0].customerName, 'Taylor Guest');
+  assert.equal(guest.orders[0].truckName, 'Taco Luna');
+  assert.match(element('customerAccountContent').innerHTML, /Order Successfully Placed/);
+  const vendorGuestOrder = JSON.parse(localStorage.getItem('ftnVendorOrdersV0231')).find(order => order.id === guest.orders[0].id);
+  assert.equal(vendorGuestOrder.guestCheckout, true);
+  assert.equal(vendorGuestOrder.customer, 'Taylor');
+  assert.equal(JSON.parse(localStorage.getItem('ftnCustomerAccountsV1')).some(account => account.id === 'guest-local'), false);
+});
+
 test('roadmap marks Phase 3.2 complete and names live communication as Phase 4', () => {
   const roadmap = fs.readFileSync(new URL('../PROJECT_ROADMAP.md', import.meta.url), 'utf8');
   assert.match(roadmap, /\[x\] Phase 3 – Customer Account System/);
