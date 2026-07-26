@@ -148,8 +148,7 @@ test('homepage prioritizes customer ordering before the vendor login action', ()
   assert.ok(vendorActionIndex > customerActionIndex);
   assert.match(html, /customer-entry customer-entry-primary/);
   assert.match(html, /class="vendor-login-button full"/);
-  assert.match(html, /Vendor Log In<\/button>\s*<p class="vendor-login-tagline">Find it\. Order it\. Pick it Up\.<\/p>/);
-  assert.match(html, /id="backToVendorButton"[^>]*>← Back<\/button>/);
+  assert.match(html, /id="backToVendorButton"[^>]*>← Back<\/button>\s*<p class="customer-back-tagline">Find it\. Order it\. Pick it Up\.<\/p>/);
   assert.match(accountStyles, /\.customer-entry-button\{[^}]*background:var\(--brand\)/);
   assert.match(accountStyles, /\.vendor-login-button\{[^}]*background:#17241d/);
 });
