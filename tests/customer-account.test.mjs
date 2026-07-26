@@ -112,7 +112,7 @@ test('customer account UI includes every required area and has unique static IDs
     'Delete Account', 'Ready for something delicious?', 'Current Location',
     'Search food trucks, menu items, cuisines, or events...', 'Order Food',
     'Find Trucks', 'Events Near You', 'Favorite Trucks', 'Recent Orders',
-    'Add Address', 'Add Payment Method', 'Explore', 'Cart',
+    'Add Address', 'Add Payment Method', 'Explore', 'My Cart', 'Cart',
     'Find Food Trucks Near Your Location', 'Showing Trucks Within:',
     'Drive time', 'Hours today', 'Estimated pickup', 'Order Now', 'Directions',
     'Featured Items', "Today's Specials", 'Popular Items', 'About This Truck',
@@ -121,7 +121,8 @@ test('customer account UI includes every required area and has unique static IDs
     'No onions', 'Extra pickles', 'Well done', 'Cut in half',
     'Shopping Cart', 'Service Fee', 'Proceed to Checkout', 'Pickup Information',
     'Schedule Later', 'Promo Code', 'Place Order', 'Order Successfully Placed',
-    'Track My Order', 'Order Received', 'Ready for Pickup', 'Order Number'
+    'Track My Order', 'Order Received', 'Ready for Pickup', 'Order Number',
+    'Cancel Order', 'Full refund'
   ];
   const completeUiSource = `${html}\n${source}`;
   requiredText.forEach(text => assert.ok(completeUiSource.includes(text), `Missing UI contract: ${text}`));
@@ -136,6 +137,9 @@ test('customer account UI includes every required area and has unique static IDs
   assert.match(orderingStyles, /@media\(max-width:760px\)/);
   assert.doesNotMatch(source, /Choose Spice Level|Choose Protein|Extra Sauce/);
   assert.match(orderingStyles, /floating-cart-summary/);
+  assert.match(html, /id="customerMobileCartButton"/);
+  assert.equal((html.match(/data-customer-cart-count/g) || []).length, 3);
+  assert.match(source, /cancelOrder\(account, orderId\)/);
 });
 
 test('homepage prioritizes customer ordering before the vendor login action', () => {
@@ -423,6 +427,11 @@ test('customer ordering journey persists cart, places an order, and opens live t
   await emit(element('customerAccountModalContent'), 'submit', { preventDefault() {}, target: { id: 'customerCartItemNoteForm' } });
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items.find(item => item.id === burger.id).instructions, 'No onions, cut in half');
+  const lemonade = account.cart.items.find(item => item.menuItemId === 'fresh-lemonade');
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ cartRemove: lemonade.id }) });
+  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  assert.equal(account.cart.items.length, 1);
+  assert.equal(account.cart.items.some(item => item.menuItemId === 'fresh-lemonade'), false);
 
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'checkout' }) });
   assert.match(element('customerAccountContent').innerHTML, /Review and Place Your Order/);
@@ -450,6 +459,20 @@ test('customer ordering journey persists cart, places an order, and opens live t
   assert.match(element('customerAccountContent').innerHTML, new RegExp(`Order #${permanentOrderNumber}`));
   assert.doesNotMatch(element('customerAccountContent').innerHTML, /Pickup Number/i);
   assert.doesNotMatch(source, /const pickupNumber\s*=/);
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ cancelOrder: permanentOrderNumber }) });
+  assert.match(element('customerAccountModalContent').innerHTML, /Cancel this order/);
+  assert.match(element('customerAccountModalContent').innerHTML, /Full refund/);
+  await emit(element('customerAccountModalContent'), 'click', { target: actionTarget({ confirmCancelOrder: permanentOrderNumber }) });
+  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  const cancelledOrder = account.orders.find(order => order.id === permanentOrderNumber);
+  assert.equal(cancelledOrder.status, 'cancelled');
+  assert.equal(cancelledOrder.refund.status, 'refunded');
+  assert.equal(cancelledOrder.refund.amount, cancelledOrder.total);
+  const vendorOrder = JSON.parse(localStorage.getItem('ftnVendorOrdersV0231')).find(order => order.id === permanentOrderNumber);
+  assert.equal(vendorOrder.status, 'cancelled');
+  assert.equal(vendorOrder.refundStatus, 'refunded');
+  assert.match(element('customerAccountContent').innerHTML, /Cancelled · Full Refund/);
 });
 
 test('roadmap marks Phase 3.2 complete and names live communication as Phase 4', () => {

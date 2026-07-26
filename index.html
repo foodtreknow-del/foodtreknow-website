@@ -162,6 +162,7 @@
       <div id="customerMiniProfile" class="customer-mini-profile"></div>
       <nav id="customerAccountNav" aria-label="Customer account">
         <button class="customer-nav-link active" data-customer-page="overview" type="button"><span>⌂</span> Home</button>
+        <button class="customer-nav-link customer-cart-nav-link" data-customer-page="cart" type="button"><span>🛒</span> My Cart <b class="customer-nav-cart-count hidden-view" data-customer-cart-count>0</b></button>
         <button class="customer-nav-link" data-customer-page="profile" type="button"><span>☺</span> Profile</button>
         <button class="customer-nav-link" data-customer-page="addresses" type="button"><span>⌖</span> Addresses</button>
         <button class="customer-nav-link" data-customer-page="favorites" type="button"><span>♥</span> Favorites</button>
@@ -175,7 +176,7 @@
     <main class="customer-main">
       <header class="customer-mobile-header">
         <div class="customer-wordmark"><img class="foodtrek-logo foodtrek-logo-header" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></div>
-        <button id="customerMenuButton" class="customer-menu-button" type="button" aria-expanded="false" aria-controls="customerAccountNav">Menu</button>
+        <div class="customer-mobile-actions"><button id="customerMobileCartButton" class="customer-mobile-cart-button" type="button" aria-label="View cart"><span>🛒</span><b class="customer-nav-cart-count hidden-view" data-customer-cart-count>0</b></button><button id="customerMenuButton" class="customer-menu-button" type="button" aria-expanded="false" aria-controls="customerAccountNav">Menu</button></div>
       </header>
       <div id="customerVerificationBanner" class="verification-banner hidden-view">
         <span>✉</span><div><strong>Verify your email address</strong><p>Verification is a placeholder for now. Supabase will handle delivery in a future phase.</p></div><button id="dismissVerificationButton" type="button" aria-label="Dismiss">×</button>
@@ -187,7 +188,7 @@
     <button class="active" data-bottom-page="overview" type="button"><span>🏠</span><strong>Home</strong></button>
     <button data-bottom-target="explore" type="button"><span>🔍</span><strong>Explore</strong></button>
     <button data-bottom-target="events" type="button"><span>🎪</span><strong>Events</strong></button>
-    <button id="customerCartNavButton" data-bottom-target="cart" type="button"><span>🛒</span><strong>Cart</strong><b id="customerCartCount" class="customer-cart-count hidden-view">0</b></button>
+    <button id="customerCartNavButton" data-bottom-target="cart" type="button"><span>🛒</span><strong>Cart</strong><b id="customerCartCount" class="customer-cart-count hidden-view" data-customer-cart-count>0</b></button>
     <button data-bottom-page="profile" type="button"><span>👤</span><strong>Profile</strong></button>
   </nav>
   <div id="customerAccountModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="customerModalTitle">

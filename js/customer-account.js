@@ -358,6 +358,22 @@
       repository.save(account);
       return order;
     }
+
+    cancelOrder(account, orderId) {
+      const order = account.orders.find(item => String(item.id) === String(orderId));
+      if (!order || !['received', 'new'].includes(order.status)) return null;
+      order.status = 'cancelled';
+      order.statusLabel = 'Cancelled · Full Refund';
+      order.cancelledAt = Date.now();
+      order.refund = {
+        status: 'refunded',
+        amount: Number(order.total || 0),
+        processedAt: order.cancelledAt,
+        method: order.paymentLabel || 'Original payment method'
+      };
+      repository.save(account);
+      return order;
+    }
   }
 
   // Ordering boundary: a future Supabase adapter can replace these local
@@ -367,7 +383,8 @@
     setAdapter(adapter) { this.adapter = adapter; },
     ensureState(account) { return this.adapter.ensureState(account); },
     saveCart(account, cart) { return this.adapter.saveCart(account, cart); },
-    placeOrder(account, order) { return this.adapter.placeOrder(account, order); }
+    placeOrder(account, order) { return this.adapter.placeOrder(account, order); },
+    cancelOrder(account, orderId) { return this.adapter.cancelOrder(account, orderId); }
   };
   window.FoodTrekNowOrdering = CustomerOrderingService;
 
@@ -456,10 +473,10 @@
 
   function updateCartBadge() {
     const count = currentAccount?.cart?.items?.reduce((total, item) => total + Number(item.quantity || 0), 0) || 0;
-    const badge = document.getElementById('customerCartCount');
-    if (!badge) return;
-    badge.textContent = String(count);
-    badge.classList.toggle('hidden-view', count === 0);
+    document.querySelectorAll('[data-customer-cart-count]').forEach(badge => {
+      badge.textContent = String(count);
+      badge.classList.toggle('hidden-view', count === 0);
+    });
   }
 
   function renderGuestMenu() {
@@ -776,11 +793,23 @@
     return currentAccount.orders.find(order => order.id === lastPlacedOrderId) || currentAccount.orders[0];
   }
 
+  function isOrderCancellable(order) {
+    return Boolean(order && ['received', 'new'].includes(order.status));
+  }
+
+  function cancelOrderModal(order) {
+    if (!isOrderCancellable(order)) {
+      customerToast('This order is already being prepared and can no longer be cancelled automatically.');
+      return;
+    }
+    openModal(`<div class="cancel-order-modal"><p class="eyebrow">Cancel ${orderNumberLabel(order.id)}</p><h2 id="customerModalTitle">Cancel this order?</h2><p>${escapeHtml(order.truckName)} has received your order but has not started preparing it.</p><div class="refund-summary"><span>Full refund</span><strong>${customerMoney(order.total)}</strong></div><p class="muted">The cancellation and full refund are recorded in this browser-local beta. No real payment processor is connected yet.</p><div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Keep My Order</button><button class="customer-small-button danger" data-confirm-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order &amp; Refund</button></div></div>`);
+  }
+
   function renderOrderConfirmation() {
     const order = confirmationOrder();
     if (!order) return renderOverview();
     const readyTime = new Date(order.estimatedReadyAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    return `<div class="ordering-page confirmation-page"><section class="confirmation-card"><div class="confirmation-check">✓</div><p class="eyebrow">Order Successfully Placed</p><h1>Thanks, ${escapeHtml(currentAccount.preferredName || currentAccount.firstName)}!</h1><p>Your order is with ${escapeHtml(order.truckName)}.</p><div class="confirmation-number"><small>Order Number · Use for pickup</small><strong>${orderNumberLabel(order.id)}</strong></div><div class="confirmation-details"><span><small>Estimated Ready Time</small><strong>${readyTime}</strong></span><span><small>Pickup Instructions</small><strong>Show ${orderNumberLabel(order.id)} at the truck window.</strong></span></div><div class="confirmation-actions"><button class="primary-button" data-ordering-action="track-order" type="button">Track My Order</button><button class="secondary-button" data-order-again="${escapeHtml(order.id)}" type="button">Order Again</button><button class="secondary-button" data-home-page="overview" type="button">Return Home</button></div></section></div>`;
+    return `<div class="ordering-page confirmation-page"><section class="confirmation-card"><div class="confirmation-check">✓</div><p class="eyebrow">Order Successfully Placed</p><h1>Thanks, ${escapeHtml(currentAccount.preferredName || currentAccount.firstName)}!</h1><p>Your order is with ${escapeHtml(order.truckName)}.</p><div class="confirmation-number"><small>Order Number · Use for pickup</small><strong>${orderNumberLabel(order.id)}</strong></div><div class="confirmation-details"><span><small>Estimated Ready Time</small><strong>${readyTime}</strong></span><span><small>Pickup Instructions</small><strong>Show ${orderNumberLabel(order.id)} at the truck window.</strong></span></div><div class="confirmation-actions"><button class="primary-button" data-ordering-action="track-order" type="button">Track My Order</button><button class="secondary-button" data-order-again="${escapeHtml(order.id)}" type="button">Order Again</button><button class="secondary-button" data-home-page="overview" type="button">Return Home</button>${isOrderCancellable(order) ? `<button class="customer-small-button danger confirmation-cancel-button" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button>` : ''}</div></section></div>`;
   }
 
   function trackingStatusIndex(status) {
@@ -798,6 +827,7 @@
       <section class="tracking-hero"><div><p class="eyebrow">Live Order Tracking</p><h1>${escapeHtml(order.truckName)}</h1><p>${orderNumberLabel(order.id)}</p></div><div><small>Estimated Ready</small><strong>${readyTime}</strong></div><div><small>Order Number</small><strong>#${orderNumberValue(order.id)}</strong></div></section>
       <section class="tracking-timeline">${statuses.map(([title, copy], index) => `<article class="${index < activeIndex ? 'complete' : index === activeIndex ? 'active' : ''}"><span>${index < activeIndex ? '✓' : index + 1}</span><div><small>${index === activeIndex ? 'Current Status' : index < activeIndex ? 'Complete' : 'Up Next'}</small><h2>${title}</h2><p>${copy}</p></div></article>`).join('')}</section>
       <section class="tracking-pickup-card"><span>📍</span><div><p class="eyebrow">Pickup Instructions</p><h2>Meet us at the truck window</h2><p>Bring <strong>${orderNumberLabel(order.id)}</strong>. We’ll call your order number when it is ready.</p></div><button class="secondary-button" data-ordering-action="directions" type="button">Directions</button></section>
+      ${isOrderCancellable(order) ? `<section class="tracking-cancel-card"><div><p class="eyebrow">Changed your mind?</p><h2>Cancel before preparation starts</h2><p>Cancel now to receive a full refund of ${customerMoney(order.total)}.</p></div><button class="customer-small-button danger" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button></section>` : ''}
     </div>`;
   }
 
@@ -822,6 +852,24 @@
       createdAt: order.createdAt
     });
     localStorage.setItem(vendorStorageKey, JSON.stringify(vendorOrders));
+  }
+
+  function syncCancelledOrderToVendor(order) {
+    const vendorStorageKey = 'ftnVendorOrdersV0231';
+    let vendorOrders = [];
+    try {
+      const saved = JSON.parse(localStorage.getItem(vendorStorageKey));
+      if (Array.isArray(saved)) vendorOrders = saved;
+    } catch {}
+    const vendorOrder = vendorOrders.find(item => String(item.id) === String(order.id));
+    if (vendorOrder) {
+      vendorOrder.status = 'cancelled';
+      vendorOrder.paid = false;
+      vendorOrder.cancelledAt = order.cancelledAt;
+      vendorOrder.refundStatus = 'refunded';
+      vendorOrder.refundedAmount = order.refund?.amount || order.total;
+      localStorage.setItem(vendorStorageKey, JSON.stringify(vendorOrders));
+    }
   }
 
   function activeOrderCard(order) {
@@ -867,6 +915,7 @@
     currentPage = page;
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === page));
     document.querySelectorAll('[data-bottom-page]').forEach(button => button.classList.toggle('active', button.dataset.bottomPage === page));
+    document.querySelectorAll('[data-bottom-target="cart"]').forEach(button => button.classList.toggle('active', page === 'cart'));
     const renderers = {
       overview: renderOverview,
       nearby: renderNearbyTrucks,
@@ -892,8 +941,8 @@
   }
 
   function renderOverview() {
-    const currentOrders = currentAccount.orders.filter(order => order.status !== 'completed');
-    const pastOrders = currentAccount.orders.filter(order => order.status === 'completed');
+    const currentOrders = currentAccount.orders.filter(order => !['completed', 'cancelled'].includes(order.status));
+    const pastOrders = currentAccount.orders.filter(order => ['completed', 'cancelled'].includes(order.status));
     const current = currentOrders[0];
     const name = escapeHtml(currentAccount.preferredName || currentAccount.firstName);
     const favoriteTrucks = TRUCKS.filter(truck => currentAccount.favoriteTrucks.includes(truck.id));
@@ -998,8 +1047,8 @@
   }
 
   function renderOrders() {
-    const current = currentAccount.orders.filter(order => order.status !== 'completed');
-    const past = currentAccount.orders.filter(order => order.status === 'completed');
+    const current = currentAccount.orders.filter(order => !['completed', 'cancelled'].includes(order.status));
+    const past = currentAccount.orders.filter(order => ['completed', 'cancelled'].includes(order.status));
     const shown = orderHistoryFilter === 'current' ? current : past;
     return `${pageHeader('Every Pickup', 'Order History', 'Track active orders and revisit past meals.')}
       <div class="order-history-tabs" role="tablist"><button class="order-history-tab ${orderHistoryFilter === 'current' ? 'active' : ''}" data-order-filter="current" type="button">Current Orders (${current.length})</button><button class="order-history-tab ${orderHistoryFilter === 'past' ? 'active' : ''}" data-order-filter="past" type="button">Past Orders (${past.length})</button></div>
@@ -1008,7 +1057,8 @@
 
   function orderHistoryCard(order) {
     const isFavorite = currentAccount.favoriteOrders.includes(order.id);
-    return `<article class="customer-card customer-order-card"><div><span class="status-pill ${order.status === 'completed' ? 'past' : ''}">${escapeHtml(order.statusLabel)}</span><h3>${escapeHtml(order.truckName)} · ${orderNumberLabel(order.id)}</h3><p class="muted">${formatDate(order.createdAt)}</p><div class="order-item-summary">${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</div></div><div><div class="order-total">${customerMoney(order.total)}</div><div class="customer-card-actions"><button class="customer-small-button" data-order-details="${escapeHtml(order.id)}" type="button">Order Details</button>${order.status === 'completed' ? `<button class="customer-small-button" data-receipt="${escapeHtml(order.id)}" type="button">Receipt</button><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button><button class="customer-small-button" data-toggle-order-favorite="${escapeHtml(order.id)}" type="button">${isFavorite ? '♥ Saved' : '♡ Save Favorite'}</button>` : ''}</div></div></article>`;
+    const isPast = ['completed', 'cancelled'].includes(order.status);
+    return `<article class="customer-card customer-order-card"><div><span class="status-pill ${isPast ? 'past' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span><h3>${escapeHtml(order.truckName)} · ${orderNumberLabel(order.id)}</h3><p class="muted">${formatDate(order.createdAt)}</p><div class="order-item-summary">${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</div>${order.status === 'cancelled' ? `<p class="refund-confirmation">Full refund: ${customerMoney(order.refund?.amount || order.total)}</p>` : ''}</div><div><div class="order-total">${customerMoney(order.total)}</div><div class="customer-card-actions"><button class="customer-small-button" data-order-details="${escapeHtml(order.id)}" type="button">Order Details</button>${isOrderCancellable(order) ? `<button class="customer-small-button danger" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button>` : ''}${order.status === 'completed' ? `<button class="customer-small-button" data-receipt="${escapeHtml(order.id)}" type="button">Receipt</button><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button><button class="customer-small-button" data-toggle-order-favorite="${escapeHtml(order.id)}" type="button">${isFavorite ? '♥ Saved' : '♡ Save Favorite'}</button>` : ''}${order.status === 'cancelled' ? `<button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Order Again</button>` : ''}</div></div></article>`;
   }
 
   function renderPayments() {
@@ -1097,7 +1147,7 @@
   function orderModal(order, receiptOnly = false) {
     if (!order) return;
     const itemLines = order.items.map(item => `<div class="receipt-line"><span>${item.qty} × ${escapeHtml(item.name)}</span><strong>${customerMoney(item.qty * item.price)}</strong></div>`).join('');
-    openModal(`<div class="customer-receipt"><div class="receipt-brand"><p class="eyebrow">${receiptOnly ? 'Receipt' : 'Order Details'}</p><h2 id="customerModalTitle">${escapeHtml(order.truckName)}</h2><p>${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><span class="status-pill ${order.status === 'completed' ? 'past' : ''}">${escapeHtml(order.statusLabel)}</span></div><h3>Items</h3>${itemLines}<div class="receipt-line"><span>Subtotal</span><strong>${customerMoney(order.subtotal)}</strong></div><div class="receipt-line"><span>Tax</span><strong>${customerMoney(order.tax)}</strong></div><div class="receipt-line receipt-total"><strong>Total</strong><strong>${customerMoney(order.total)}</strong></div><p class="muted">${receiptOnly ? 'Paid · Customer receipt view' : 'Pickup status updates appear in your account and notification preferences.'}</p>${order.status === 'completed' ? `<button class="primary-button full" data-reorder="${escapeHtml(order.id)}" type="button">Reorder This Meal</button>` : ''}</div>`);
+    openModal(`<div class="customer-receipt"><div class="receipt-brand"><p class="eyebrow">${receiptOnly ? 'Receipt' : 'Order Details'}</p><h2 id="customerModalTitle">${escapeHtml(order.truckName)}</h2><p>${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><span class="status-pill ${['completed', 'cancelled'].includes(order.status) ? 'past' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span></div><h3>Items</h3>${itemLines}<div class="receipt-line"><span>Subtotal</span><strong>${customerMoney(order.subtotal)}</strong></div><div class="receipt-line"><span>Tax</span><strong>${customerMoney(order.tax)}</strong></div><div class="receipt-line receipt-total"><strong>Total</strong><strong>${customerMoney(order.total)}</strong></div>${order.status === 'cancelled' ? `<div class="receipt-line refund-line"><strong>Full Refund</strong><strong>−${customerMoney(order.refund?.amount || order.total)}</strong></div>` : ''}<p class="muted">${order.status === 'cancelled' ? 'Refund recorded to the original payment method in this browser-local beta.' : receiptOnly ? 'Paid · Customer receipt view' : 'Pickup status updates appear in your account and notification preferences.'}</p>${isOrderCancellable(order) ? `<button class="customer-small-button danger full" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order &amp; Full Refund</button>` : ''}${order.status === 'completed' ? `<button class="primary-button full" data-reorder="${escapeHtml(order.id)}" type="button">Reorder This Meal</button>` : ''}</div>`);
   }
 
   function deleteAccountModal() {
@@ -1190,6 +1240,7 @@
     const open = sidebar.classList.toggle('open');
     event.currentTarget.setAttribute('aria-expanded', String(open));
   });
+  document.getElementById('customerMobileCartButton').addEventListener('click', () => renderCustomerPage('cart'));
   document.getElementById('customerAccountNav').addEventListener('click', event => {
     const button = event.target.closest('[data-customer-page]');
     if (button) renderCustomerPage(button.dataset.customerPage);
@@ -1377,6 +1428,11 @@
     if (trackOrder) {
       lastPlacedOrderId = trackOrder.dataset.trackOrder;
       renderCustomerPage('tracking');
+      return;
+    }
+    const cancelOrder = event.target.closest('[data-cancel-order]');
+    if (cancelOrder) {
+      cancelOrderModal(currentAccount.orders.find(order => String(order.id) === String(cancelOrder.dataset.cancelOrder)));
       return;
     }
     const homeEvent = event.target.closest('[data-home-event]');
@@ -1584,6 +1640,23 @@
     }
     const reorder = event.target.closest('[data-reorder]');
     if (reorder) reorderMeal(reorder.dataset.reorder);
+    const cancelOrder = event.target.closest('[data-cancel-order]');
+    if (cancelOrder) cancelOrderModal(currentAccount.orders.find(order => String(order.id) === String(cancelOrder.dataset.cancelOrder)));
+    const confirmCancelOrder = event.target.closest('[data-confirm-cancel-order]');
+    if (confirmCancelOrder) {
+      const order = CustomerOrderingService.cancelOrder(currentAccount, confirmCancelOrder.dataset.confirmCancelOrder);
+      if (!order) {
+        closeModal();
+        customerToast('This order can no longer be cancelled automatically.');
+        return;
+      }
+      syncCancelledOrderToVendor(order);
+      lastPlacedOrderId = order.id;
+      closeModal();
+      orderHistoryFilter = 'past';
+      renderCustomerPage('orders');
+      customerToast(`${orderNumberLabel(order.id)} cancelled. Full refund: ${customerMoney(order.refund.amount)}.`);
+    }
   });
 
   modalContent.addEventListener('submit', async event => {
