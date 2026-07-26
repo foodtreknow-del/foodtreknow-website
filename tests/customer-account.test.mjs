@@ -376,6 +376,54 @@ test('nearby truck search uses the saved location, filters today, sorts distance
   assert.equal(JSON.parse(localStorage.getItem('ftnSelectedTruckV1')).truckId, 'capital-city-eats');
 });
 
+test('twenty sample trucks open distinct cuisine-specific menus', async () => {
+  const account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  localStorage.setItem('ftnCustomerSessionV1', JSON.stringify({ accountId: account.id }));
+  await emit(element('openCustomerPortalButton'), 'click');
+  const expectedMenus = [
+    ['capital-city-eats', 'Classic Cheeseburger'],
+    ['rolling-ember-bbq', 'Brisket Burnt Ends'],
+    ['taco-luna', 'Birria Tacos'],
+    ['triangle-dumpling-co', 'Pork Soup Dumplings'],
+    ['oak-city-sweets', 'Banana Pudding Cup'],
+    ['carolina-coastal-kitchen', 'Calabash Shrimp Basket'],
+    ['mama-jos-soul-kitchen', 'Smothered Turkey Wings'],
+    ['kingston-jerk-stop', 'Oxtail Stew'],
+    ['athena-street-eats', 'Lamb Gyro Platter'],
+    ['seoul-on-wheels', 'Korean BBQ Beef Bowl'],
+    ['cupcake-caravan', 'Salted Caramel Cupcake'],
+    ['scoop-loop', 'Hot Fudge Brownie Sundae'],
+    ['bull-city-burgers', 'Bull City Double'],
+    ['smokehouse-919', 'Prime Brisket Plate'],
+    ['green-route-vegan', 'Rainbow Buddha Bowl'],
+    ['pie-and-pudding', 'Chocolate Chess Pie'],
+    ['bayou-bites', 'Chicken and Sausage Gumbo'],
+    ['pasta-passeggiata', 'Cacio e Pepe'],
+    ['curry-in-a-hurry', 'Butter Chicken Bowl'],
+    ['breakfast-bus', 'Chicken and Waffles']
+  ];
+  const menuSignatures = [];
+
+  for (const [truckId, expectedItem] of expectedMenus) {
+    await emit(element('customerAccountContent'), 'click', { target: actionTarget({ nearbyOrder: truckId }) });
+    await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-menu' }) });
+    const menuMarkup = element('customerAccountContent').innerHTML;
+    assert.match(menuMarkup, new RegExp(expectedItem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    menuSignatures.push([...menuMarkup.matchAll(/data-add-menu-item="([^"]+)"/g)].map(match => match[1]).sort().join('|'));
+  }
+
+  assert.equal(expectedMenus.length, 20);
+  assert.equal(new Set(menuSignatures).size, 20, 'each truck should have a distinct menu item set');
+
+  await emit(element('openCustomerPortalButton'), 'click');
+  element('customerHomeSearchInput').value = 'Oxtail';
+  await emit(element('customerAccountContent'), 'submit', {
+    preventDefault() {},
+    target: { id: 'customerHomeSearch' }
+  });
+  assert.match(element('customerHomeSearchResults').innerHTML, /Kingston Jerk Stop/);
+});
+
 test('customer ordering journey persists cart, places an order, and opens live tracking', async () => {
   let account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   localStorage.setItem('ftnCustomerSessionV1', JSON.stringify({ accountId: account.id }));
@@ -473,6 +521,41 @@ test('customer ordering journey persists cart, places an order, and opens live t
   assert.equal(vendorOrder.status, 'cancelled');
   assert.equal(vendorOrder.refundStatus, 'refunded');
   assert.match(element('customerAccountContent').innerHTML, /Cancelled · Full Refund/);
+});
+
+test('vendor saved availability controls the signed-in customer menu and checkout', async () => {
+  let account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  localStorage.setItem('ftnCustomerSessionV1', JSON.stringify({ accountId: account.id }));
+  const vendorMenu = [{ id: 1, name: 'Classic Cheeseburger', category: 'Burgers', price: 11.5, description: 'Vendor-managed burger.', available: false, image: '' }];
+  const burger = vendorMenu[0];
+  localStorage.setItem('ftnVendorMenuV0400', JSON.stringify(vendorMenu));
+
+  await emit(element('openCustomerPortalButton'), 'click');
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ nearbyOrder: 'capital-city-eats' }) });
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-menu' }) });
+  assert.match(element('customerAccountContent').innerHTML, /Classic Cheeseburger/);
+  assert.match(element('customerAccountContent').innerHTML, /data-add-menu-item="capital-smash-burger" type="button" disabled/);
+
+  burger.available = true;
+  localStorage.setItem('ftnVendorMenuV0400', JSON.stringify(vendorMenu));
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-menu' }) });
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
+  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  assert.equal(account.cart.items.length, 1);
+
+  burger.available = false;
+  localStorage.setItem('ftnVendorMenuV0400', JSON.stringify(vendorMenu));
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-cart' }) });
+  assert.match(element('customerAccountContent').innerHTML, /Your cart changed/);
+  assert.match(element('customerAccountContent').innerHTML, /Sold Out/);
+  assert.match(element('customerAccountContent').innerHTML, /Remove Sold-Out Items/);
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'checkout' }) });
+  assert.match(element('customerAccountContent').innerHTML, /Shopping Cart/);
+  assert.doesNotMatch(element('customerAccountContent').innerHTML, /Review and Place Your Order/);
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'empty-cart' }) });
+  localStorage.removeItem('ftnVendorMenuV0400');
 });
 
 test('roadmap marks Phase 3.2 complete and names live communication as Phase 4', () => {

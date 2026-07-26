@@ -28,7 +28,21 @@
     { id: 'taco-luna', name: 'Taco Luna', cuisine: 'Mexican · Street tacos', status: 'Open now', wait: '12–18 min', icon: '🌮', latitude: 35.842, longitude: -78.672, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '12:00 PM', closesAt: '10:00 PM', pickupMinutes: 12, currentEvent: 'Oakwood Night Market' },
     { id: 'triangle-dumpling-co', name: 'Triangle Dumpling Co.', cuisine: 'Asian fusion · Dumplings', status: 'Open now', wait: '18–24 min', icon: '🥟', latitude: 35.92, longitude: -78.78, operatingDays: [1, 2, 3, 4, 5, 6], opensAt: '11:30 AM', closesAt: '8:30 PM', pickupMinutes: 18, currentEvent: '' },
     { id: 'oak-city-sweets', name: 'Oak City Sweets', cuisine: 'Desserts · Coffee', status: 'Open now', wait: '8–12 min', icon: '🧁', latitude: 35.7, longitude: -78.62, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '8:00 AM', closesAt: '6:00 PM', pickupMinutes: 8, currentEvent: 'Moore Square Makers Market' },
-    { id: 'carolina-coastal-kitchen', name: 'Carolina Coastal Kitchen', cuisine: 'Seafood · Coastal', status: 'Open now', wait: '22–30 min', icon: '🦐', latitude: 36.05, longitude: -78.85, operatingDays: [0, 3, 4, 5, 6], opensAt: '11:00 AM', closesAt: '8:00 PM', pickupMinutes: 22, currentEvent: '' }
+    { id: 'carolina-coastal-kitchen', name: 'Carolina Coastal Kitchen', cuisine: 'Seafood · Coastal', status: 'Open now', wait: '22–30 min', icon: '🦐', latitude: 36.05, longitude: -78.85, operatingDays: [0, 3, 4, 5, 6], opensAt: '11:00 AM', closesAt: '8:00 PM', pickupMinutes: 22, currentEvent: '' },
+    { id: 'mama-jos-soul-kitchen', name: "Mama Jo's Soul Kitchen", cuisine: 'Soul Food · Southern classics', status: 'Open now', wait: '18–24 min', icon: '🍗', latitude: 35.755, longitude: -78.71, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '11:00 AM', closesAt: '8:00 PM', pickupMinutes: 18, currentEvent: 'Southside Sunday Social' },
+    { id: 'kingston-jerk-stop', name: 'Kingston Jerk Stop', cuisine: 'Jamaican · Caribbean', status: 'Open now', wait: '16–22 min', icon: '🇯🇲', latitude: 35.735, longitude: -78.76, operatingDays: [0, 2, 3, 4, 5, 6], opensAt: '11:30 AM', closesAt: '9:00 PM', pickupMinutes: 16, currentEvent: '' },
+    { id: 'athena-street-eats', name: 'Athena Street Eats', cuisine: 'Greek · Mediterranean', status: 'Open now', wait: '14–20 min', icon: '🫓', latitude: 35.865, longitude: -78.73, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '10:30 AM', closesAt: '8:30 PM', pickupMinutes: 14, currentEvent: '' },
+    { id: 'seoul-on-wheels', name: 'Seoul on Wheels', cuisine: 'Korean · Asian fusion', status: 'Open now', wait: '17–23 min', icon: '🍜', latitude: 35.69, longitude: -78.69, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '11:00 AM', closesAt: '9:00 PM', pickupMinutes: 17, currentEvent: 'Warehouse District Pop-Up' },
+    { id: 'cupcake-caravan', name: 'Cupcake Caravan', cuisine: 'Cupcakes · Baked treats', status: 'Open now', wait: '7–10 min', icon: '🧁', latitude: 35.88, longitude: -78.58, operatingDays: [0, 2, 3, 4, 5, 6], opensAt: '9:00 AM', closesAt: '7:00 PM', pickupMinutes: 7, currentEvent: '' },
+    { id: 'scoop-loop', name: 'Scoop Loop', cuisine: 'Ice Cream · Frozen treats', status: 'Open now', wait: '6–10 min', icon: '🍦', latitude: 35.66, longitude: -78.57, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '12:00 PM', closesAt: '10:00 PM', pickupMinutes: 6, currentEvent: 'Family Fun Day' },
+    { id: 'bull-city-burgers', name: 'Bull City Burgers', cuisine: 'Burgers · Hand-cut fries', status: 'Open now', wait: '15–21 min', icon: '🍔', latitude: 35.99, longitude: -78.9, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '11:00 AM', closesAt: '10:00 PM', pickupMinutes: 15, currentEvent: '' },
+    { id: 'smokehouse-919', name: 'Smokehouse 919', cuisine: 'BBQ · Smokehouse', status: 'Open now', wait: '24–32 min', icon: '🥩', latitude: 36.1, longitude: -78.72, operatingDays: [0, 3, 4, 5, 6], opensAt: '11:00 AM', closesAt: '8:00 PM', pickupMinutes: 24, currentEvent: '' },
+    { id: 'green-route-vegan', name: 'Green Route Vegan', cuisine: 'Vegan · Plant based', status: 'Open now', wait: '13–18 min', icon: '🌱', latitude: 35.62, longitude: -78.8, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '10:00 AM', closesAt: '8:00 PM', pickupMinutes: 13, currentEvent: 'Wellness Market' },
+    { id: 'pie-and-pudding', name: 'Pie & Pudding', cuisine: 'Desserts · Pies and puddings', status: 'Open now', wait: '8–12 min', icon: '🥧', latitude: 35.94, longitude: -78.47, operatingDays: [0, 1, 3, 4, 5, 6], opensAt: '10:00 AM', closesAt: '7:00 PM', pickupMinutes: 8, currentEvent: '' },
+    { id: 'bayou-bites', name: 'Bayou Bites', cuisine: 'Cajun · Creole seafood', status: 'Open now', wait: '19–26 min', icon: '🦞', latitude: 35.57, longitude: -78.64, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '11:30 AM', closesAt: '9:00 PM', pickupMinutes: 19, currentEvent: '' },
+    { id: 'pasta-passeggiata', name: 'Pasta Passeggiata', cuisine: 'Italian · Fresh pasta', status: 'Open now', wait: '18–25 min', icon: '🍝', latitude: 36.13, longitude: -78.96, operatingDays: [0, 2, 3, 4, 5, 6], opensAt: '11:00 AM', closesAt: '9:00 PM', pickupMinutes: 18, currentEvent: '' },
+    { id: 'curry-in-a-hurry', name: 'Curry in a Hurry', cuisine: 'Indian · Street food', status: 'Open now', wait: '15–22 min', icon: '🍛', latitude: 35.49, longitude: -78.91, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '11:00 AM', closesAt: '9:00 PM', pickupMinutes: 15, currentEvent: 'Global Food Festival' },
+    { id: 'breakfast-bus', name: 'The Breakfast Bus', cuisine: 'Breakfast · Brunch', status: 'Open now', wait: '10–16 min', icon: '🍳', latitude: 36.18, longitude: -78.55, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '7:00 AM', closesAt: '2:00 PM', pickupMinutes: 10, currentEvent: '' }
   ];
   const NEARBY_RADIUS_OPTIONS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
   const EVENTS = [
@@ -60,6 +74,165 @@
     { id: 'fresh-lemonade', category: 'Drinks', name: 'Fresh-Squeezed Lemonade', description: 'Bright, cold lemonade made fresh throughout the day.', price: 4, calories: 180, available: true, icon: '🍋', featured: false, special: false, popular: true, requiredChoices: [{ id: 'size', name: 'Choose a size', options: [{ id: 'regular', name: 'Regular', price: 0 }, { id: 'large', name: 'Large', price: 1.5 }] }] },
     { id: 'sweet-tea', category: 'Drinks', name: 'Southern Sweet Tea', description: 'Fresh-brewed black tea served over ice with lemon.', price: 3.5, calories: 150, available: true, icon: '🥤', featured: false, special: false, popular: false }
   ];
+  const VENDOR_MENU_ITEM_MAP = new Map([
+    [1, 'capital-smash-burger'],
+    [2, 'loaded-street-nachos'],
+    [3, 'firecracker-chicken-tacos'],
+    [4, 'trek-seasoned-fries'],
+    [6, 'fresh-lemonade']
+  ]);
+  function buildTruckMenu(truckId, items) {
+    return items.map(([category, name, description, price, icon, available = true], index) => ({
+      id: `${truckId}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`,
+      truckId,
+      category,
+      name,
+      description,
+      price,
+      calories: null,
+      available,
+      icon,
+      featured: index < 2,
+      special: index === 1,
+      popular: index < 3
+    }));
+  }
+
+  const TRUCK_MENUS = {
+    'rolling-ember-bbq': buildTruckMenu('rolling-ember-bbq', [
+      ['Starters', 'Smoked Wings', 'Hickory-smoked wings glazed with tangy Carolina sauce.', 10, '🍗'],
+      ['Plates', 'Pulled Pork Plate', 'Twelve-hour pulled pork with two country sides and cornbread.', 16, '🐖'],
+      ['Plates', 'Brisket Burnt Ends', 'Caramelized brisket ends with smoky molasses barbecue sauce.', 18, '🥩'],
+      ['Sides', 'Smokehouse Mac', 'Creamy three-cheese macaroni with toasted crumbs.', 5, '🧀'],
+      ['Drinks', 'Peach Sweet Tea', 'Fresh-brewed sweet tea with ripe peach.', 4, '🍑']
+    ]),
+    'taco-luna': buildTruckMenu('taco-luna', [
+      ['Antojitos', 'Elote Cup', 'Fire-roasted corn, cotija, chile, lime, and crema.', 6, '🌽'],
+      ['Tacos', 'Birria Tacos', 'Three crispy beef birria tacos with consommé.', 14, '🌮'],
+      ['Tacos', 'Baja Fish Tacos', 'Crispy fish, cabbage, pico, and chipotle crema.', 13, '🐟'],
+      ['Bowls', 'Carnitas Rice Bowl', 'Citrus pork, cilantro rice, black beans, and salsa verde.', 13.5, '🍚'],
+      ['Drinks', 'Watermelon Agua Fresca', 'Fresh watermelon, lime, and cane sugar.', 4, '🍉']
+    ]),
+    'triangle-dumpling-co': buildTruckMenu('triangle-dumpling-co', [
+      ['Small Plates', 'Scallion Pancakes', 'Crisp layered pancakes with soy ginger dip.', 7, '🥞'],
+      ['Dumplings', 'Pork Soup Dumplings', 'Six delicate dumplings filled with pork and savory broth.', 13, '🥟'],
+      ['Dumplings', 'Vegetable Potstickers', 'Pan-seared cabbage, mushroom, and chive dumplings.', 11, '🥬'],
+      ['Noodles', 'Chili Garlic Noodles', 'Springy noodles with sesame, scallions, and chili crisp.', 12, '🍜'],
+      ['Drinks', 'Lychee Green Tea', 'Iced jasmine green tea with lychee.', 4.5, '🧋']
+    ]),
+    'oak-city-sweets': buildTruckMenu('oak-city-sweets', [
+      ['Cookies', 'Salted Chocolate Chunk Cookie', 'Warm brown-butter cookie with dark chocolate and sea salt.', 4, '🍪'],
+      ['Desserts', 'Banana Pudding Cup', 'Vanilla custard, bananas, wafers, and whipped cream.', 7, '🍌'],
+      ['Desserts', 'Red Velvet Brownie', 'Fudgy cocoa brownie with cream cheese swirl.', 5.5, '🍫'],
+      ['Cheesecakes', 'Strawberry Cheesecake Jar', 'Creamy cheesecake layered with strawberry compote.', 8, '🍓'],
+      ['Coffee', 'Brown Sugar Cold Brew', 'Cold brew with brown sugar cream and cinnamon.', 5, '☕']
+    ]),
+    'carolina-coastal-kitchen': buildTruckMenu('carolina-coastal-kitchen', [
+      ['Starters', 'Crab Hushpuppies', 'Golden hushpuppies with blue crab and remoulade.', 9, '🦀'],
+      ['Seafood Baskets', 'Calabash Shrimp Basket', 'Lightly breaded shrimp, fries, slaw, and cocktail sauce.', 17, '🍤'],
+      ['Sandwiches', 'Blackened Mahi Sandwich', 'Spiced mahi, lettuce, tomato, and lemon aioli.', 16, '🐟'],
+      ['Seafood Rolls', 'Warm Lobster Roll', 'Butter-poached lobster in a toasted split-top roll.', 22, '🦞'],
+      ['Sides', 'Coastal Slaw', 'Cabbage, carrots, herbs, and citrus dressing.', 4, '🥗']
+    ]),
+    'mama-jos-soul-kitchen': buildTruckMenu('mama-jos-soul-kitchen', [
+      ['Starters', 'Fried Green Tomatoes', 'Cornmeal-crusted tomatoes with comeback sauce.', 8, '🍅'],
+      ['Soul Plates', 'Buttermilk Fried Chicken', 'Crispy seasoned chicken, two sides, and a biscuit.', 16, '🍗'],
+      ['Soul Plates', 'Smothered Turkey Wings', 'Slow-braised turkey wings with onion gravy and rice.', 17, '🦃'],
+      ['Sides', 'Candied Yams', 'Sweet potatoes baked with brown sugar and warm spices.', 5, '🍠'],
+      ['Desserts', 'Peach Cobbler', 'Warm spiced peaches under a buttery golden crust.', 7, '🍑']
+    ]),
+    'kingston-jerk-stop': buildTruckMenu('kingston-jerk-stop', [
+      ['Small Bites', 'Jamaican Beef Patty', 'Flaky golden pastry filled with curried island beef.', 5, '🥟'],
+      ['Plates', 'Jerk Chicken Plate', 'Pimento-smoked jerk chicken with rice and peas.', 16, '🍗'],
+      ['Plates', 'Oxtail Stew', 'Slow-braised oxtail with butter beans and rich gravy.', 21, '🍲'],
+      ['Sides', 'Festival Bread', 'Sweet fried Jamaican dumplings.', 5, '🥖'],
+      ['Drinks', 'Pineapple Ginger Punch', 'Cold pineapple punch with fresh ginger and lime.', 5, '🍍']
+    ]),
+    'athena-street-eats': buildTruckMenu('athena-street-eats', [
+      ['Meze', 'Spanakopita Bites', 'Flaky phyllo filled with spinach, feta, and herbs.', 8, '🥬'],
+      ['Pitas', 'Chicken Souvlaki Pita', 'Grilled lemon-herb chicken, tomato, onion, and tzatziki.', 12, '🫓'],
+      ['Platters', 'Lamb Gyro Platter', 'Seasoned lamb, lemon potatoes, village salad, and pita.', 17, '🥙'],
+      ['Sides', 'Loaded Feta Fries', 'Crispy fries with feta, oregano, and garlic sauce.', 7, '🍟'],
+      ['Desserts', 'Honey Baklava', 'Walnut phyllo pastry with orange blossom honey.', 6, '🍯']
+    ]),
+    'seoul-on-wheels': buildTruckMenu('seoul-on-wheels', [
+      ['Snacks', 'Kimchi Mandu', 'Crispy dumplings filled with kimchi and vegetables.', 8, '🥟'],
+      ['Rice Bowls', 'Korean BBQ Beef Bowl', 'Bulgogi beef, steamed rice, pickled vegetables, and egg.', 15, '🍚'],
+      ['Sandwiches', 'Gochujang Chicken Bao', 'Two steamed buns with spicy glazed chicken and slaw.', 12, '🥠'],
+      ['Noodles', 'Japchae Noodles', 'Sweet potato noodles with vegetables and sesame.', 13, '🍜'],
+      ['Drinks', 'Yuzu Lemonade', 'Sparkling citrus lemonade with fragrant yuzu.', 5, '🍋']
+    ]),
+    'cupcake-caravan': buildTruckMenu('cupcake-caravan', [
+      ['Classic Cupcakes', 'Vanilla Confetti Cupcake', 'Vanilla bean cake, buttercream, and rainbow confetti.', 4.5, '🧁'],
+      ['Signature Cupcakes', 'Salted Caramel Cupcake', 'Chocolate cake, caramel center, and salted buttercream.', 5, '🍮'],
+      ['Signature Cupcakes', 'Strawberry Shortcake Cupcake', 'Vanilla cake with strawberry filling and whipped frosting.', 5, '🍓'],
+      ['Mini Boxes', 'Six Mini Cupcake Box', 'A rotating assortment of six bite-size cupcakes.', 15, '🎁'],
+      ['Drinks', 'Cold Milk', 'Chilled whole or chocolate milk.', 3, '🥛']
+    ]),
+    'scoop-loop': buildTruckMenu('scoop-loop', [
+      ['Cones', 'Double Scoop Cone', 'Choose two rotating house-churned flavors.', 7, '🍦'],
+      ['Sundaes', 'Hot Fudge Brownie Sundae', 'Vanilla ice cream, warm brownie, fudge, and whipped cream.', 9, '🍨'],
+      ['Shakes', 'Cookies and Cream Shake', 'Thick vanilla shake blended with chocolate cookies.', 8, '🥤'],
+      ['Frozen Treats', 'Strawberry Ice Cream Sandwich', 'Strawberry ice cream between soft sugar cookies.', 6, '🍓'],
+      ['Dairy Free', 'Mango Coconut Sorbet', 'Bright mango sorbet made with coconut milk.', 6, '🥭']
+    ]),
+    'bull-city-burgers': buildTruckMenu('bull-city-burgers', [
+      ['Snacks', 'Fried Pickle Chips', 'Crispy dill pickle chips with ranch.', 7, '🥒'],
+      ['Burgers', 'Bull City Double', 'Two smashed patties, cheddar, pickles, onion, and house sauce.', 14, '🍔'],
+      ['Burgers', 'Carolina Chili Burger', 'Beef patty, beef chili, slaw, mustard, and onions.', 13.5, '🍔'],
+      ['Chicken', 'Hot Honey Chicken Sandwich', 'Crispy chicken, hot honey, pickles, and slaw.', 13, '🍗'],
+      ['Sides', 'Parmesan Truffle Fries', 'Hand-cut fries with parmesan and truffle seasoning.', 6, '🍟']
+    ]),
+    'smokehouse-919': buildTruckMenu('smokehouse-919', [
+      ['Pit Snacks', 'Brisket Queso', 'Smoked brisket, warm queso, jalapeños, and tortilla chips.', 11, '🧀'],
+      ['From the Pit', 'Prime Brisket Plate', 'Sliced oak-smoked brisket, pickles, bread, and two sides.', 21, '🥩'],
+      ['From the Pit', 'St. Louis Rib Plate', 'Dry-rubbed pork ribs glazed with house barbecue sauce.', 20, '🍖'],
+      ['Sandwiches', 'Smoked Turkey Melt', 'Smoked turkey, cheddar, onions, and white barbecue sauce.', 14, '🥪'],
+      ['Sides', 'Jalapeño Cornbread', 'Cast-iron cornbread with honey butter.', 5, '🌽']
+    ]),
+    'green-route-vegan': buildTruckMenu('green-route-vegan', [
+      ['Starters', 'Buffalo Cauliflower', 'Crispy cauliflower, buffalo sauce, and cashew ranch.', 9, '🥦'],
+      ['Bowls', 'Rainbow Buddha Bowl', 'Quinoa, roasted vegetables, chickpeas, greens, and tahini.', 14, '🥗'],
+      ['Sandwiches', 'Crispy Oyster Mushroom Sandwich', 'Crispy mushrooms, slaw, pickles, and herb aioli.', 13, '🍄'],
+      ['Tacos', 'Walnut Chorizo Tacos', 'Three corn tortillas with walnut chorizo and avocado crema.', 12, '🌮'],
+      ['Desserts', 'Chocolate Avocado Mousse', 'Silky dark chocolate mousse with coconut whip.', 6, '🥑']
+    ]),
+    'pie-and-pudding': buildTruckMenu('pie-and-pudding', [
+      ['Pie Slices', 'Brown Butter Apple Pie', 'Spiced apples under a flaky brown-butter crust.', 7, '🥧'],
+      ['Pie Slices', 'Chocolate Chess Pie', 'Rich Southern chocolate custard in a crisp crust.', 7, '🍫'],
+      ['Puddings', 'Classic Banana Pudding', 'Vanilla pudding, bananas, wafers, and whipped cream.', 6.5, '🍌'],
+      ['Puddings', 'Butterscotch Pudding', 'Brown sugar custard with salted caramel cream.', 6.5, '🍮'],
+      ['Drinks', 'Vanilla Cream Soda', 'House vanilla syrup, soda, and sweet cream.', 4, '🥤']
+    ]),
+    'bayou-bites': buildTruckMenu('bayou-bites', [
+      ['Lagniappe', 'Crawfish Beignets', 'Savory crawfish fritters with rémoulade.', 10, '🦞'],
+      ['Po Boys', 'Fried Shrimp Po Boy', 'Crispy Gulf shrimp, lettuce, tomato, pickles, and sauce.', 16, '🍤'],
+      ['Bowls', 'Chicken and Sausage Gumbo', 'Dark roux gumbo over rice with scallions.', 14, '🍲'],
+      ['Rice Plates', 'Cajun Jambalaya', 'Spiced rice with chicken, andouille, and vegetables.', 15, '🍚'],
+      ['Desserts', 'Powdered Sugar Beignets', 'Three hot New Orleans-style beignets.', 7, '🍩']
+    ]),
+    'pasta-passeggiata': buildTruckMenu('pasta-passeggiata', [
+      ['Antipasti', 'Arancini', 'Crispy risotto balls with mozzarella and tomato sauce.', 9, '🧀'],
+      ['Fresh Pasta', 'Cacio e Pepe', 'Fresh spaghetti, pecorino romano, and cracked pepper.', 15, '🍝'],
+      ['Fresh Pasta', 'Short Rib Pappardelle', 'Wide ribbons with braised beef and tomato ragu.', 18, '🍝'],
+      ['Sandwiches', 'Chicken Parmesan Panino', 'Crispy chicken, marinara, mozzarella, and basil.', 14, '🥪'],
+      ['Desserts', 'Tiramisu Cup', 'Espresso-soaked ladyfingers and mascarpone cream.', 7, '☕']
+    ]),
+    'curry-in-a-hurry': buildTruckMenu('curry-in-a-hurry', [
+      ['Street Snacks', 'Vegetable Samosas', 'Two crisp pastries with spiced potato and peas.', 6, '🥟'],
+      ['Curries', 'Butter Chicken Bowl', 'Tomato cream curry, basmati rice, and cucumber salad.', 15, '🍛'],
+      ['Curries', 'Chana Masala Bowl', 'Spiced chickpeas, basmati rice, and herb chutney.', 13, '🫘'],
+      ['Wraps', 'Tandoori Chicken Kati Roll', 'Spiced chicken, onions, mint chutney, and paratha.', 12, '🌯'],
+      ['Drinks', 'Mango Lassi', 'Chilled mango yogurt drink with cardamom.', 5, '🥭']
+    ]),
+    'breakfast-bus': buildTruckMenu('breakfast-bus', [
+      ['Biscuits', 'Sausage Egg Biscuit', 'Buttermilk biscuit, sausage, egg, cheddar, and pepper jelly.', 8, '🥯'],
+      ['Breakfast Plates', 'Chicken and Waffles', 'Crispy chicken, Belgian waffle, hot honey, and syrup.', 15, '🧇'],
+      ['Breakfast Bowls', 'Loaded Grits Bowl', 'Creamy grits, eggs, bacon, cheddar, and scallions.', 12, '🍳'],
+      ['Sweet Breakfast', 'Berry French Toast', 'Brioche French toast, berries, cream, and maple syrup.', 13, '🍓'],
+      ['Coffee', 'Maple Cold Brew', 'Cold brew with maple cream and cinnamon.', 5, '☕']
+    ])
+  };
 
   const seedOrders = () => [
     {
@@ -584,8 +757,77 @@
     return TRUCKS.find(truck => truck.id === selectedTruckId) || TRUCK;
   }
 
-  function menuForTruck() {
-    return ORDERING_MENU_ITEMS.map(item => ({ ...item, truckId: selectedTruck().id }));
+  function readVendorMenu() {
+    try {
+      const savedMenu = JSON.parse(localStorage.getItem(MENU_STORAGE_KEY));
+      return Array.isArray(savedMenu) ? savedMenu : defaultMenu;
+    } catch {
+      return defaultMenu;
+    }
+  }
+
+  function customerMenuCategory(category) {
+    const value = String(category || '').toLowerCase();
+    if (value.includes('side')) return 'Sides';
+    if (value.includes('drink') || value.includes('beverage')) return 'Drinks';
+    if (value.includes('dessert') || value.includes('sweet')) return 'Desserts';
+    if (value.includes('app') || value.includes('nacho')) return 'Appetizers';
+    return 'Entrees';
+  }
+
+  function customerMenuIcon(category) {
+    return { Appetizers: '🥨', Entrees: '🍽️', Sides: '🍟', Desserts: '🍰', Drinks: '🥤' }[category] || '🍽️';
+  }
+
+  function menuForTruck(truckId = selectedTruck().id) {
+    const baseMenu = ORDERING_MENU_ITEMS.map(item => ({ ...item, truckId }));
+    if (truckId !== TRUCK.id) {
+      return (TRUCK_MENUS[truckId] || ORDERING_MENU_ITEMS).map(item => ({ ...item, truckId }));
+    }
+
+    const vendorMenu = readVendorMenu();
+    const vendorItemsByCustomerId = new Map(
+      vendorMenu
+        .filter(item => VENDOR_MENU_ITEM_MAP.has(Number(item.id)))
+        .map(item => [VENDOR_MENU_ITEM_MAP.get(Number(item.id)), item])
+    );
+    const connectedMenu = baseMenu.map(item => {
+      const vendorItem = vendorItemsByCustomerId.get(item.id);
+      if (!vendorItem) return item;
+      return {
+        ...item,
+        vendorMenuItemId: vendorItem.id,
+        name: vendorItem.name || item.name,
+        category: customerMenuCategory(vendorItem.category || item.category),
+        available: vendorItem.available !== false,
+        price: Number(vendorItem.price ?? item.price),
+        description: vendorItem.description || item.description,
+        image: vendorItem.image || item.image || ''
+      };
+    });
+    const mappedVendorIds = new Set(VENDOR_MENU_ITEM_MAP.keys());
+    const vendorOnlyItems = vendorMenu
+      .filter(item => !mappedVendorIds.has(Number(item.id)))
+      .map(item => {
+        const category = customerMenuCategory(item.category);
+        return {
+          id: `vendor-${item.id}`,
+          vendorMenuItemId: item.id,
+          truckId,
+          category,
+          name: item.name,
+          description: item.description || '',
+          price: Number(item.price || 0),
+          calories: null,
+          available: item.available !== false,
+          icon: customerMenuIcon(category),
+          image: item.image || '',
+          featured: Boolean(item.featured),
+          special: false,
+          popular: false
+        };
+      });
+    return [...connectedMenu, ...vendorOnlyItems];
   }
 
   function truckExperienceDetails(truck) {
@@ -746,11 +988,17 @@
     return { subtotal, tax, serviceFee, total: Number((subtotal + tax + serviceFee).toFixed(2)) };
   }
 
-  function cartItemMarkup(item) {
+  function unavailableCartItems() {
+    if (!currentAccount?.cart?.items?.length || !currentAccount.cart.truckId) return [];
+    const currentMenu = new Map(menuForTruck(currentAccount.cart.truckId).map(item => [item.id, item]));
+    return currentAccount.cart.items.filter(item => currentMenu.get(item.menuItemId)?.available === false);
+  }
+
+  function cartItemMarkup(item, unavailable = false) {
     const modifiers = (item.modifiers || []).map(modifier => modifier.name).join(' · ');
-    return `<article class="ordering-cart-item">
+    return `<article class="ordering-cart-item ${unavailable ? 'cart-item-sold-out' : ''}">
       <div class="cart-item-photo" aria-hidden="true">${item.icon || '🍽️'}</div>
-      <div class="cart-item-copy"><h3>${escapeHtml(item.name)}</h3>${modifiers ? `<p>${escapeHtml(modifiers)}</p>` : ''}${item.instructions ? `<small>“${escapeHtml(item.instructions)}”</small>` : ''}<div class="cart-item-links"><button data-cart-note="${item.id}" type="button">${item.instructions ? 'Edit Notes' : '+ Add Notes'}</button><button data-cart-remove="${item.id}" type="button">Remove</button></div></div>
+      <div class="cart-item-copy"><h3>${escapeHtml(item.name)}</h3>${unavailable ? '<strong class="cart-item-availability">Sold Out — remove to continue</strong>' : ''}${modifiers ? `<p>${escapeHtml(modifiers)}</p>` : ''}${item.instructions ? `<small>“${escapeHtml(item.instructions)}”</small>` : ''}<div class="cart-item-links"><button data-cart-note="${item.id}" type="button">${item.instructions ? 'Edit Notes' : '+ Add Notes'}</button><button data-cart-remove="${item.id}" type="button">Remove</button></div></div>
       <div class="cart-item-controls"><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong><div class="ordering-quantity small"><button data-cart-quantity="${item.id}" data-quantity-change="-1" type="button">−</button><span>${item.quantity}</span><button data-cart-quantity="${item.id}" data-quantity-change="1" type="button">+</button></div></div>
     </article>`;
   }
@@ -759,11 +1007,14 @@
     const cart = currentAccount.cart;
     const truck = TRUCKS.find(item => item.id === cart.truckId) || selectedTruck();
     const totals = cartTotals();
+    const unavailableItems = unavailableCartItems();
+    const unavailableIds = new Set(unavailableItems.map(item => item.id));
     if (!cart.items.length) return `<div class="ordering-page"><button class="ordering-back-button" data-customer-page-back="truckMenu" type="button">← Continue Shopping</button><section class="ordering-empty-cart"><span>🛒</span><p class="eyebrow">Your Cart</p><h1>Ready when you are.</h1><p>Add something delicious from ${escapeHtml(truck.name)}.</p><button class="primary-button" data-ordering-action="continue-shopping" type="button">Browse the Menu</button></section></div>`;
     return `<div class="ordering-page cart-page">
       ${pageHeader('Your Order', 'Shopping Cart', `${escapeHtml(truck.name)} · ${cart.items.reduce((total, item) => total + item.quantity, 0)} items`, '<button class="ordering-text-danger" data-ordering-action="empty-cart" type="button">Empty Cart</button>')}
-      <div class="cart-layout"><section class="cart-items-panel">${cart.items.map(cartItemMarkup).join('')}<button class="secondary-button" data-ordering-action="continue-shopping" type="button">← Continue Shopping</button></section>
-      <aside class="order-summary-card"><p class="order-number-banner"><small>Your permanent order number</small><strong>${orderNumberLabel(cart.orderNumber)}</strong></p><h2>Order Summary</h2><div><span>Subtotal</span><strong>${customerMoney(totals.subtotal)}</strong></div><div><span>Taxes <small>estimate</small></span><strong>${customerMoney(totals.tax)}</strong></div><div><span>Service Fee <small>placeholder</small></span><strong>${customerMoney(totals.serviceFee)}</strong></div><div class="order-summary-total"><span>Estimated Total</span><strong>${customerMoney(totals.total)}</strong></div><p>Estimated pickup in about ${truck.pickupMinutes} minutes.</p><button class="primary-button full" data-ordering-action="checkout" type="button">Proceed to Checkout</button></aside></div>
+      ${unavailableItems.length ? `<div class="cart-availability-alert" role="alert"><span>⚠️</span><div><strong>Your cart changed</strong><p>${unavailableItems.length === 1 ? 'An item is' : 'Some items are'} now sold out. Remove ${unavailableItems.length === 1 ? 'it' : 'them'} before checkout.</p></div></div>` : ''}
+      <div class="cart-layout"><section class="cart-items-panel">${cart.items.map(item => cartItemMarkup(item, unavailableIds.has(item.id))).join('')}<button class="secondary-button" data-ordering-action="continue-shopping" type="button">← Continue Shopping</button></section>
+      <aside class="order-summary-card"><p class="order-number-banner"><small>Your permanent order number</small><strong>${orderNumberLabel(cart.orderNumber)}</strong></p><h2>Order Summary</h2><div><span>Subtotal</span><strong>${customerMoney(totals.subtotal)}</strong></div><div><span>Taxes <small>estimate</small></span><strong>${customerMoney(totals.tax)}</strong></div><div><span>Service Fee <small>placeholder</small></span><strong>${customerMoney(totals.serviceFee)}</strong></div><div class="order-summary-total"><span>Estimated Total</span><strong>${customerMoney(totals.total)}</strong></div><p>Estimated pickup in about ${truck.pickupMinutes} minutes.</p><button class="primary-button full" data-ordering-action="checkout" type="button" ${unavailableItems.length ? 'disabled aria-disabled="true"' : ''}>${unavailableItems.length ? 'Remove Sold-Out Items' : 'Proceed to Checkout'}</button></aside></div>
     </div>`;
   }
 
@@ -1357,6 +1608,11 @@
         renderCustomerPage('truckMenu');
       } else if (action === 'open-cart') renderCustomerPage('cart');
       else if (action === 'checkout' && currentAccount.cart.items.length) {
+        if (unavailableCartItems().length) {
+          renderCustomerPage('cart');
+          customerToast('Remove sold-out items before checkout.');
+          return;
+        }
         if (!currentAccount.cart.orderNumber) currentAccount.cart.orderNumber = generateOrderNumber();
         CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
         renderCustomerPage('checkout');
@@ -1550,6 +1806,11 @@
         renderCustomerPage('cart');
         return;
       }
+      if (unavailableCartItems().length) {
+        renderCustomerPage('cart');
+        customerToast('Availability changed. Remove sold-out items before checkout.');
+        return;
+      }
       const truck = TRUCKS.find(item => item.id === currentAccount.cart.truckId) || selectedTruck();
       const totals = cartTotals();
       const payment = accountContent.querySelector('input[name="paymentMethod"]:checked');
@@ -1591,8 +1852,12 @@
         input.focus();
         return;
       }
-      const truckMatches = TRUCKS.filter(truck => `${truck.name} ${truck.cuisine} ${truck.status}`.toLowerCase().includes(query));
-      const menuMatches = defaultMenu.filter(item => `${item.name} ${item.category} ${item.description}`.toLowerCase().includes(query));
+      const menusByTruck = new Map(TRUCKS.map(truck => [truck.id, menuForTruck(truck.id)]));
+      const menuMatches = [...menusByTruck.entries()].flatMap(([truckId, menu]) => menu
+        .filter(item => `${item.name} ${item.category} ${item.description}`.toLowerCase().includes(query))
+        .map(item => ({ ...item, truckId })));
+      const menuMatchTruckIds = new Set(menuMatches.map(item => item.truckId));
+      const truckMatches = TRUCKS.filter(truck => `${truck.name} ${truck.cuisine} ${truck.status}`.toLowerCase().includes(query) || menuMatchTruckIds.has(truck.id));
       const eventMatches = EVENTS.filter(item => `${item.name} ${item.location} ${item.detail}`.toLowerCase().includes(query));
       const total = truckMatches.length + menuMatches.length + eventMatches.length;
       results.innerHTML = `<div class="home-search-result-card"><div><strong>${total ? `${total} result${total === 1 ? '' : 's'} for “${escapeHtml(input.value.trim())}”` : `No matches for “${escapeHtml(input.value.trim())}”`}</strong><p>${total ? [
