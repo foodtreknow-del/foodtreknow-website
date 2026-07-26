@@ -139,7 +139,7 @@ test('customer account UI includes every required area and has unique static IDs
 });
 
 test('homepage prioritizes customer ordering before the vendor login action', () => {
-  const customerActionIndex = html.indexOf('Order as a Customer');
+  const customerActionIndex = html.indexOf("I'm Hungry Login");
   const vendorActionIndex = html.indexOf('Vendor Log In');
   assert.ok(customerActionIndex >= 0);
   assert.ok(vendorActionIndex > customerActionIndex);
@@ -155,7 +155,7 @@ test('official FoodTrekNow logo replaces every FTN badge and customer sign-in sa
   assert.equal((html.match(/src="assets\/foodtreknow-logo\.png"/g) || []).length, 5);
   assert.deepEqual([...officialLogo.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
   assert.match(html, /<h1>I'm Hungry<\/h1>/);
-  const customerActionIndex = html.indexOf('Order as a Customer');
+  const customerActionIndex = html.indexOf("I'm Hungry Login");
   const vendorFormIndex = html.indexOf('id="loginForm"');
   assert.doesNotMatch(html.slice(customerActionIndex, vendorFormIndex), /Vendor Portal/);
 });
