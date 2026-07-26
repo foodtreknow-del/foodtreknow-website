@@ -1227,10 +1227,16 @@
       ? currentAccount.cart.items.filter(cartItem => cartItem.menuItemId === item.id).reduce((total, cartItem) => total + Number(cartItem.quantity || 0), 0)
       : 0;
     const requiresChoice = Boolean(item.requiredChoices?.length);
-    return `<button class="ordering-item-card ${compact ? 'compact' : ''} ${item.available ? '' : 'sold-out'}" data-add-menu-item="${item.id}" type="button" ${item.available ? '' : 'disabled'}>
+    return `<article class="ordering-item-card ${compact ? 'compact' : ''} ${item.available ? '' : 'sold-out'}">
       <span class="ordering-item-photo" aria-hidden="true">${item.icon}${item.available ? '' : '<b>Sold Out</b>'}</span>
-      <span class="ordering-item-copy"><small>${escapeHtml(item.category)}</small><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.description)}</span><em>${item.calories ? `${item.calories} cal · ` : ''}${customerMoney(item.price)}</em><span class="menu-item-add-label">${requiresChoice ? 'Choose options' : '+ Add'}${cartQuantity ? `<b>${cartQuantity} in cart</b>` : ''}</span></span>
-    </button>`;
+      <div class="ordering-item-copy"><small>${escapeHtml(item.category)}</small><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.description)}</span><em>${item.calories ? `${item.calories} cal · ` : ''}${customerMoney(item.price)}</em>
+        <div class="menu-item-quantity-control" aria-label="Quantity of ${escapeHtml(item.name)}">
+          <button data-menu-item-decrease="${item.id}" type="button" aria-label="Decrease ${escapeHtml(item.name)} quantity" ${item.available && cartQuantity ? '' : 'disabled'}>−</button>
+          <span><b data-menu-item-quantity="${item.id}">${cartQuantity}</b><small>in cart</small></span>
+          <button data-add-menu-item="${item.id}" type="button" aria-label="${requiresChoice && !cartQuantity ? 'Choose options for' : 'Increase'} ${escapeHtml(item.name)} quantity" ${item.available ? '' : 'disabled'}>+</button>
+        </div>
+      </div>
+    </article>`;
   }
 
   function renderTruckProfile() {
@@ -1312,12 +1318,58 @@
     return true;
   }
 
+  function incrementConfiguredMenuItem(item) {
+    const matches = currentAccount.cart.truckId === selectedTruckId
+      ? currentAccount.cart.items.filter(cartItem => cartItem.menuItemId === item.id)
+      : [];
+    if (item.requiredChoices?.length && matches.length !== 1) {
+      requiredOptionsModal(item);
+      return;
+    }
+    if (item.requiredChoices?.length && matches.length === 1) {
+      matches[0].quantity = Math.min(99, Number(matches[0].quantity || 0) + 1);
+      matches[0].qty = matches[0].quantity;
+      CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
+      updateContinuousMenuCart();
+      customerToast(`${item.name} quantity increased.`);
+      return;
+    }
+    addMenuItem(item);
+  }
+
+  function decreaseMenuItem(menuItemId) {
+    if (currentAccount.cart.truckId !== selectedTruckId) return;
+    const matches = currentAccount.cart.items.filter(item => item.menuItemId === menuItemId);
+    const cartItem = matches[matches.length - 1];
+    if (!cartItem) return;
+    cartItem.quantity = Math.max(0, Number(cartItem.quantity || 0) - 1);
+    cartItem.qty = cartItem.quantity;
+    if (!cartItem.quantity) currentAccount.cart.items = currentAccount.cart.items.filter(item => item.id !== cartItem.id);
+    if (!currentAccount.cart.items.length) {
+      currentAccount.cart.truckId = null;
+      currentAccount.cart.orderNumber = null;
+    }
+    CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
+    updateContinuousMenuCart();
+    customerToast(`${cartItem.name} quantity decreased.`);
+  }
+
   function updateContinuousMenuCart() {
     const count = currentAccount.cart.truckId === selectedTruckId ? currentAccount.cart.items.reduce((total, item) => total + Number(item.quantity || 0), 0) : 0;
     const subtotal = count ? cartTotals().subtotal : 0;
     accountContent.querySelectorAll('[data-live-cart-count]').forEach(element => { element.textContent = String(count); });
     accountContent.querySelectorAll('[data-live-cart-noun]').forEach(element => { element.textContent = count === 1 ? 'item' : 'items'; });
     accountContent.querySelectorAll('[data-live-cart-total]').forEach(element => { element.textContent = customerMoney(subtotal); });
+    accountContent.querySelectorAll('[data-menu-item-quantity]').forEach(element => {
+      const itemQuantity = currentAccount.cart.truckId === selectedTruckId
+        ? currentAccount.cart.items
+          .filter(item => item.menuItemId === element.dataset.menuItemQuantity)
+          .reduce((total, item) => total + Number(item.quantity || 0), 0)
+        : 0;
+      element.textContent = String(itemQuantity);
+      const decreaseButton = accountContent.querySelector(`[data-menu-item-decrease="${element.dataset.menuItemQuantity}"]`);
+      if (decreaseButton) decreaseButton.disabled = !itemQuantity;
+    });
     const summary = accountContent.querySelector('.floating-cart-summary');
     if (summary) summary.classList.toggle('has-items', Boolean(count));
     const checkoutButton = accountContent.querySelector('.floating-checkout-button');
@@ -1446,6 +1498,8 @@
     } catch {}
     vendorOrders.unshift({
       id: order.id,
+      truckId: order.truckId,
+      truckName: order.truckName,
       customer: currentAccount.preferredName || currentAccount.firstName,
       customerMobile: currentAccount.mobile,
       customerEmail: currentAccount.email,
@@ -1461,6 +1515,9 @@
       createdAt: order.createdAt
     });
     localStorage.setItem(vendorStorageKey, JSON.stringify(vendorOrders));
+    if (window.dispatchEvent && typeof CustomEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('ftn:vendor-orders-updated'));
+    }
   }
 
   function syncCancelledOrderToVendor(order) {
@@ -1478,6 +1535,9 @@
       vendorOrder.refundStatus = 'refunded';
       vendorOrder.refundedAmount = order.refund?.amount || order.total;
       localStorage.setItem(vendorStorageKey, JSON.stringify(vendorOrders));
+      if (window.dispatchEvent && typeof CustomEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('ftn:vendor-orders-updated'));
+      }
     }
   }
 
@@ -1997,8 +2057,12 @@
     const addMenuItemButton = event.target.closest('[data-add-menu-item]');
     if (addMenuItemButton) {
       const item = menuForTruck().find(menuItem => menuItem.id === addMenuItemButton.dataset.addMenuItem);
-      if (item?.requiredChoices?.length) requiredOptionsModal(item);
-      else addMenuItem(item);
+      if (item) incrementConfiguredMenuItem(item);
+      return;
+    }
+    const decreaseMenuItemButton = event.target.closest('[data-menu-item-decrease]');
+    if (decreaseMenuItemButton) {
+      decreaseMenuItem(decreaseMenuItemButton.dataset.menuItemDecrease);
       return;
     }
     const categoryJump = event.target.closest('[data-menu-category]');

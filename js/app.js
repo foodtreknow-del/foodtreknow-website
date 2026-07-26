@@ -7,7 +7,7 @@ const STORAGE_KEY='ftnVendorOrdersV0231';
 const SOUND_KEY='ftnVendorSound';
 let soundOn=localStorage.getItem(SOUND_KEY)!=='off';
 
-function showDashboard(){loginView.classList.add('hidden-view');dashboardView.classList.remove('hidden-view');document.body.classList.remove('login-page');localStorage.setItem('ftnVendorLoggedIn','true');render();}
+function showDashboard(){loginView.classList.add('hidden-view');dashboardView.classList.remove('hidden-view');document.body.classList.remove('login-page');localStorage.setItem('ftnVendorLoggedIn','true');orders=loadOrders();render();}
 function showLogin(){dashboardView.classList.add('hidden-view');loginView.classList.remove('hidden-view');document.body.classList.add('login-page');localStorage.removeItem('ftnVendorLoggedIn');}
 form.addEventListener('submit',e=>{e.preventDefault();const email=document.getElementById('email').value.trim().toLowerCase();const password=document.getElementById('password').value.trim();if(email==='vendor@foodtreknow.com'&&password==='demo123'){message.textContent='';showDashboard();}else message.textContent='Login not recognized. Use vendor@foodtreknow.com and demo123.';});
 if(demoButton)demoButton.addEventListener('click',()=>{document.getElementById('email').value='vendor@foodtreknow.com';document.getElementById('password').value='demo123';message.textContent='';});
@@ -26,8 +26,29 @@ let activeFilter='all';
 let lastNewId=null;
 let pickupConfirmationOrderId=null;
 function normalizeOrders(list){return list.map(o=>{if(o.status==='completed'){o.status='pickedup';o.pickedUpAt=o.pickedUpAt||o.completedAt||Date.now();}return o;});}
-function loadOrders(){try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));return normalizeOrders(Array.isArray(saved)&&saved.length?saved:seedOrders);}catch{return normalizeOrders(seedOrders);}}
+function recoverActiveCustomerOrders(vendorOrders){
+ const recovered=[...vendorOrders],knownIds=new Set(recovered.map(order=>String(order.id))),customers=[];
+ try{const accounts=JSON.parse(localStorage.getItem('ftnCustomerAccountsV1'));if(Array.isArray(accounts))customers.push(...accounts);}catch{}
+ try{const guest=JSON.parse(localStorage.getItem('ftnGuestCustomerV1'));if(guest)customers.push(guest);}catch{}
+ customers.forEach(customer=>(customer.orders||[]).forEach(order=>{
+  if(knownIds.has(String(order.id))||['completed','cancelled','pickedup'].includes(order.status))return;
+  recovered.unshift({
+   id:order.id,truckId:order.truckId,truckName:order.truckName,
+   customer:order.customerName||customer.preferredName||customer.firstName||'Customer',
+   customerMobile:order.customerMobile||customer.mobile||'',customerEmail:order.customerEmail||customer.email||'',
+   guestCheckout:Boolean(order.guestCheckout||customer.isGuest),
+   items:(order.items||[]).map(item=>({name:item.name,qty:Number(item.qty||item.quantity||1),price:Number(item.price||0),modifiers:item.modifiers||[],instructions:item.instructions||''})),
+   subtotal:Number(order.subtotal||0),tax:Number(order.tax||0),total:Number(order.total||0),
+   status:order.status==='received'?'new':order.status,time:new Date(order.createdAt||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}),
+   payment:order.paymentLabel||'Pay at Pickup',paid:true,createdAt:order.createdAt||Date.now()
+  });
+  knownIds.add(String(order.id));
+ }));
+ return recovered;
+}
+function loadOrders(){try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));const stored=Array.isArray(saved)&&saved.length?saved:seedOrders;return normalizeOrders(recoverActiveCustomerOrders(stored));}catch{return normalizeOrders(recoverActiveCustomerOrders(seedOrders));}}
 function saveOrders(){localStorage.setItem(STORAGE_KEY,JSON.stringify(orders));}
+function refreshVendorOrders(){orders=loadOrders();if(!dashboardView.classList.contains('hidden-view'))render();}
 function money(v){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(v)}
 function itemCount(o){return o.items.reduce((s,i)=>s+Number(i.qty||0),0)}
 function safeOrderText(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
@@ -62,7 +83,7 @@ window.showDetails=id=>{const o=orders.find(x=>x.id===id);if(!o)return;document.
 function closeModal(){document.getElementById('orderModal').classList.add('hidden');}
 document.getElementById('closeModal').addEventListener('click',closeModal);document.getElementById('orderModal').addEventListener('click',e=>{if(e.target.id==='orderModal')closeModal();});
 
-document.querySelectorAll('.nav-link[data-page]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.app-page').forEach(p=>p.classList.add('hidden-view'));document.getElementById(`${btn.dataset.page}Page`).classList.remove('hidden-view');if(btn.dataset.page==='menu'&&typeof renderMenu==='function')renderMenu();const map={dashboard:['Vendor Dashboard','Capital City Eats'],orders:['Order Management','Orders'],menu:['Menu Management','Menu'],reports:['Sales & Performance','Reports'],settings:['Vendor Profile','Settings']};document.getElementById('pageEyebrow').textContent=map[btn.dataset.page][0];document.getElementById('pageTitle').textContent=map[btn.dataset.page][1];}));
+document.querySelectorAll('.nav-link[data-page]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.app-page').forEach(p=>p.classList.add('hidden-view'));document.getElementById(`${btn.dataset.page}Page`).classList.remove('hidden-view');if(btn.dataset.page==='orders')refreshVendorOrders();if(btn.dataset.page==='menu'&&typeof renderMenu==='function')renderMenu();const map={dashboard:['Vendor Dashboard','Capital City Eats'],orders:['Order Management','Orders'],menu:['Menu Management','Menu'],reports:['Sales & Performance','Reports'],settings:['Vendor Profile','Settings']};document.getElementById('pageEyebrow').textContent=map[btn.dataset.page][0];document.getElementById('pageTitle').textContent=map[btn.dataset.page][1];}));
 document.querySelectorAll('.filter-tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.filter-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');activeFilter=btn.dataset.filter;renderOrdersPage();}));
 document.getElementById('orderSearch').addEventListener('input',renderOrdersPage);
 document.getElementById('simulateOrderButton').addEventListener('click',()=>{const names=['Jordan','Taylor','Chris','Alicia','Robert','Nina'];const choices=[[{name:'Smash Burger',qty:2,price:11.50},{name:'Seasoned Fries',qty:1,price:4.50}],[{name:'Chicken Tacos',qty:3,price:5.25},{name:'Lemonade',qty:2,price:4.00}],[{name:'BBQ Bowl',qty:1,price:16.00},{name:'Mac & Cheese',qty:1,price:5.50}]];const items=choices[Math.floor(Math.random()*choices.length)];const subtotal=items.reduce((s,i)=>s+i.qty*i.price,0);const tax=Number((subtotal*.06).toFixed(2));const id=Math.max(...orders.map(o=>o.id))+1;const createdAt=Date.now();orders.unshift({id,customer:names[Math.floor(Math.random()*names.length)],items,subtotal,tax,total:Number((subtotal+tax).toFixed(2)),status:'new',time:new Date(createdAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}),payment:'Credit Card',paid:true,createdAt});lastNewId=id;render();tone('new');notify(`New order #${id} received`);setTimeout(()=>{lastNewId=null;document.querySelectorAll('.new-flash').forEach(el=>el.classList.remove('new-flash'));},3800);});
@@ -70,6 +91,10 @@ function updateSoundButton(){const b=document.getElementById('soundToggleButton'
 document.getElementById('soundToggleButton').addEventListener('click',()=>{soundOn=!soundOn;localStorage.setItem(SOUND_KEY,soundOn?'on':'off');updateSoundButton();if(soundOn)tone('new');notify(soundOn?'Order sounds enabled':'Order sounds muted');});
 document.getElementById('onlineToggle').addEventListener('change',e=>{const on=e.target.checked;document.getElementById('statusText').textContent=on?'Online':'Offline';document.getElementById('statusDot').className=`status-dot ${on?'online':'offline'}`;notify(on?'Truck is online':'Truck is offline');});
 document.getElementById('logoutButton').addEventListener('click',showLogin);
+if(window.addEventListener){
+ window.addEventListener('ftn:vendor-orders-updated',refreshVendorOrders);
+ window.addEventListener('storage',event=>{if(event.key===STORAGE_KEY)refreshVendorOrders();});
+}
 setInterval(()=>{if(!dashboardView.classList.contains('hidden-view')){updateLiveTimers();}},1000);
 if(localStorage.getItem('ftnVendorLoggedIn')==='true')showDashboard();else updateSoundButton();
 

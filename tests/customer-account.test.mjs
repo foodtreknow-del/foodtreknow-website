@@ -445,11 +445,19 @@ test('customer ordering journey persists cart, places an order, and opens live t
   assert.match(element('customerAccountContent').innerHTML, /Sold Out/);
 
   assert.match(element('customerAccountContent').innerHTML, /floating-cart-summary/);
+  assert.match(element('customerAccountContent').innerHTML, /data-menu-item-decrease="capital-smash-burger"/);
+  assert.match(element('customerAccountContent').innerHTML, /data-menu-item-quantity="capital-smash-burger">0/);
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
 
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items.length, 1);
+  assert.equal(account.cart.items[0].quantity, 2);
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ menuItemDecrease: 'capital-smash-burger' }) });
+  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  assert.equal(account.cart.items[0].quantity, 1);
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
+  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items[0].quantity, 2);
   assert.equal(account.cart.items[0].instructions, '');
   assert.match(element('customerAccountContent').innerHTML, /Capital City Eats Menu/);
@@ -506,6 +514,16 @@ test('customer ordering journey persists cart, places an order, and opens live t
   assert.match(element('customerAccountContent').innerHTML, /Order Successfully Placed/);
   assert.match(element('customerAccountContent').innerHTML, new RegExp(`Order #${permanentOrderNumber}`));
   assert.equal(JSON.parse(localStorage.getItem('ftnVendorOrdersV0231'))[0].id, permanentOrderNumber);
+  assert.equal(JSON.parse(localStorage.getItem('ftnVendorOrdersV0231'))[0].truckName, 'Capital City Eats');
+
+  localStorage.setItem('ftnVendorOrdersV0231', JSON.stringify(
+    JSON.parse(localStorage.getItem('ftnVendorOrdersV0231')).filter(order => order.id !== permanentOrderNumber)
+  ));
+  element('email').value = 'vendor@foodtreknow.com';
+  element('password').value = 'demo123';
+  await emit(element('loginForm'), 'submit', { preventDefault() {} });
+  assert.match(element('newOrders').innerHTML, new RegExp(`Order #${permanentOrderNumber}`));
+  assert.ok(JSON.parse(localStorage.getItem('ftnVendorOrdersV0231')).some(order => order.id === permanentOrderNumber));
 
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'track-order' }) });
   assert.match(element('customerAccountContent').innerHTML, /Live Order Tracking/);
@@ -541,7 +559,7 @@ test('vendor saved availability controls the signed-in customer menu and checkou
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ nearbyOrder: 'capital-city-eats' }) });
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-menu' }) });
   assert.match(element('customerAccountContent').innerHTML, /Classic Cheeseburger/);
-  assert.match(element('customerAccountContent').innerHTML, /data-add-menu-item="capital-smash-burger" type="button" disabled/);
+  assert.match(element('customerAccountContent').innerHTML, /data-add-menu-item="capital-smash-burger"[^>]*disabled/);
 
   burger.available = true;
   localStorage.setItem('ftnVendorMenuV0400', JSON.stringify(vendorMenu));
