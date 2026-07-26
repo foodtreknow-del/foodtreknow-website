@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>FoodTrekNow | Vendor & Customer Portal</title>
-<link rel="stylesheet" href="css/vendor.css" />
+<link rel="stylesheet" href="css/vendor.css?v=official-logo-3" />
 <link rel="stylesheet" href="css/customer-account.css?v=customer-priority-1" />
 <link rel="stylesheet" href="css/customer-ordering.css" />
 <link rel="stylesheet" href="css/beta-banner.css" />
@@ -38,13 +38,13 @@
 
 <div id="loginView">
   <main class="login-shell">
-    <section class="brand-panel"><div class="logo-mark">FTN</div><h1>FoodTrekNow</h1><p>Vendor Portal</p></section>
+    <section class="brand-panel"><h1 class="brand-logo-heading"><img class="foodtrek-logo foodtrek-logo-hero" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></h1><p>Local food. Ready when you are.</p></section>
     <section class="login-card">
       <div class="customer-entry customer-entry-primary">
         <span>Looking for something delicious?</span>
         <button id="openCustomerPortalButton" class="customer-entry-button" type="button">Order as a Customer <span aria-hidden="true">→</span></button>
       </div>
-      <h2>Vendor Portal</h2><p class="muted">Sign in to manage your truck, orders, menu, and sales.</p>
+      <p class="muted vendor-access-copy">Food truck partners can sign in below to manage their truck, orders, menu, and sales.</p>
       <form id="loginForm" novalidate>
         <label for="email">Email</label><input id="email" type="email" placeholder="vendor@foodtreknow.com" required />
         <label for="password">Password</label><input id="password" type="password" placeholder="Enter password" required />
@@ -65,7 +65,7 @@
   <main class="customer-auth-shell">
     <header class="customer-auth-header">
       <button id="backToVendorButton" class="customer-back-button" type="button" aria-label="Back to vendor login">← Vendor Login</button>
-      <div class="customer-wordmark"><span class="logo-mark small">FTN</span><strong>FoodTrekNow</strong></div>
+      <div class="customer-wordmark"><img class="foodtrek-logo foodtrek-logo-header" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></div>
     </header>
 
     <section id="customerWelcomePanel" class="customer-welcome-panel">
@@ -94,7 +94,7 @@
     <section id="customerSignInPanel" class="customer-auth-card hidden-view">
       <button class="customer-panel-back" data-auth-back type="button">← Back</button>
       <p class="eyebrow">Customer Account</p>
-      <h1>Welcome back</h1>
+      <h1>I'm Hungry</h1>
       <p class="muted">Sign in to see your orders, favorites, and saved details.</p>
       <form id="customerSignInForm" novalidate>
         <label for="customerSignInIdentifier">Email or Mobile Number</label>
@@ -158,7 +158,7 @@
 <div id="customerAccountView" class="hidden-view">
   <div class="customer-app-shell">
     <aside class="customer-sidebar">
-      <div class="customer-sidebar-brand"><span class="logo-mark small">FTN</span><div><strong>FoodTrekNow</strong><small>Customer Account</small></div></div>
+      <div class="customer-sidebar-brand"><div><img class="foodtrek-logo foodtrek-logo-sidebar" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /><small>Customer Account</small></div></div>
       <div id="customerMiniProfile" class="customer-mini-profile"></div>
       <nav id="customerAccountNav" aria-label="Customer account">
         <button class="customer-nav-link active" data-customer-page="overview" type="button"><span>⌂</span> Home</button>
@@ -174,7 +174,7 @@
     </aside>
     <main class="customer-main">
       <header class="customer-mobile-header">
-        <div class="customer-wordmark"><span class="logo-mark small">FTN</span><strong>FoodTrekNow</strong></div>
+        <div class="customer-wordmark"><img class="foodtrek-logo foodtrek-logo-header" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></div>
         <button id="customerMenuButton" class="customer-menu-button" type="button" aria-expanded="false" aria-controls="customerAccountNav">Menu</button>
       </header>
       <div id="customerVerificationBanner" class="verification-banner hidden-view">
@@ -199,7 +199,7 @@
 <div id="dashboardView" class="hidden-view">
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="sidebar-brand"><div class="logo-mark small">FTN</div><div><strong>FoodTrekNow</strong><span>Vendor Portal</span></div></div>
+      <div class="sidebar-brand"><div><img class="foodtrek-logo foodtrek-logo-sidebar" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /><span>Vendor Portal</span></div></div>
       <nav>
         <button class="nav-link active" data-page="dashboard">Dashboard</button>
         <button class="nav-link" data-page="orders">Orders</button>

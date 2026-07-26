@@ -10,6 +10,7 @@ const betaBannerSource = fs.readFileSync(new URL('../js/beta-banner.js', import.
 const betaBannerStyles = fs.readFileSync(new URL('../css/beta-banner.css', import.meta.url), 'utf8');
 const accountStyles = fs.readFileSync(new URL('../css/customer-account.css', import.meta.url), 'utf8');
 const orderingStyles = fs.readFileSync(new URL('../css/customer-ordering.css', import.meta.url), 'utf8');
+const officialLogo = fs.readFileSync(new URL('../assets/foodtreknow-logo.png', import.meta.url));
 
 class StorageMock {
   constructor() { this.values = new Map(); }
@@ -146,6 +147,17 @@ test('homepage prioritizes customer ordering before the vendor login action', ()
   assert.match(html, /class="vendor-login-button full"/);
   assert.match(accountStyles, /\.customer-entry-button\{[^}]*background:var\(--brand\)/);
   assert.match(accountStyles, /\.vendor-login-button\{[^}]*background:#17241d/);
+});
+
+test('official FoodTrekNow logo replaces every FTN badge and customer sign-in says I am hungry', () => {
+  assert.doesNotMatch(html, />\s*FTN\s*</);
+  assert.equal((html.match(/class="foodtrek-logo/g) || []).length, 5);
+  assert.equal((html.match(/src="assets\/foodtreknow-logo\.png"/g) || []).length, 5);
+  assert.deepEqual([...officialLogo.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.match(html, /<h1>I'm Hungry<\/h1>/);
+  const customerActionIndex = html.indexOf('Order as a Customer');
+  const vendorFormIndex = html.indexOf('id="loginForm"');
+  assert.doesNotMatch(html.slice(customerActionIndex, vendorFormIndex), /Vendor Portal/);
 });
 
 test('beta banner is the first homepage content and includes responsive persisted interactions', () => {
