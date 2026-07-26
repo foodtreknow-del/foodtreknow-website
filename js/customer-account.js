@@ -2074,7 +2074,15 @@
     const cartQuantity = event.target.closest('[data-cart-quantity]');
     if (cartQuantity) {
       const item = currentAccount.cart.items.find(cartItem => cartItem.id === cartQuantity.dataset.cartQuantity);
-      if (item) item.quantity = Math.max(1, Math.min(99, item.quantity + Number(cartQuantity.dataset.quantityChange || 0)));
+      if (item) {
+        item.quantity = Math.max(0, Math.min(99, item.quantity + Number(cartQuantity.dataset.quantityChange || 0)));
+        item.qty = item.quantity;
+        if (!item.quantity) currentAccount.cart.items = currentAccount.cart.items.filter(cartItem => cartItem.id !== item.id);
+      }
+      if (!currentAccount.cart.items.length) {
+        currentAccount.cart.truckId = null;
+        currentAccount.cart.orderNumber = null;
+      }
       CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
       renderCustomerPage('cart');
       return;
@@ -2088,7 +2096,10 @@
     const cartRemove = event.target.closest('[data-cart-remove]');
     if (cartRemove) {
       currentAccount.cart.items = currentAccount.cart.items.filter(item => item.id !== cartRemove.dataset.cartRemove);
-      if (!currentAccount.cart.items.length) currentAccount.cart.truckId = null;
+      if (!currentAccount.cart.items.length) {
+        currentAccount.cart.truckId = null;
+        currentAccount.cart.orderNumber = null;
+      }
       CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
       renderCustomerPage('cart');
       return;
