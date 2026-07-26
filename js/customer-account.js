@@ -69,12 +69,17 @@
     { id: 'firecracker-chicken-tacos', category: 'Entrees', name: 'Firecracker Chicken Tacos', description: 'Three griddled tacos with spicy chicken, slaw, pico, and lime crema.', price: 12.75, calories: 680, available: true, icon: '🌮', featured: true, special: true, popular: true },
     { id: 'smokehouse-bbq-bowl', category: 'Entrees', name: 'Smokehouse BBQ Bowl', description: 'Slow-smoked pork, seasoned rice, street corn, slaw, and barbecue drizzle.', price: 14.25, calories: 820, available: true, icon: '🍲', featured: false, special: false, popular: true },
     { id: 'garden-crunch-wrap', category: 'Entrees', name: 'Garden Crunch Wrap', description: 'Black beans, roasted vegetables, queso, lettuce, and salsa verde.', price: 11.5, calories: 620, available: false, icon: '🌯', featured: false, special: false, popular: false },
+    { id: 'nashville-hot-chicken-sandwich', category: 'Entrees', name: 'Nashville Hot Chicken Sandwich', description: 'Crispy hot chicken, pickles, slaw, and comeback sauce on brioche.', price: 13.75, calories: 840, available: true, icon: '🍗', featured: false, special: true, popular: true },
+    { id: 'roasted-veggie-grain-bowl', category: 'Entrees', name: 'Roasted Veggie Grain Bowl', description: 'Seasoned grains, roasted vegetables, chickpeas, greens, and herb dressing.', price: 12.5, calories: 590, available: true, icon: '🥗', featured: false, special: false, popular: false },
     { id: 'trek-seasoned-fries', category: 'Sides', name: 'Trek Seasoned Fries', description: 'Crispy skin-on fries tossed with our signature road-trip seasoning.', price: 4.5, calories: 390, available: true, icon: '🍟', featured: false, special: false, popular: true },
     { id: 'street-corn-cup', category: 'Sides', name: 'Street Corn Cup', description: 'Charred corn, cotija, lime crema, chile, and cilantro.', price: 5.25, calories: 310, available: true, icon: '🌽', featured: false, special: true, popular: false },
     { id: 'churro-bites', category: 'Desserts', name: 'Cinnamon Churro Bites', description: 'Warm cinnamon-sugar churros with chocolate dipping sauce.', price: 6.5, calories: 510, available: true, icon: '🍩', featured: true, special: false, popular: true },
     { id: 'banana-pudding-jar', category: 'Desserts', name: 'Banana Pudding Jar', description: 'Vanilla pudding, fresh banana, wafers, and whipped cream.', price: 6, calories: 460, available: true, icon: '🍌', featured: false, special: true, popular: false },
     { id: 'fresh-lemonade', category: 'Drinks', name: 'Fresh-Squeezed Lemonade', description: 'Bright, cold lemonade made fresh throughout the day.', price: 4, calories: 180, available: true, icon: '🍋', featured: false, special: false, popular: true, requiredChoices: [{ id: 'size', name: 'Choose a size', options: [{ id: 'regular', name: 'Regular', price: 0 }, { id: 'large', name: 'Large', price: 1.5 }] }] },
-    { id: 'sweet-tea', category: 'Drinks', name: 'Southern Sweet Tea', description: 'Fresh-brewed black tea served over ice with lemon.', price: 3.5, calories: 150, available: true, icon: '🥤', featured: false, special: false, popular: false }
+    { id: 'sweet-tea', category: 'Drinks', name: 'Southern Sweet Tea', description: 'Fresh-brewed black tea served over ice with lemon.', price: 3.5, calories: 150, available: true, icon: '🥤', featured: false, special: false, popular: false },
+    { id: 'road-trip-pretzel-bites', category: 'Snacks', name: 'Road Trip Pretzel Bites', description: 'Warm salted pretzel bites with beer cheese dip.', price: 6.5, calories: 430, available: true, icon: '🥨', featured: false, special: false, popular: true },
+    { id: 'orange-cream-soda', category: 'Drinks', name: 'Orange Cream Soda', description: 'Sparkling orange soda finished with vanilla cream.', price: 4.5, calories: 210, available: true, icon: '🍊', featured: false, special: false, popular: false },
+    { id: 'bottled-spring-water', category: 'Drinks', name: 'Bottled Spring Water', description: 'Cold bottled spring water.', price: 2.5, calories: null, available: true, icon: '💧', featured: false, special: false, popular: false }
   ];
   const VENDOR_MENU_ITEM_MAP = new Map([
     [1, 'capital-smash-burger'],
@@ -233,6 +238,281 @@
       ['Breakfast Bowls', 'Loaded Grits Bowl', 'Creamy grits, eggs, bacon, cheddar, and scallions.', 12, '🍳'],
       ['Sweet Breakfast', 'Berry French Toast', 'Brioche French toast, berries, cream, and maple syrup.', 13, '🍓'],
       ['Coffee', 'Maple Cold Brew', 'Cold brew with maple cream and cinnamon.', 5, '☕']
+    ])
+  };
+
+  const TRUCK_MENU_EXTRAS = {
+    'rolling-ember-bbq': buildTruckMenu('rolling-ember-bbq', [
+      ['Snacks', 'BBQ Pork Rinds', 'Crispy pork rinds dusted with the house barbecue rub.', 5, '🐖'],
+      ['Drinks', 'Cherry Cola', 'Cold craft cola with black cherry.', 4, '🥤'],
+      ['Drinks', 'Smoked Lemonade', 'Fresh lemonade with charred lemon and rosemary.', 4.5, '🍋']
+    ]),
+    'taco-luna': buildTruckMenu('taco-luna', [
+      ['Snacks', 'Chile Lime Chicharrones', 'Crispy pork rinds with chile, lime, and sea salt.', 5, '🌶️'],
+      ['Drinks', 'Horchata', 'Chilled cinnamon rice milk.', 4.5, '🥛'],
+      ['Drinks', 'Mexican Coke', 'Cane-sugar cola served ice cold.', 4, '🥤']
+    ]),
+    'triangle-dumpling-co': buildTruckMenu('triangle-dumpling-co', [
+      ['Snacks', 'Sesame Cucumber Salad', 'Chilled cucumbers with sesame, rice vinegar, and chili.', 6, '🥒'],
+      ['Drinks', 'Brown Sugar Boba Tea', 'Black milk tea with brown sugar tapioca pearls.', 6, '🧋'],
+      ['Drinks', 'Sparkling Yuzu Water', 'Crisp sparkling water with Japanese yuzu.', 4, '🍋']
+    ]),
+    'oak-city-sweets': buildTruckMenu('oak-city-sweets', [
+      ['Snacks', 'Caramel Popcorn Cup', 'Buttery popcorn coated in salted caramel.', 5, '🍿'],
+      ['Drinks', 'Strawberry Milk', 'Cold milk blended with house strawberry syrup.', 4.5, '🥛'],
+      ['Drinks', 'Vanilla Iced Latte', 'Espresso, milk, ice, and vanilla bean syrup.', 5.5, '☕']
+    ]),
+    'carolina-coastal-kitchen': buildTruckMenu('carolina-coastal-kitchen', [
+      ['Snacks', 'Old Bay Oyster Crackers', 'Toasted oyster crackers tossed in coastal spices.', 4.5, '🦪'],
+      ['Drinks', 'Coastal Arnold Palmer', 'Half sweet tea and half fresh lemonade.', 4, '🍋'],
+      ['Drinks', 'Pineapple Sparkler', 'Pineapple, lime, and sparkling water.', 5, '🍍']
+    ]),
+    'mama-jos-soul-kitchen': buildTruckMenu('mama-jos-soul-kitchen', [
+      ['Snacks', 'Hot Honey Cornbread Bites', 'Mini cornbread bites with whipped butter and hot honey.', 6, '🌽'],
+      ['Drinks', 'Southern Sweet Tea', 'Fresh-brewed black tea with lemon.', 4, '🥤'],
+      ['Drinks', 'Strawberry Lemonade', 'House lemonade with strawberry purée.', 4.5, '🍓']
+    ]),
+    'kingston-jerk-stop': buildTruckMenu('kingston-jerk-stop', [
+      ['Snacks', 'Jerk Plantain Chips', 'Crisp plantain chips with warm jerk spices.', 5, '🍌'],
+      ['Drinks', 'Jamaican Sorrel', 'Chilled hibiscus drink with ginger and island spices.', 5, '🌺'],
+      ['Drinks', 'Ting Grapefruit Soda', 'Sparkling Caribbean grapefruit soda.', 4, '🥤']
+    ]),
+    'athena-street-eats': buildTruckMenu('athena-street-eats', [
+      ['Snacks', 'Pita Chips and Tzatziki', 'Crisp oregano pita chips with cool cucumber yogurt dip.', 6, '🫓'],
+      ['Drinks', 'Greek Lemon Soda', 'Sparkling lemon soda served cold.', 4, '🍋'],
+      ['Drinks', 'Peach Mountain Tea', 'Iced black tea with peach and wildflower honey.', 4.5, '🍑']
+    ]),
+    'seoul-on-wheels': buildTruckMenu('seoul-on-wheels', [
+      ['Snacks', 'Seaweed Rice Crisps', 'Crunchy sesame rice crisps wrapped with roasted seaweed.', 5, '🍘'],
+      ['Drinks', 'Korean Pear Juice', 'Chilled sweet Korean pear juice.', 4.5, '🍐'],
+      ['Drinks', 'Strawberry Milk Tea', 'Creamy iced tea with strawberry.', 5.5, '🧋']
+    ]),
+    'cupcake-caravan': buildTruckMenu('cupcake-caravan', [
+      ['Snacks', 'Birthday Cake Pop', 'Vanilla cake pop dipped in white chocolate and sprinkles.', 4, '🍭'],
+      ['Drinks', 'Sparkling Raspberry Lemonade', 'Raspberry lemonade with sparkling water.', 4.5, '🍓'],
+      ['Drinks', 'Chocolate Milk', 'Rich chilled chocolate milk.', 3.5, '🥛']
+    ]),
+    'scoop-loop': buildTruckMenu('scoop-loop', [
+      ['Snacks', 'Chocolate-Dipped Waffle Chips', 'Crisp waffle cone chips dipped in dark chocolate.', 5, '🍫'],
+      ['Drinks', 'Root Beer Float', 'Craft root beer with vanilla ice cream.', 7, '🍺'],
+      ['Drinks', 'Cold Brew Float', 'Cold brew coffee poured over vanilla ice cream.', 7.5, '☕']
+    ]),
+    'bull-city-burgers': buildTruckMenu('bull-city-burgers', [
+      ['Snacks', 'Cajun Onion Straws', 'Thin crispy onions with Cajun seasoning and ranch.', 6, '🧅'],
+      ['Drinks', 'Vanilla Cola', 'Craft cola with house vanilla syrup.', 4.5, '🥤'],
+      ['Drinks', 'Fresh Limeade', 'Tart limeade shaken over ice.', 4, '🍋']
+    ]),
+    'smokehouse-919': buildTruckMenu('smokehouse-919', [
+      ['Snacks', 'Smoked Chex Mix', 'Crunchy cereal, pretzels, peanuts, and smoky pit seasoning.', 5, '🥜'],
+      ['Drinks', 'Bourbon Barrel Root Beer', 'Alcohol-free craft root beer with oak and vanilla notes.', 4.5, '🥤'],
+      ['Drinks', 'Blackberry Sweet Tea', 'Southern sweet tea with blackberry.', 4, '🫐']
+    ]),
+    'green-route-vegan': buildTruckMenu('green-route-vegan', [
+      ['Snacks', 'Crispy Spiced Chickpeas', 'Roasted chickpeas with smoked paprika and sea salt.', 5, '🫘'],
+      ['Drinks', 'Cucumber Mint Cooler', 'Cucumber, mint, lime, and sparkling water.', 5, '🥒'],
+      ['Drinks', 'Blueberry Kombucha', 'Locally brewed blueberry kombucha.', 6, '🫐']
+    ]),
+    'pie-and-pudding': buildTruckMenu('pie-and-pudding', [
+      ['Snacks', 'Cinnamon Pie Crust Dippers', 'Baked pie crust strips with cinnamon sugar and caramel.', 5, '🥧'],
+      ['Drinks', 'Salted Caramel Cold Brew', 'Cold brew topped with salted caramel cream.', 5.5, '☕'],
+      ['Drinks', 'Cherry Cream Soda', 'Sparkling cherry soda with sweet cream.', 4.5, '🍒']
+    ]),
+    'bayou-bites': buildTruckMenu('bayou-bites', [
+      ['Snacks', 'Cajun Spiced Peanuts', 'Warm roasted peanuts tossed with bayou spices.', 4.5, '🥜'],
+      ['Drinks', 'Louisiana Chicory Cold Brew', 'Smooth chicory coffee served over ice.', 5, '☕'],
+      ['Drinks', 'Praline Cream Soda', 'Vanilla cream soda with toasted pecan flavor.', 4.5, '🥤']
+    ]),
+    'pasta-passeggiata': buildTruckMenu('pasta-passeggiata', [
+      ['Snacks', 'Parmesan Breadsticks', 'Warm garlic breadsticks with parmesan and marinara.', 6, '🥖'],
+      ['Drinks', 'Blood Orange Italian Soda', 'Blood orange syrup, sparkling water, and citrus.', 5, '🍊'],
+      ['Drinks', 'Peach Bellini Fizz', 'Alcohol-free peach nectar with sparkling water.', 5, '🍑']
+    ]),
+    'curry-in-a-hurry': buildTruckMenu('curry-in-a-hurry', [
+      ['Snacks', 'Masala-Spiced Cashews', 'Roasted cashews with curry leaf and warm spices.', 5, '🥜'],
+      ['Drinks', 'Rose Lemonade', 'Fresh lemonade scented with rose water.', 4.5, '🌹'],
+      ['Drinks', 'Cardamom Iced Chai', 'Black tea, milk, cardamom, and warming spices.', 5, '🧋']
+    ]),
+    'breakfast-bus': buildTruckMenu('breakfast-bus', [
+      ['Snacks', 'Maple Granola Cup', 'House granola with maple, pecans, and dried berries.', 5, '🥣'],
+      ['Drinks', 'Fresh Orange Juice', 'Cold fresh-squeezed orange juice.', 5, '🍊'],
+      ['Drinks', 'Vanilla Oat Milk Latte', 'Espresso, oat milk, and vanilla bean syrup.', 5.5, '☕']
+    ])
+  };
+
+  const TRUCK_ENTREE_EXTRAS = {
+    'rolling-ember-bbq': buildTruckMenu('rolling-ember-bbq', [
+      ['Entrees', 'Smoked Chicken Quarter', 'Hickory-smoked chicken with barbecue glaze, two sides, and cornbread.', 15, '🍗'],
+      ['Entrees', 'St. Louis Rib Plate', 'Tender dry-rubbed ribs with pickles, bread, and two country sides.', 19, '🍖'],
+      ['Entrees', 'Pitmaster Sausage Platter', 'Smoked sausage links with peppers, onions, beans, and slaw.', 16, '🌭']
+    ]),
+    'taco-luna': buildTruckMenu('taco-luna', [
+      ['Entrees', 'Al Pastor Taco Plate', 'Three achiote pork tacos with pineapple, onion, cilantro, and rice.', 13, '🌮'],
+      ['Entrees', 'Carne Asada Quesadilla', 'Griddled flour tortilla with steak, Oaxaca cheese, and salsa roja.', 14, '🫓'],
+      ['Entrees', 'Chicken Enchilada Bowl', 'Chile-braised chicken, rice, beans, queso, crema, and salsa verde.', 14, '🍲']
+    ]),
+    'triangle-dumpling-co': buildTruckMenu('triangle-dumpling-co', [
+      ['Entrees', 'Orange Chicken Rice Bowl', 'Crispy chicken, bright citrus glaze, broccoli, and steamed rice.', 14, '🍗'],
+      ['Entrees', 'Beef Chow Fun', 'Wide rice noodles with tender beef, scallions, and bean sprouts.', 15, '🍜'],
+      ['Entrees', 'Coconut Tofu Curry', 'Crispy tofu and vegetables in coconut curry with jasmine rice.', 13, '🍛']
+    ]),
+    'oak-city-sweets': buildTruckMenu('oak-city-sweets', [
+      ['Entrees', 'Brownie Waffle Sundae', 'Warm brownie waffle, vanilla ice cream, fudge, and whipped cream.', 11, '🍨'],
+      ['Entrees', 'Oak City Dessert Flight', 'A tasting of cheesecake, banana pudding, brownie, and cookie.', 14, '🍰'],
+      ['Entrees', 'Stuffed Cookie Skillet', 'Warm chocolate chip cookie filled with caramel and topped with ice cream.', 10, '🍪']
+    ]),
+    'carolina-coastal-kitchen': buildTruckMenu('carolina-coastal-kitchen', [
+      ['Entrees', 'Carolina Crab Cake Plate', 'Two blue crab cakes with coastal slaw, fries, and remoulade.', 21, '🦀'],
+      ['Entrees', 'Beer-Battered Fish and Chips', 'Crispy Atlantic cod, seasoned fries, slaw, and tartar sauce.', 17, '🐟'],
+      ['Entrees', 'Lowcountry Shrimp and Grits', 'Blackened shrimp, creamy grits, peppers, bacon, and pan sauce.', 18, '🍤']
+    ]),
+    'mama-jos-soul-kitchen': buildTruckMenu('mama-jos-soul-kitchen', [
+      ['Entrees', 'Southern Fried Catfish Plate', 'Cornmeal-crusted catfish with two sides and a hushpuppy.', 17, '🐟'],
+      ['Entrees', 'Sunday Meatloaf Dinner', 'Glazed beef meatloaf, mashed potatoes, green beans, and gravy.', 16, '🍽️'],
+      ['Entrees', 'Hot Honey Chicken and Waffles', 'Crispy chicken, Belgian waffle, hot honey, and maple syrup.', 16, '🧇']
+    ]),
+    'kingston-jerk-stop': buildTruckMenu('kingston-jerk-stop', [
+      ['Entrees', 'Curry Goat Plate', 'Slow-cooked curry goat with rice and peas and steamed cabbage.', 19, '🍛'],
+      ['Entrees', 'Brown Stew Chicken', 'Jamaican brown stew chicken with island gravy and rice.', 16, '🍗'],
+      ['Entrees', 'Escovitch Fish Plate', 'Crispy fish with spicy pickled vegetables, festival, and plantains.', 20, '🐟']
+    ]),
+    'athena-street-eats': buildTruckMenu('athena-street-eats', [
+      ['Entrees', 'Falafel Mezze Platter', 'Herb falafel, hummus, village salad, olives, and warm pita.', 15, '🧆'],
+      ['Entrees', 'Moussaka Bowl', 'Layers of eggplant, seasoned beef, potato, and creamy béchamel.', 16, '🍲'],
+      ['Entrees', 'Garlic Shrimp Souvlaki', 'Grilled shrimp skewers with lemon rice, salad, and tzatziki.', 18, '🍤']
+    ]),
+    'seoul-on-wheels': buildTruckMenu('seoul-on-wheels', [
+      ['Entrees', 'Kimchi Fried Rice', 'Wok-fried rice with kimchi, vegetables, sesame, and fried egg.', 13, '🍳'],
+      ['Entrees', 'Spicy Pork Bulgogi Bowl', 'Gochujang pork, steamed rice, pickled vegetables, and scallions.', 15, '🍚'],
+      ['Entrees', 'Crispy Tofu Bibimbap', 'Seasoned vegetables, rice, crispy tofu, egg, and gochujang.', 14, '🥗']
+    ]),
+    'cupcake-caravan': buildTruckMenu('cupcake-caravan', [
+      ['Entrees', 'Signature Cupcake Flight', 'Choose four full-size cupcakes from today’s signature flavors.', 18, '🧁'],
+      ['Entrees', 'Cupcake Sundae', 'Warm cupcake, vanilla ice cream, sauce, whipped cream, and sprinkles.', 10, '🍨'],
+      ['Entrees', 'Celebration Treat Box', 'Two cupcakes, two brownies, two cookies, and chocolate-dipped pretzels.', 24, '🎁']
+    ]),
+    'scoop-loop': buildTruckMenu('scoop-loop', [
+      ['Entrees', 'Classic Banana Split', 'Three scoops, banana, fudge, strawberry, pineapple, and whipped cream.', 12, '🍌'],
+      ['Entrees', 'Ice Cream Tasting Flight', 'Six small scoops of rotating house-churned flavors.', 14, '🍨'],
+      ['Entrees', 'Loaded Waffle Bowl', 'Three scoops in a waffle bowl with two sauces and three toppings.', 13, '🧇']
+    ]),
+    'bull-city-burgers': buildTruckMenu('bull-city-burgers', [
+      ['Entrees', 'Mushroom Swiss Smash', 'Two smashed patties, mushrooms, Swiss, onions, and garlic aioli.', 14, '🍔'],
+      ['Entrees', 'Bacon Jam Burger', 'Beef patty, cheddar, bacon-onion jam, pickles, and mustard sauce.', 15, '🥓'],
+      ['Entrees', 'Black Bean Crunch Burger', 'Seasoned black bean patty, avocado, slaw, tomato, and chipotle aioli.', 13, '🥑']
+    ]),
+    'smokehouse-919': buildTruckMenu('smokehouse-919', [
+      ['Entrees', 'Pulled Pork Dinner', 'Oak-smoked pulled pork, house sauce, two sides, and cornbread.', 17, '🐖'],
+      ['Entrees', 'Texas Sausage Trio', 'Three smoked sausages with pickles, onions, bread, and two sides.', 18, '🌭'],
+      ['Entrees', 'White Sauce Smoked Chicken', 'Half smoked chicken with Alabama white sauce and two sides.', 18, '🍗']
+    ]),
+    'green-route-vegan': buildTruckMenu('green-route-vegan', [
+      ['Entrees', 'Smoky Lentil Burger', 'Lentil-walnut patty, greens, tomato, pickles, and cashew aioli.', 14, '🍔'],
+      ['Entrees', 'BBQ Jackfruit Plate', 'Pulled jackfruit, baked beans, vinegar slaw, and cornbread.', 15, '🌱'],
+      ['Entrees', 'Coconut Chickpea Curry', 'Chickpeas, sweet potato, spinach, coconut curry, and brown rice.', 14, '🍛']
+    ]),
+    'pie-and-pudding': buildTruckMenu('pie-and-pudding', [
+      ['Entrees', 'Seasonal Pie Flight', 'Four generous tastes of today’s freshly baked pies.', 15, '🥧'],
+      ['Entrees', 'Southern Pudding Trio', 'Banana, butterscotch, and chocolate pudding with house toppings.', 13, '🍮'],
+      ['Entrees', 'Brownie Pie Sundae', 'Warm brownie pie, vanilla ice cream, fudge, and toasted pecans.', 11, '🍨']
+    ]),
+    'bayou-bites': buildTruckMenu('bayou-bites', [
+      ['Entrees', 'Crawfish Étouffée', 'Crawfish in a rich seasoned sauce over steamed rice.', 18, '🦞'],
+      ['Entrees', 'Blackened Catfish Plate', 'Blackened catfish with dirty rice, green beans, and remoulade.', 17, '🐟'],
+      ['Entrees', 'Red Beans and Rice', 'Slow-cooked red beans, smoked sausage, rice, and cornbread.', 14, '🫘']
+    ]),
+    'pasta-passeggiata': buildTruckMenu('pasta-passeggiata', [
+      ['Entrees', 'Basil Pesto Gnocchi', 'Potato gnocchi, basil pesto, blistered tomatoes, and parmesan.', 16, '🍝'],
+      ['Entrees', 'Spicy Vodka Rigatoni', 'Rigatoni in creamy tomato vodka sauce with Calabrian chile.', 16, '🍝'],
+      ['Entrees', 'Skillet Lasagna Cup', 'Layers of pasta, beef ragu, ricotta, mozzarella, and basil.', 17, '🧀']
+    ]),
+    'curry-in-a-hurry': buildTruckMenu('curry-in-a-hurry', [
+      ['Entrees', 'Paneer Tikka Masala', 'Grilled paneer in tomato cream curry with basmati rice and naan.', 15, '🍛'],
+      ['Entrees', 'Lamb Rogan Josh', 'Slow-braised lamb curry with basmati rice and cucumber raita.', 18, '🍲'],
+      ['Entrees', 'Hyderabadi Chicken Biryani', 'Fragrant spiced rice layered with chicken, herbs, and fried onions.', 16, '🍚']
+    ]),
+    'breakfast-bus': buildTruckMenu('breakfast-bus', [
+      ['Entrees', 'Loaded Breakfast Burrito', 'Eggs, sausage, potatoes, cheddar, peppers, and salsa in a flour tortilla.', 12, '🌯'],
+      ['Entrees', 'Shrimp and Cheddar Grits', 'Blackened shrimp, creamy cheddar grits, tomatoes, and scallions.', 15, '🍤'],
+      ['Entrees', 'Avocado Sunrise Toast', 'Sourdough, smashed avocado, two eggs, tomato, feta, and herbs.', 12, '🥑']
+    ])
+  };
+
+  const TRUCK_ADDITIONAL_ENTREES = {
+    'rolling-ember-bbq': buildTruckMenu('rolling-ember-bbq', [
+      ['Entrees', 'Pepper-Smoked Turkey Plate', 'Sliced smoked turkey breast with white barbecue sauce and two sides.', 17, '🦃'],
+      ['Entrees', 'Ember Pit Combo', 'Brisket, pulled pork, smoked sausage, two sides, pickles, and bread.', 24, '🔥']
+    ]),
+    'taco-luna': buildTruckMenu('taco-luna', [
+      ['Entrees', 'Roasted Chile Relleno Plate', 'Poblano filled with cheese and vegetables, tomato sauce, rice, and beans.', 14, '🌶️'],
+      ['Entrees', 'Chipotle Shrimp Burrito', 'Grilled shrimp, cilantro rice, black beans, slaw, and chipotle crema.', 15, '🌯']
+    ]),
+    'triangle-dumpling-co': buildTruckMenu('triangle-dumpling-co', [
+      ['Entrees', 'Sesame Chicken Bowl', 'Crispy chicken, sesame glaze, broccoli, scallions, and steamed rice.', 14, '🍗'],
+      ['Entrees', 'Roasted Pork Ramen', 'Rich broth, noodles, roasted pork, egg, mushrooms, and scallions.', 16, '🍜']
+    ]),
+    'oak-city-sweets': buildTruckMenu('oak-city-sweets', [
+      ['Entrees', 'Strawberry Cheesecake Waffle', 'Warm Belgian waffle, cheesecake cream, strawberries, and crumble.', 11, '🧇'],
+      ['Entrees', 'Southern Sweets Party Tray', 'Banana pudding, peach cobbler, brownies, cookies, and cheesecake bites.', 22, '🍰']
+    ]),
+    'carolina-coastal-kitchen': buildTruckMenu('carolina-coastal-kitchen', [
+      ['Entrees', 'Blackened Salmon Rice Bowl', 'Blackened salmon, seasoned rice, coastal vegetables, and lemon sauce.', 19, '🐟'],
+      ['Entrees', 'Crispy Oyster Po Boy', 'Fried oysters, lettuce, tomato, pickles, and remoulade on French bread.', 17, '🦪']
+    ]),
+    'mama-jos-soul-kitchen': buildTruckMenu('mama-jos-soul-kitchen', [
+      ['Entrees', 'Smothered Pork Chop Dinner', 'Pan-seared pork chop, onion gravy, rice, and two sides.', 18, '🍖'],
+      ['Entrees', 'Soulful Chicken Pot Pie', 'Chicken and vegetables in cream gravy under a flaky biscuit crust.', 15, '🥧']
+    ]),
+    'kingston-jerk-stop': buildTruckMenu('kingston-jerk-stop', [
+      ['Entrees', 'Ackee and Saltfish Plate', 'Jamaica’s national dish with fried dumpling, plantain, and callaloo.', 18, '🐟'],
+      ['Entrees', 'Jerk Salmon Plate', 'Jerk-glazed salmon with coconut rice and mango cabbage slaw.', 20, '🐟']
+    ]),
+    'athena-street-eats': buildTruckMenu('athena-street-eats', [
+      ['Entrees', 'Lemon Chicken Rice Plate', 'Grilled lemon chicken, herbed rice, village salad, pita, and tzatziki.', 16, '🍗'],
+      ['Entrees', 'Beef Keftedes Platter', 'Greek beef meatballs with lemon potatoes, salad, pita, and red sauce.', 17, '🧆']
+    ]),
+    'seoul-on-wheels': buildTruckMenu('seoul-on-wheels', [
+      ['Entrees', 'Korean Fried Chicken Plate', 'Crispy glazed chicken with rice, pickled radish, and sesame slaw.', 16, '🍗'],
+      ['Entrees', 'Galbi Short Rib Noodles', 'Marinated short rib, chewy noodles, vegetables, and soy garlic sauce.', 18, '🍜']
+    ]),
+    'cupcake-caravan': buildTruckMenu('cupcake-caravan', [
+      ['Entrees', 'Baker’s Dozen Cupcake Box', 'Thirteen assorted classic and signature cupcakes.', 48, '🧁'],
+      ['Entrees', 'Cookie Cupcake Sandwich Trio', 'Three buttercream-filled cupcake tops paired with soft cookies.', 14, '🍪']
+    ]),
+    'scoop-loop': buildTruckMenu('scoop-loop', [
+      ['Entrees', 'Brownie Avalanche Sundae', 'Three scoops, brownie chunks, fudge, caramel, whipped cream, and nuts.', 13, '🍨'],
+      ['Entrees', 'Dairy-Free Sundae Flight', 'Three coconut-based scoops with fruit sauces and toasted toppings.', 12, '🥥']
+    ]),
+    'bull-city-burgers': buildTruckMenu('bull-city-burgers', [
+      ['Entrees', 'Griddled Patty Melt', 'Two beef patties, Swiss, caramelized onions, and sauce on rye.', 14, '🥪'],
+      ['Entrees', 'Blue Ridge Burger', 'Beef patty, blue cheese, bacon, onion straws, and pepper jelly.', 15, '🍔']
+    ]),
+    'smokehouse-919': buildTruckMenu('smokehouse-919', [
+      ['Entrees', 'Dino Beef Rib Plate', 'Massive smoked beef rib with two sides, pickles, and bread.', 28, '🍖'],
+      ['Entrees', '919 Smokehouse Sampler', 'Brisket, ribs, pulled pork, sausage, two sides, and cornbread.', 27, '🥩']
+    ]),
+    'green-route-vegan': buildTruckMenu('green-route-vegan', [
+      ['Entrees', 'Ginger Tempeh Power Bowl', 'Glazed tempeh, brown rice, vegetables, edamame, and sesame dressing.', 15, '🥗'],
+      ['Entrees', 'Wild Mushroom Stroganoff', 'Mushrooms and noodles in a creamy cashew sauce with fresh herbs.', 15, '🍄']
+    ]),
+    'pie-and-pudding': buildTruckMenu('pie-and-pudding', [
+      ['Entrees', 'Chocolate Pecan Pie À La Mode', 'Warm chocolate pecan pie with vanilla ice cream and caramel.', 11, '🥧'],
+      ['Entrees', 'Warm Cobbler Sampler', 'Peach, berry, and apple cobblers with vanilla cream.', 13, '🍑']
+    ]),
+    'bayou-bites': buildTruckMenu('bayou-bites', [
+      ['Entrees', 'Creole Shrimp Plate', 'Gulf shrimp in tomato Creole sauce over rice with green beans.', 18, '🍤'],
+      ['Entrees', 'Boudin and Dirty Rice Plate', 'Grilled boudin links, dirty rice, mustard slaw, and French bread.', 16, '🌭']
+    ]),
+    'pasta-passeggiata': buildTruckMenu('pasta-passeggiata', [
+      ['Entrees', 'Roasted Garlic Chicken Alfredo', 'Fresh fettuccine, grilled chicken, roasted garlic cream, and parmesan.', 18, '🍝'],
+      ['Entrees', 'Eggplant Parmesan Bowl', 'Crispy eggplant, tomato sauce, mozzarella, basil, and fresh pasta.', 16, '🍆']
+    ]),
+    'curry-in-a-hurry': buildTruckMenu('curry-in-a-hurry', [
+      ['Entrees', 'Chicken Vindaloo', 'Tangy hot-spiced chicken curry with basmati rice and naan.', 16, '🍛'],
+      ['Entrees', 'Dal Makhani Plate', 'Slow-simmered black lentils with basmati rice, naan, and chutney.', 14, '🫘']
+    ]),
+    'breakfast-bus': buildTruckMenu('breakfast-bus', [
+      ['Entrees', 'Steak and Egg Breakfast Hash', 'Seared steak, crispy potatoes, peppers, onions, eggs, and hollandaise.', 16, '🍳'],
+      ['Entrees', 'Lemon Ricotta Pancake Stack', 'Three fluffy pancakes with berries, lemon cream, and maple syrup.', 13, '🥞']
     ])
   };
 
@@ -834,7 +1114,13 @@
   function menuForTruck(truckId = selectedTruck().id) {
     const baseMenu = ORDERING_MENU_ITEMS.map(item => ({ ...item, truckId }));
     if (truckId !== TRUCK.id) {
-      return (TRUCK_MENUS[truckId] || ORDERING_MENU_ITEMS).map(item => ({ ...item, truckId }));
+      const cuisineMenu = [
+        ...(TRUCK_MENUS[truckId] || []),
+        ...(TRUCK_ENTREE_EXTRAS[truckId] || []),
+        ...(TRUCK_ADDITIONAL_ENTREES[truckId] || []),
+        ...(TRUCK_MENU_EXTRAS[truckId] || [])
+      ];
+      return (cuisineMenu.length ? cuisineMenu : ORDERING_MENU_ITEMS).map(item => ({ ...item, truckId }));
     }
 
     const vendorMenu = readVendorMenu();

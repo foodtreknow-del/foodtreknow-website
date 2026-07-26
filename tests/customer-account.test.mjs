@@ -409,7 +409,15 @@ test('twenty sample trucks open distinct cuisine-specific menus', async () => {
     await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-menu' }) });
     const menuMarkup = element('customerAccountContent').innerHTML;
     assert.match(menuMarkup, new RegExp(expectedItem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    menuSignatures.push([...menuMarkup.matchAll(/data-add-menu-item="([^"]+)"/g)].map(match => match[1]).sort().join('|'));
+    assert.match(menuMarkup, /data-menu-section="Entrees"/);
+    assert.match(menuMarkup, /data-menu-section="Snacks"/);
+    assert.match(menuMarkup, /data-menu-section="Drinks"/);
+    const entreeSection = menuMarkup.match(/data-menu-section="Entrees"[\s\S]*?<\/section>/)?.[0] || '';
+    const entreeItemIds = [...entreeSection.matchAll(/data-add-menu-item="([^"]+)"/g)].map(match => match[1]);
+    assert.ok(entreeItemIds.length >= 5, `${truckId} should provide at least five entrées`);
+    const menuItemIds = [...menuMarkup.matchAll(/data-add-menu-item="([^"]+)"/g)].map(match => match[1]).sort();
+    assert.ok(menuItemIds.length >= 13, `${truckId} should provide a full menu with at least thirteen selections`);
+    menuSignatures.push(menuItemIds.join('|'));
   }
 
   assert.equal(expectedMenus.length, 20);
