@@ -8,6 +8,17 @@
 - Added printable reporting and CSV export without changing persisted order data
 - Added responsive layouts and automated calculation, range, refund, and export tests
 
+## Vendor Settings
+
+- Replaced the Settings placeholder with persisted truck profile and contact details
+- Added optional truck logo/photo, address, cuisine, and customer-facing description fields
+- Added order availability, prep time, minimum order, tax, and pickup instruction controls
+- Added seven-day business hours with per-day open and closed states
+- Added accepted payment method and vendor notification preferences
+- Synchronized saved vendor availability, identity, and order sound with existing portal controls
+- Prepared a replaceable local settings boundary for future Supabase vendor profiles
+- Added responsive layouts, validation, persistence tests, and rendered desktop/mobile verification
+
 ## Phase 3.1 - Customer Home Experience Polish
 
 - Added a time-aware customer greeting and locally persisted preferred location selection

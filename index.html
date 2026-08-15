@@ -6,6 +6,7 @@
 <title>FoodTrekNow | Vendor & Customer Portal</title>
 <link rel="stylesheet" href="css/vendor.css?v=official-logo-3" />
 <link rel="stylesheet" href="css/vendor-reports.css" />
+<link rel="stylesheet" href="css/vendor-settings.css" />
 <link rel="stylesheet" href="css/customer-account.css?v=customer-priority-1" />
 <link rel="stylesheet" href="css/customer-ordering.css" />
 <link rel="stylesheet" href="css/beta-banner.css" />
@@ -304,7 +305,80 @@
         </section>
         <article class="panel report-orders-panel"><div class="report-panel-heading"><div><p class="eyebrow">Transactions</p><h3>Sales Detail</h3><p id="reportOrderSummary" class="muted"></p></div><button id="printSalesReportButton" class="secondary-button" type="button">Print Report</button></div><div class="report-table-wrap"><table class="report-table report-orders-table"><thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Status</th><th>Payment</th><th>Items</th><th>Total</th></tr></thead><tbody id="reportOrdersBody"></tbody></table></div></article>
       </section>
-      <section id="settingsPage" class="app-page hidden-view"><div class="panel placeholder-panel"><h2>Vendor Settings</h2><p class="muted">Truck profile and notification settings will be added in the next phase.</p></div></section>
+      <section id="settingsPage" class="app-page hidden-view">
+        <form id="vendorSettingsForm" novalidate>
+          <div class="vendor-section-heading">
+            <div><p class="eyebrow">Vendor Profile</p><h2>Vendor Settings</h2><p class="muted">Control how your truck appears to customers and how orders reach your team.</p></div>
+            <div class="settings-page-actions"><button id="restoreVendorDefaultsButton" class="secondary-button" type="button">Restore Defaults</button><button class="primary-button" type="submit">Save Settings</button></div>
+          </div>
+          <p id="vendorSettingsMessage" class="settings-message" aria-live="polite"></p>
+          <div class="settings-layout">
+            <section class="panel settings-panel settings-profile-panel">
+              <div class="settings-panel-heading"><span class="settings-icon" aria-hidden="true">🚚</span><div><h3>Truck Profile</h3><p>Business details customers use to identify and contact you.</p></div></div>
+              <div class="settings-logo-row"><div id="vendorLogoPreview" class="settings-logo-preview">C</div><div><strong>Truck Logo or Photo</strong><p class="field-help">Optional JPG, PNG, or WEBP under 2 MB.</p><div class="settings-inline-actions"><label class="customer-small-button" for="vendorLogoInput">Choose Image</label><input id="vendorLogoInput" type="file" accept="image/*" hidden><button id="removeVendorLogoButton" class="customer-small-button danger" type="button">Remove</button></div></div></div>
+              <div class="settings-form-grid">
+                <div class="full-row"><label for="vendorTruckName">Truck Name</label><input id="vendorTruckName" class="settings-input" type="text" maxlength="80" required></div>
+                <div><label for="vendorCuisine">Cuisine</label><input id="vendorCuisine" class="settings-input" type="text" maxlength="80" required placeholder="American favorites"></div>
+                <div><label for="vendorPhone">Business Phone</label><input id="vendorPhone" class="settings-input" type="tel" maxlength="20" required></div>
+                <div class="full-row"><label for="vendorDescription">Truck Description</label><textarea id="vendorDescription" class="settings-input" rows="3" maxlength="280"></textarea></div>
+                <div><label for="vendorEmail">Business Email</label><input id="vendorEmail" class="settings-input" type="email" maxlength="120" required></div>
+                <div><label for="vendorWebsite">Website</label><input id="vendorWebsite" class="settings-input" type="url" maxlength="160" placeholder="https://"></div>
+                <div class="full-row"><label for="vendorStreet">Business Address</label><input id="vendorStreet" class="settings-input" type="text" maxlength="120"></div>
+                <div><label for="vendorCity">City</label><input id="vendorCity" class="settings-input" type="text" maxlength="60"></div>
+                <div><label for="vendorState">State</label><input id="vendorState" class="settings-input" type="text" maxlength="2"></div>
+                <div><label for="vendorZip">ZIP Code</label><input id="vendorZip" class="settings-input" type="text" maxlength="10"></div>
+              </div>
+            </section>
+
+            <section class="panel settings-panel">
+              <div class="settings-panel-heading"><span class="settings-icon" aria-hidden="true">⚡</span><div><h3>Order Operations</h3><p>Set availability, timing, and checkout defaults.</p></div></div>
+              <div class="settings-toggle-row"><div><strong>Accepting Orders</strong><small>Customers can place new pickup orders.</small></div><label class="switch"><input id="vendorAcceptingOrders" type="checkbox"><span class="slider"></span></label></div>
+              <div class="settings-form-grid compact-grid">
+                <div><label for="vendorPrepTime">Estimated Prep Time</label><div class="settings-suffix-input"><input id="vendorPrepTime" class="settings-input" type="number" min="5" max="120" step="5" required><span>min</span></div></div>
+                <div><label for="vendorMinimumOrder">Minimum Order</label><div class="settings-prefix-input"><span>$</span><input id="vendorMinimumOrder" class="settings-input" type="number" min="0" max="500" step="0.01"></div></div>
+                <div><label for="vendorTaxRate">Sales Tax</label><div class="settings-suffix-input"><input id="vendorTaxRate" class="settings-input" type="number" min="0" max="25" step="0.01" required><span>%</span></div></div>
+                <div class="full-row"><label for="vendorPickupInstructions">Pickup Instructions</label><textarea id="vendorPickupInstructions" class="settings-input" rows="3" maxlength="240" placeholder="Tell customers where to meet the truck"></textarea></div>
+              </div>
+            </section>
+
+            <section class="panel settings-panel settings-hours-panel">
+              <div class="settings-panel-heading"><span class="settings-icon" aria-hidden="true">◷</span><div><h3>Business Hours</h3><p>Set the weekly hours shown to customers.</p></div></div>
+              <div id="vendorHoursGrid" class="settings-hours-grid">
+                <div class="settings-hours-row" data-day="monday"><label class="settings-day-toggle"><input id="hoursMondayEnabled" type="checkbox"><strong>Monday</strong></label><input id="hoursMondayOpen" class="settings-input" type="time"><span>to</span><input id="hoursMondayClose" class="settings-input" type="time"></div>
+                <div class="settings-hours-row" data-day="tuesday"><label class="settings-day-toggle"><input id="hoursTuesdayEnabled" type="checkbox"><strong>Tuesday</strong></label><input id="hoursTuesdayOpen" class="settings-input" type="time"><span>to</span><input id="hoursTuesdayClose" class="settings-input" type="time"></div>
+                <div class="settings-hours-row" data-day="wednesday"><label class="settings-day-toggle"><input id="hoursWednesdayEnabled" type="checkbox"><strong>Wednesday</strong></label><input id="hoursWednesdayOpen" class="settings-input" type="time"><span>to</span><input id="hoursWednesdayClose" class="settings-input" type="time"></div>
+                <div class="settings-hours-row" data-day="thursday"><label class="settings-day-toggle"><input id="hoursThursdayEnabled" type="checkbox"><strong>Thursday</strong></label><input id="hoursThursdayOpen" class="settings-input" type="time"><span>to</span><input id="hoursThursdayClose" class="settings-input" type="time"></div>
+                <div class="settings-hours-row" data-day="friday"><label class="settings-day-toggle"><input id="hoursFridayEnabled" type="checkbox"><strong>Friday</strong></label><input id="hoursFridayOpen" class="settings-input" type="time"><span>to</span><input id="hoursFridayClose" class="settings-input" type="time"></div>
+                <div class="settings-hours-row" data-day="saturday"><label class="settings-day-toggle"><input id="hoursSaturdayEnabled" type="checkbox"><strong>Saturday</strong></label><input id="hoursSaturdayOpen" class="settings-input" type="time"><span>to</span><input id="hoursSaturdayClose" class="settings-input" type="time"></div>
+                <div class="settings-hours-row" data-day="sunday"><label class="settings-day-toggle"><input id="hoursSundayEnabled" type="checkbox"><strong>Sunday</strong></label><input id="hoursSundayOpen" class="settings-input" type="time"><span>to</span><input id="hoursSundayClose" class="settings-input" type="time"></div>
+              </div>
+            </section>
+
+            <section class="panel settings-panel">
+              <div class="settings-panel-heading"><span class="settings-icon" aria-hidden="true">▣</span><div><h3>Accepted Payments</h3><p>Choose the methods customers can use at checkout.</p></div></div>
+              <div class="settings-check-grid">
+                <label class="settings-check-card"><input id="paymentCreditCard" type="checkbox"><span><strong>Credit &amp; Debit Cards</strong><small>Visa, Mastercard, Amex</small></span></label>
+                <label class="settings-check-card"><input id="paymentApplePay" type="checkbox"><span><strong>Apple Pay</strong><small>Mobile wallet</small></span></label>
+                <label class="settings-check-card"><input id="paymentGooglePay" type="checkbox"><span><strong>Google Pay</strong><small>Mobile wallet</small></span></label>
+                <label class="settings-check-card"><input id="paymentCashApp" type="checkbox"><span><strong>Cash App</strong><small>Digital payment</small></span></label>
+                <label class="settings-check-card"><input id="paymentAtPickup" type="checkbox"><span><strong>Pay at Pickup</strong><small>Collected by vendor</small></span></label>
+              </div>
+            </section>
+
+            <section class="panel settings-panel">
+              <div class="settings-panel-heading"><span class="settings-icon" aria-hidden="true">●</span><div><h3>Vendor Notifications</h3><p>Choose how the team receives order and sales updates.</p></div></div>
+              <div class="settings-toggle-list">
+                <div class="settings-toggle-row"><div><strong>New Order Sound</strong><small>Play an alert when a new order arrives.</small></div><label class="switch"><input id="notificationOrderSound" type="checkbox"><span class="slider"></span></label></div>
+                <div class="settings-toggle-row"><div><strong>Email Order Alerts</strong><small>Send order updates to the business email.</small></div><label class="switch"><input id="notificationEmailOrders" type="checkbox"><span class="slider"></span></label></div>
+                <div class="settings-toggle-row"><div><strong>SMS Order Alerts</strong><small>UI-only preference for future delivery.</small></div><label class="switch"><input id="notificationSmsOrders" type="checkbox"><span class="slider"></span></label></div>
+                <div class="settings-toggle-row"><div><strong>Browser Push Alerts</strong><small>UI-only preference for future push notifications.</small></div><label class="switch"><input id="notificationPushOrders" type="checkbox"><span class="slider"></span></label></div>
+                <div class="settings-toggle-row"><div><strong>Daily Sales Summary</strong><small>Prepare a daily performance summary.</small></div><label class="switch"><input id="notificationDailySummary" type="checkbox"><span class="slider"></span></label></div>
+              </div>
+            </section>
+          </div>
+          <div class="settings-save-bar"><div><strong id="settingsSaveState">Settings are stored in this browser.</strong><small>Prepared for a future Supabase vendor profile adapter.</small></div><button class="primary-button" type="submit">Save All Settings</button></div>
+        </form>
+      </section>
     </main>
   </div>
 
@@ -365,6 +439,7 @@
 </div>
 <script src="js/app.js"></script>
 <script src="js/vendor-reports.js"></script>
+<script src="js/vendor-settings.js"></script>
 <script src="js/customer-account.js?v=single-size-drinks-2"></script>
 <script src="js/beta-banner.js"></script>
 </body>
