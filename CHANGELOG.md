@@ -1,5 +1,13 @@
 # FoodTrekNow Vendor Platform v0.4.0
 
+## Vendor Sales Reports
+
+- Replaced the Reports placeholder with date-filtered sales analytics
+- Added net sales, gross sales, refunds, order count, average order value, and items sold KPIs
+- Added revenue trends, order status, top-selling items, payment method, and transaction detail views
+- Added printable reporting and CSV export without changing persisted order data
+- Added responsive layouts and automated calculation, range, refund, and export tests
+
 ## Phase 3.1 - Customer Home Experience Polish
 
 - Added a time-aware customer greeting and locally persisted preferred location selection

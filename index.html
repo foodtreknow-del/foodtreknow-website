@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>FoodTrekNow | Vendor & Customer Portal</title>
 <link rel="stylesheet" href="css/vendor.css?v=official-logo-3" />
+<link rel="stylesheet" href="css/vendor-reports.css" />
 <link rel="stylesheet" href="css/customer-account.css?v=customer-priority-1" />
 <link rel="stylesheet" href="css/customer-ordering.css" />
 <link rel="stylesheet" href="css/beta-banner.css" />
@@ -282,7 +283,27 @@
           <div id="menuItemsGrid" class="menu-items-grid"></div>
         </div>
       </section>
-      <section id="reportsPage" class="app-page hidden-view"><div class="panel placeholder-panel"><h2>Sales Reports</h2><p class="muted">Basic report totals will be expanded in the next phase.</p></div></section>
+      <section id="reportsPage" class="app-page hidden-view">
+        <div class="vendor-section-heading">
+          <div><p class="eyebrow">Sales &amp; Performance</p><h2>Sales Reports</h2><p class="muted">Understand revenue, order volume, and what customers order most.</p></div>
+          <div class="report-actions"><label class="report-range-label" for="reportRange">Reporting period<select id="reportRange" class="menu-select"><option value="today">Today</option><option value="7">Last 7 Days</option><option value="30">Last 30 Days</option><option value="all">All Time</option></select></label><button id="refreshSalesReportButton" class="secondary-button" type="button">Refresh</button><button id="exportSalesReportButton" class="primary-button" type="button">Export CSV</button></div>
+        </div>
+        <section class="report-kpi-grid" aria-label="Sales summary">
+          <article class="report-kpi-card report-kpi-primary"><span>Net Sales</span><strong id="reportNetSales">$0.00</strong><small id="reportPeriodLabel">Today</small></article>
+          <article class="report-kpi-card"><span>Gross Sales</span><strong id="reportGrossSales">$0.00</strong><small>Before refunds</small></article>
+          <article class="report-kpi-card"><span>Orders</span><strong id="reportOrderCount">0</strong><small>Paid, non-cancelled</small></article>
+          <article class="report-kpi-card"><span>Average Order</span><strong id="reportAverageOrder">$0.00</strong><small>Per paid order</small></article>
+          <article class="report-kpi-card"><span>Items Sold</span><strong id="reportItemsSold">0</strong><small>Across all orders</small></article>
+          <article class="report-kpi-card report-kpi-refunds"><span>Refunds</span><strong id="reportRefunds">$0.00</strong><small id="reportRefundCount">0 cancelled orders</small></article>
+        </section>
+        <section class="report-dashboard-grid">
+          <article class="panel report-chart-panel"><div class="report-panel-heading"><div><p class="eyebrow">Revenue Trend</p><h3>Sales by Day</h3></div><span id="reportTrendTotal" class="report-total-chip">$0.00</span></div><div id="salesTrendChart" class="sales-trend-chart" aria-label="Sales trend chart"></div></article>
+          <article class="panel"><div class="report-panel-heading"><div><p class="eyebrow">Order Mix</p><h3>Order Status</h3></div></div><div id="reportStatusBreakdown" class="report-breakdown-list"></div></article>
+          <article class="panel"><div class="report-panel-heading"><div><p class="eyebrow">Customer Choice</p><h3>Top-Selling Items</h3></div></div><div class="report-table-wrap"><table class="report-table"><thead><tr><th>Item</th><th>Qty</th><th>Sales</th></tr></thead><tbody id="topSellingItemsBody"></tbody></table></div></article>
+          <article class="panel"><div class="report-panel-heading"><div><p class="eyebrow">Tender</p><h3>Payment Methods</h3></div></div><div id="reportPaymentBreakdown" class="report-breakdown-list"></div></article>
+        </section>
+        <article class="panel report-orders-panel"><div class="report-panel-heading"><div><p class="eyebrow">Transactions</p><h3>Sales Detail</h3><p id="reportOrderSummary" class="muted"></p></div><button id="printSalesReportButton" class="secondary-button" type="button">Print Report</button></div><div class="report-table-wrap"><table class="report-table report-orders-table"><thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Status</th><th>Payment</th><th>Items</th><th>Total</th></tr></thead><tbody id="reportOrdersBody"></tbody></table></div></article>
+      </section>
       <section id="settingsPage" class="app-page hidden-view"><div class="panel placeholder-panel"><h2>Vendor Settings</h2><p class="muted">Truck profile and notification settings will be added in the next phase.</p></div></section>
     </main>
   </div>
@@ -343,6 +364,7 @@
   <div id="toast" class="toast" aria-live="polite"></div>
 </div>
 <script src="js/app.js"></script>
+<script src="js/vendor-reports.js"></script>
 <script src="js/customer-account.js?v=single-size-drinks-2"></script>
 <script src="js/beta-banner.js"></script>
 </body>
