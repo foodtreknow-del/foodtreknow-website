@@ -6,7 +6,7 @@
 <title>FoodTrekNow | Vendor & Customer Portal</title>
 <link rel="stylesheet" href="css/vendor.css?v=official-logo-3" />
 <link rel="stylesheet" href="css/vendor-reports.css" />
-<link rel="stylesheet" href="css/vendor-settings.css" />
+<link rel="stylesheet" href="css/vendor-settings.css?v=stripe-connect-1" />
 <link rel="stylesheet" href="css/customer-account.css?v=communications-2" />
 <link rel="stylesheet" href="css/customer-ordering.css" />
 <link rel="stylesheet" href="css/beta-banner.css" />
@@ -332,6 +332,25 @@
               </div>
             </section>
 
+            <section class="panel settings-panel stripe-connect-panel" aria-labelledby="stripeConnectHeading">
+              <div class="settings-panel-heading"><span class="settings-icon stripe-icon" aria-hidden="true">S</span><div><h3 id="stripeConnectHeading">Stripe Payments</h3><p>Connect your food truck so customer payments go directly to your Stripe account.</p></div></div>
+              <div class="stripe-status-row">
+                <span id="stripeConnectBadge" class="stripe-status-badge not-connected">Not connected</span>
+                <div><strong id="stripeConnectTitle">Connect Stripe to accept online payments</strong><p id="stripeConnectMessage">FoodTrekNow does not hold your order funds. Stripe processes payments for your food truck.</p></div>
+              </div>
+              <div class="stripe-readiness-grid" aria-label="Stripe account readiness">
+                <div><span id="stripeDetailsIndicator" class="stripe-readiness-dot"></span><small>Business details</small></div>
+                <div><span id="stripeChargesIndicator" class="stripe-readiness-dot"></span><small>Customer charges</small></div>
+                <div><span id="stripePayoutsIndicator" class="stripe-readiness-dot"></span><small>Bank payouts</small></div>
+              </div>
+              <p id="stripeConnectError" class="settings-message error" aria-live="polite"></p>
+              <div class="stripe-connect-actions">
+                <button id="connectStripeButton" class="primary-button" type="button">Connect with Stripe</button>
+                <button id="refreshStripeStatusButton" class="secondary-button" type="button">Check Status</button>
+              </div>
+              <p class="stripe-security-note">Secure onboarding opens on Stripe. FoodTrekNow never sees or stores your bank login or full account details.</p>
+            </section>
+
             <section class="panel settings-panel">
               <div class="settings-panel-heading"><span class="settings-icon" aria-hidden="true">⚡</span><div><h3>Order Operations</h3><p>Set availability, timing, and checkout defaults.</p></div></div>
               <div class="settings-toggle-row"><div><strong>Accepting Orders</strong><small>Customers can place new pickup orders.</small></div><label class="switch"><input id="vendorAcceptingOrders" type="checkbox"><span class="slider"></span></label></div>
@@ -451,6 +470,7 @@
 <script src="js/app.js?v=communications-1"></script>
 <script src="js/vendor-reports.js"></script>
 <script src="js/vendor-settings.js?v=vendor-data-2"></script>
+<script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/customer-account.js?v=communications-1"></script>
 <script src="js/beta-banner.js"></script>
 </body>
