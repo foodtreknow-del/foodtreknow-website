@@ -38,7 +38,7 @@ test('approved active trucks load with their hours, categories, and real menu it
 
 test('customer marketplace loads before customer UI code', () => {
   const marketplacePosition = html.indexOf('js/customer-marketplace.js?v=customer-marketplace-1');
-  const customerPosition = html.indexOf('js/customer-account.js?v=customer-marketplace-1');
+  const customerPosition = html.indexOf('js/customer-account.js?v=live-orders-1');
   assert.ok(marketplacePosition >= 0 && marketplacePosition < customerPosition);
 });
 
@@ -46,6 +46,7 @@ test('customer UI merges Supabase trucks without removing sample functionality',
   assert.match(customerSource, /refreshCustomerMarketplace\(\)/);
   assert.match(customerSource, /TRUCKS\.push\(/);
   assert.match(customerSource, /TRUCK_MENUS\[truck\.id\]/);
-  assert.match(customerSource, /truck\.acceptingOrders === false \? 'Currently Closed' : 'Order Now'/);
+  assert.match(customerSource, /customerCanOrderTruck/);
+  assert.match(customerSource, /Sign In to Order/);
   assert.match(customerSource, /item\.image \? `<img/);
 });

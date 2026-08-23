@@ -1074,6 +1074,7 @@
     renderCustomerShell();
     renderCustomerPage(page);
     refreshCustomerMarketplace();
+    hydrateLiveCustomerOrders();
     window.scrollTo(0, 0);
   }
 
@@ -1145,6 +1146,75 @@
     } catch (error) {
       marketplaceLoadPromise = null;
       customerToast(`Live trucks could not be loaded: ${error.message}`);
+    }
+  }
+
+  function databaseStatusForCustomer(status) {
+    return {
+      received: { status: 'received', statusLabel: 'Order Received' },
+      preparing: { status: 'preparing', statusLabel: 'Preparing' },
+      ready: { status: 'ready', statusLabel: 'Ready for Pickup' },
+      picked_up: { status: 'completed', statusLabel: 'Picked Up' },
+      cancelled: { status: 'cancelled', statusLabel: 'Cancelled · Full Refund' }
+    }[status] || { status, statusLabel: status };
+  }
+
+  function databaseOrderToCustomerOrder(row) {
+    const mappedStatus = databaseStatusForCustomer(row.status);
+    const prepMinutes = Number(row.trucks?.estimated_prep_minutes) || 20;
+    return {
+      id: row.order_number,
+      supabaseOrderId: row.id,
+      truckId: row.truck_id,
+      truckName: row.trucks?.name || 'Food Truck',
+      ...mappedStatus,
+      createdAt: Date.parse(row.created_at),
+      estimatedReadyAt: Date.parse(row.created_at) + prepMinutes * 60 * 1000,
+      pickupInstructions: row.trucks?.pickup_instructions || `Show Order #${row.order_number} at the truck window.`,
+      items: (row.order_items || []).map(item => ({
+        id: item.id,
+        menuItemId: item.menu_item_id,
+        name: item.item_name,
+        icon: customerMenuIcon('Entrees'),
+        basePrice: Number(item.unit_price),
+        price: Number(item.unit_price),
+        quantity: Number(item.quantity),
+        qty: Number(item.quantity),
+        modifiers: item.modifiers || [],
+        instructions: item.special_instructions || ''
+      })),
+      subtotal: Number(row.subtotal),
+      tax: Number(row.tax),
+      serviceFee: Number(row.service_fee),
+      total: Number(row.total),
+      paymentLabel: row.payment_label || 'Pay at Pickup',
+      orderNotes: row.order_notes || '',
+      acceptedAt: row.preparing_at ? Date.parse(row.preparing_at) : null,
+      readyAt: row.ready_at ? Date.parse(row.ready_at) : null,
+      completedAt: row.picked_up_at ? Date.parse(row.picked_up_at) : null,
+      cancelledAt: row.cancelled_at ? Date.parse(row.cancelled_at) : null,
+      refund: row.status === 'cancelled' ? { status: 'refunded', amount: Number(row.total), processedAt: Date.parse(row.cancelled_at || row.updated_at), method: row.payment_label || 'Original payment method' } : null
+    };
+  }
+
+  async function hydrateLiveCustomerOrders(announce = false) {
+    const service = window.FoodTrekNowLiveOrders;
+    if (!currentAccount || currentAccount.isGuest || !service?.available) return;
+    try {
+      const remoteRows = await service.loadCustomerOrders();
+      const previousStatuses = new Map((currentAccount.orders || []).filter(order => order.supabaseOrderId).map(order => [order.supabaseOrderId, order.status]));
+      const localOrders = (currentAccount.orders || []).filter(order => !order.supabaseOrderId);
+      const remoteOrders = remoteRows.map(databaseOrderToCustomerOrder);
+      currentAccount.orders = [...remoteOrders, ...localOrders].sort((a, b) => Number(b.createdAt) - Number(a.createdAt));
+      saveCustomerState(currentAccount);
+      if (!accountView.classList.contains('hidden-view')) {
+        renderCustomerShell();
+        renderCustomerPage(currentPage);
+      }
+      if (announce && remoteOrders.some(order => previousStatuses.has(order.supabaseOrderId) && previousStatuses.get(order.supabaseOrderId) !== order.status)) customerToast('Your order status was updated.');
+      service.subscribeCustomer(currentAccount.id, () => hydrateLiveCustomerOrders(true));
+    } catch (error) {
+      customerToast(`Order updates could not be loaded: ${error.message}`);
     }
   }
 
@@ -1232,7 +1302,13 @@
     return NEARBY_RADIUS_OPTIONS.includes(savedRadius) ? savedRadius : 5;
   }
 
+  function customerCanOrderTruck(truck) {
+    return truck?.acceptingOrders !== false && !(currentAccount?.isGuest && truck?.supabase);
+  }
+
   function nearbyTruckCard(truck) {
+    const canOrder = customerCanOrderTruck(truck);
+    const orderLabel = currentAccount?.isGuest && truck.supabase ? 'Sign In to Order' : truck.acceptingOrders === false ? 'Currently Closed' : 'Order Now';
     return `<article class="nearby-truck-card" data-open-truck-profile="${truck.id}">
       <div class="nearby-truck-logo" aria-hidden="true">${truck.icon || '🚚'}</div>
       <div class="nearby-truck-main">
@@ -1245,7 +1321,7 @@
         ${truck.currentEvent ? `<div class="nearby-event-note"><span aria-hidden="true">🎪</span><div><small>Current Event</small><strong>${escapeHtml(truck.currentEvent)}</strong></div></div>` : ''}
       </div>
       <div class="nearby-truck-actions">
-        <button class="primary-button" data-nearby-order="${truck.id}" type="button" ${truck.acceptingOrders === false ? 'disabled' : ''}>${truck.acceptingOrders === false ? 'Currently Closed' : 'Order Now'}</button>
+        <button class="primary-button" data-nearby-order="${truck.id}" type="button" ${canOrder ? '' : 'disabled'}>${orderLabel}</button>
         <button class="secondary-button" data-nearby-directions="${truck.id}" type="button">Directions</button>
       </div>
     </article>`;
@@ -1420,7 +1496,7 @@
       ? currentAccount.cart.items.filter(cartItem => cartItem.menuItemId === item.id).reduce((total, cartItem) => total + Number(cartItem.quantity || 0), 0)
       : 0;
     const requiresChoice = Boolean(item.requiredChoices?.length);
-    const canOrder = item.available && selectedTruck().acceptingOrders !== false;
+    const canOrder = item.available && customerCanOrderTruck(selectedTruck());
     return `<article class="ordering-item-card ${compact ? 'compact' : ''} ${canOrder ? '' : 'sold-out'}">
       <span class="ordering-item-photo" aria-hidden="true">${item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : item.icon}${canOrder ? '' : `<b>${item.available ? 'Closed' : 'Sold Out'}</b>`}</span>
       <div class="ordering-item-copy"><small>${escapeHtml(item.category)}</small><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.description)}</span><em>${item.calories ? `${item.calories} cal · ` : ''}${customerMoney(item.price)}</em>
@@ -1483,8 +1559,9 @@
   }
 
   function addMenuItem(item, modifiers = []) {
-    if (!item || !item.available || selectedTruck().acceptingOrders === false) {
-      if (selectedTruck().acceptingOrders === false) customerToast(`${selectedTruck().name} is not accepting orders right now.`);
+    if (!item || !item.available || !customerCanOrderTruck(selectedTruck())) {
+      if (currentAccount?.isGuest && selectedTruck().supabase) customerToast('Sign in or create an account to send a live order to this truck.');
+      else if (selectedTruck().acceptingOrders === false) customerToast(`${selectedTruck().name} is not accepting orders right now.`);
       return false;
     }
     if (currentAccount.cart.items.length && currentAccount.cart.truckId !== selectedTruckId && !confirm('Your cart contains items from another truck. Start a new cart?')) return false;
@@ -1584,8 +1661,10 @@
 
   function cartTotals() {
     const subtotal = currentAccount.cart.items.reduce((total, item) => total + cartItemUnitPrice(item) * Number(item.quantity || 0), 0);
-    const tax = Number((subtotal * 0.06).toFixed(2));
-    const serviceFee = subtotal ? 1.49 : 0;
+    const truck = TRUCKS.find(item => item.id === currentAccount.cart.truckId);
+    const taxRate = truck?.supabase ? Number(truck.taxRate || 0) : 0.06;
+    const tax = Number((subtotal * taxRate).toFixed(2));
+    const serviceFee = truck?.supabase ? 0 : subtotal ? 1.49 : 0;
     return { subtotal, tax, serviceFee, total: Number((subtotal + tax + serviceFee).toFixed(2)) };
   }
 
@@ -1593,7 +1672,7 @@
     if (!currentAccount?.cart?.items?.length || !currentAccount.cart.truckId) return [];
     const currentMenu = new Map(menuForTruck(currentAccount.cart.truckId).map(item => [item.id, item]));
     const truck = TRUCKS.find(item => item.id === currentAccount.cart.truckId);
-    if (truck?.acceptingOrders === false) return currentAccount.cart.items.slice();
+    if (!customerCanOrderTruck(truck)) return currentAccount.cart.items.slice();
     return currentAccount.cart.items.filter(item => currentMenu.get(item.menuItemId)?.available !== true);
   }
 
@@ -2481,6 +2560,15 @@
   function reorderMeal(orderId) {
     const source = currentAccount.orders.find(order => String(order.id) === String(orderId));
     if (!source) return;
+    if (source.supabaseOrderId) {
+      selectedTruckId = source.truckId;
+      currentAccount.cart = { truckId: selectedTruckId, orderNumber: generateOrderNumber(), items: source.items.map(item => ({ ...item, id: uid('cart') })) };
+      CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
+      closeModal();
+      renderCustomerPage('cart');
+      customerToast('Your previous meal is ready to review and order again.');
+      return;
+    }
     const { pickupNumber: legacyPickupNumber, ...sourceWithoutPickupNumber } = source;
     const copy = {
       ...sourceWithoutPickupNumber,
@@ -2615,8 +2703,38 @@
         promoCode: document.getElementById('checkoutPromoCode').value.trim(),
         orderNotes: document.getElementById('checkoutOrderNotes').value.trim()
       };
+      let liveOrderPlaced = false;
+      if (truck.supabase && !currentAccount.isGuest && window.FoodTrekNowLiveOrders?.available) {
+        const checkoutMessage = document.getElementById('checkoutMessage');
+        checkoutMessage.textContent = 'Placing your secure order…';
+        try {
+          const placed = await window.FoodTrekNowLiveOrders.placeOrder({
+            truckId: truck.id,
+            items: currentAccount.cart.items,
+            customerName: order.customerName,
+            customerMobile: order.customerMobile,
+            customerEmail: order.customerEmail,
+            orderNotes: order.orderNotes,
+            paymentLabel: order.paymentLabel
+          });
+          Object.assign(order, {
+            id: Number(placed.order_number),
+            supabaseOrderId: placed.order_id,
+            status: placed.status,
+            statusLabel: databaseStatusForCustomer(placed.status).statusLabel,
+            subtotal: Number(placed.subtotal),
+            tax: Number(placed.tax),
+            serviceFee: 0,
+            total: Number(placed.total)
+          });
+          liveOrderPlaced = true;
+        } catch (error) {
+          checkoutMessage.textContent = error.message || 'Your order could not be placed. Please try again.';
+          return;
+        }
+      }
       CustomerOrderingService.placeOrder(currentAccount, order);
-      syncPlacedOrderToVendor(order);
+      if (!liveOrderPlaced) syncPlacedOrderToVendor(order);
       lastPlacedOrderId = order.id;
       selectedTruckId = truck.id;
       renderCustomerPage('confirmation');
@@ -2677,7 +2795,7 @@
     }
   });
 
-  modalContent.addEventListener('click', event => {
+  modalContent.addEventListener('click', async event => {
     if (event.target.closest('[data-close-customer-modal]')) closeModal();
     const locationChoice = event.target.closest('[data-location-method]');
     if (locationChoice) {
@@ -2694,13 +2812,23 @@
     if (cancelOrder) cancelOrderModal(currentAccount.orders.find(order => String(order.id) === String(cancelOrder.dataset.cancelOrder)));
     const confirmCancelOrder = event.target.closest('[data-confirm-cancel-order]');
     if (confirmCancelOrder) {
+      const selectedOrder = currentAccount.orders.find(order => String(order.id) === String(confirmCancelOrder.dataset.confirmCancelOrder));
+      if (selectedOrder?.supabaseOrderId) {
+        try {
+          await window.FoodTrekNowLiveOrders.cancelCustomerOrder(selectedOrder.supabaseOrderId);
+        } catch (error) {
+          closeModal();
+          customerToast(error.message || 'This order can no longer be cancelled.');
+          return;
+        }
+      }
       const order = CustomerOrderingService.cancelOrder(currentAccount, confirmCancelOrder.dataset.confirmCancelOrder);
       if (!order) {
         closeModal();
         customerToast('This order can no longer be cancelled automatically.');
         return;
       }
-      syncCancelledOrderToVendor(order);
+      if (!order.supabaseOrderId) syncCancelledOrderToVendor(order);
       lastPlacedOrderId = order.id;
       closeModal();
       orderHistoryFilter = 'past';
