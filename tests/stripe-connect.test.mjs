@@ -81,7 +81,13 @@ test('Edge Functions verify the vendor and keep Stripe calls server-side', () =>
   assert.match(startFunction, /userClient\.auth\.getUser\(\)/);
   assert.match(startFunction, /Only an approved vendor can connect a Stripe account/);
   assert.match(startFunction, /authenticatedVendor\(request\)/);
-  assert.match(startFunction, /type', 'standard'/);
+  assert.match(startFunction, /\/v2\/core\/accounts/);
+  assert.match(startFunction, /Stripe-Version.*2026-07-29\.dahlia/);
+  assert.match(startFunction, /dashboard:\s*'full'/);
+  assert.match(startFunction, /merchant:[\s\S]*card_payments:[\s\S]*requested:\s*true/);
+  assert.match(startFunction, /fees_collector:\s*'stripe'/);
+  assert.match(startFunction, /losses_collector:\s*'stripe'/);
+  assert.doesNotMatch(startFunction, /stripeRequest<\{ id: string \}>\('\/v1\/accounts'/);
   assert.match(startFunction, /Idempotency-Key|idempotencyKey/);
   assert.match(statusFunction, /account\.charges_enabled && account\.payouts_enabled/);
   assert.match(startFunction, /Deno\.env\.get\('STRIPE_SECRET_KEY'\)|requiredEnvironment\('STRIPE_SECRET_KEY'\)/);

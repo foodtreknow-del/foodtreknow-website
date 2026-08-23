@@ -10,17 +10,22 @@ function secretKey() {
 type StripeOptions = {
   method?: 'GET' | 'POST';
   form?: URLSearchParams;
+  json?: Record<string, unknown>;
   idempotencyKey?: string;
 };
 
 export async function stripeRequest<T>(path: string, options: StripeOptions = {}) {
   const headers: Record<string, string> = { Authorization: `Bearer ${secretKey()}` };
   if (options.form) headers['Content-Type'] = 'application/x-www-form-urlencoded';
+  if (options.json) {
+    headers['Content-Type'] = 'application/json';
+    headers['Stripe-Version'] = '2026-07-29.dahlia';
+  }
   if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey;
   const response = await fetch(`https://api.stripe.com${path}`, {
-    method: options.method || (options.form ? 'POST' : 'GET'),
+    method: options.method || (options.form || options.json ? 'POST' : 'GET'),
     headers,
-    body: options.form?.toString()
+    body: options.form?.toString() || (options.json ? JSON.stringify(options.json) : undefined)
   });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload?.error?.message || 'Stripe could not complete the request.');

@@ -46,14 +46,23 @@ async function authenticatedVendor(request: Request) {
   return { serviceClient, user: userData.user, vendor };
 }
 
-async function stripeRequest<T>(path: string, form?: URLSearchParams, idempotencyKey?: string) {
+type StripeRequestBody = URLSearchParams | Record<string, unknown>;
+
+async function stripeRequest<T>(path: string, body?: StripeRequestBody, idempotencyKey?: string) {
   const secret = requiredEnvironment('STRIPE_SECRET_KEY');
   if (!secret.startsWith('sk_test_') && !secret.startsWith('sk_live_')) throw new Error('Stripe is configured with an invalid server key.');
   const headers: Record<string, string> = { Authorization: `Bearer ${secret}` };
-  if (form) headers['Content-Type'] = 'application/x-www-form-urlencoded';
+  const isForm = body instanceof URLSearchParams;
+  if (isForm) headers['Content-Type'] = 'application/x-www-form-urlencoded';
+  else if (body) {
+    headers['Content-Type'] = 'application/json';
+    headers['Stripe-Version'] = '2026-07-29.dahlia';
+  }
   if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
   const response = await fetch(`https://api.stripe.com${path}`, {
-    method: form ? 'POST' : 'GET', headers, body: form?.toString()
+    method: body ? 'POST' : 'GET',
+    headers,
+    body: isForm ? body.toString() : body ? JSON.stringify(body) : undefined
   });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload?.error?.message || 'Stripe could not complete the request.');
@@ -80,14 +89,33 @@ Deno.serve(async request => {
     if (savedError) throw savedError;
     let accountId = savedAccount?.stripe_account_id;
     if (!accountId) {
-      const form = new URLSearchParams();
-      form.set('type', 'standard');
-      form.set('country', 'US');
       const accountEmail = vendor.contact_email || user.email;
-      if (accountEmail) form.set('email', accountEmail);
-      form.set('business_profile[url]', 'https://www.foodtreknow.com');
-      form.set('metadata[foodtreknow_vendor_profile_id]', vendor.id);
-      const account = await stripeRequest<{ id: string }>('/v1/accounts', form, `foodtreknow-connect-${vendor.id}`);
+      const accountBody: Record<string, unknown> = {
+        display_name: vendor.business_name,
+        identity: { country: 'us' },
+        dashboard: 'full',
+        configuration: {
+          merchant: {
+            capabilities: {
+              card_payments: { requested: true }
+            }
+          }
+        },
+        defaults: {
+          responsibilities: {
+            fees_collector: 'stripe',
+            losses_collector: 'stripe'
+          }
+        },
+        metadata: { foodtreknow_vendor_profile_id: vendor.id },
+        include: ['configuration.merchant', 'identity', 'defaults']
+      };
+      if (accountEmail) accountBody.contact_email = accountEmail;
+      const account = await stripeRequest<{ id: string }>(
+        '/v2/core/accounts',
+        accountBody,
+        `foodtreknow-connect-v2-${vendor.id}`
+      );
       accountId = account.id;
       const { error: saveError } = await serviceClient.from('stripe_connect_accounts').insert({
         vendor_profile_id: vendor.id, stripe_account_id: accountId, status: 'onboarding_required'
