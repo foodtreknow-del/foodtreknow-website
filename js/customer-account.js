@@ -46,6 +46,8 @@
     { id: 'curry-in-a-hurry', name: 'Curry in a Hurry', cuisine: 'Indian · Street food', status: 'Open now', wait: '15–22 min', icon: '🍛', latitude: 35.49, longitude: -78.91, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '11:00 AM', closesAt: '9:00 PM', pickupMinutes: 15, currentEvent: 'Global Food Festival' },
     { id: 'breakfast-bus', name: 'The Breakfast Bus', cuisine: 'Breakfast · Brunch', status: 'Open now', wait: '10–16 min', icon: '🍳', latitude: 36.18, longitude: -78.55, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '7:00 AM', closesAt: '2:00 PM', pickupMinutes: 10, currentEvent: '' }
   ];
+  let remoteTruckIds = new Set();
+  let marketplaceLoadPromise = null;
   const NEARBY_RADIUS_OPTIONS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
   const EVENTS = [
     { id: 'first-friday', truckId: 'capital-city-eats', date: 'AUG 01', name: 'First Friday Food Truck Rodeo', location: 'City Market Plaza', time: '5:00–9:00 PM', detail: '12 trucks · Live music' },
@@ -1071,7 +1073,79 @@
     document.body.classList.remove('login-page');
     renderCustomerShell();
     renderCustomerPage(page);
+    refreshCustomerMarketplace();
     window.scrollTo(0, 0);
+  }
+
+  function displayMarketplaceTime(value, fallback) {
+    if (!value) return fallback;
+    const [hourValue, minute = '00'] = String(value).split(':');
+    const hour = Number(hourValue);
+    if (!Number.isFinite(hour)) return fallback;
+    return `${hour % 12 || 12}:${minute} ${hour >= 12 ? 'PM' : 'AM'}`;
+  }
+
+  async function refreshCustomerMarketplace() {
+    const service = window.FoodTrekNowCustomerMarketplace;
+    if (!service?.available) return;
+    if (!marketplaceLoadPromise) marketplaceLoadPromise = service.load();
+    try {
+      const marketplace = await marketplaceLoadPromise;
+      const sampleTrucks = TRUCKS.filter(truck => !remoteTruckIds.has(truck.id));
+      TRUCKS.splice(0, TRUCKS.length, ...sampleTrucks);
+      remoteTruckIds = new Set(marketplace.map(truck => truck.id));
+      marketplace.forEach((truck, index) => {
+        const openHours = truck.hours.filter(row => !row.is_closed);
+        const todayHours = truck.hours.find(row => row.day_of_week === new Date().getDay());
+        const fallbackLocation = resolveSampleCustomerLocation(currentAccount?.preferredLocation);
+        TRUCKS.push({
+          id: truck.id,
+          name: truck.name,
+          cuisine: truck.cuisine || 'Food Truck',
+          description: truck.description || '',
+          status: truck.accepting_orders ? 'Open now' : 'Not accepting orders',
+          wait: `${truck.estimated_prep_minutes || 20} min`,
+          icon: '🚚',
+          logo: truck.logo_url || '',
+          latitude: Number(truck.latitude) || fallbackLocation.latitude + (index + 1) * 0.002,
+          longitude: Number(truck.longitude) || fallbackLocation.longitude + (index + 1) * 0.002,
+          operatingDays: openHours.length ? openHours.map(row => row.day_of_week) : [0, 1, 2, 3, 4, 5, 6],
+          opensAt: displayMarketplaceTime(todayHours?.opens_at, '11:00 AM'),
+          closesAt: displayMarketplaceTime(todayHours?.closes_at, '8:00 PM'),
+          pickupMinutes: Number(truck.estimated_prep_minutes) || 20,
+          currentEvent: truck.location_name || '',
+          acceptingOrders: Boolean(truck.accepting_orders),
+          pickupInstructions: truck.pickup_instructions || '',
+          minimumOrder: Number(truck.minimum_order) || 0,
+          taxRate: Number(truck.tax_rate) || 0,
+          supabase: true
+        });
+        TRUCK_MENUS[truck.id] = truck.menu.map(item => ({
+          id: item.id,
+          menuItemId: item.id,
+          truckId: truck.id,
+          category: item.category_name,
+          name: item.name,
+          description: item.description || '',
+          price: Number(item.price),
+          calories: null,
+          available: !item.is_sold_out,
+          icon: customerMenuIcon(item.category_name),
+          image: item.photo_url || '',
+          featured: Boolean(item.is_featured),
+          special: false,
+          popular: Boolean(item.is_featured)
+        }));
+      });
+      try {
+        const savedTruck = JSON.parse(localStorage.getItem('ftnSelectedTruckV1') || 'null');
+        if (savedTruck?.truckId && TRUCKS.some(truck => truck.id === savedTruck.truckId)) selectedTruckId = savedTruck.truckId;
+      } catch {}
+      if (currentAccount && !accountView.classList.contains('hidden-view')) renderCustomerPage(currentPage);
+    } catch (error) {
+      marketplaceLoadPromise = null;
+      customerToast(`Live trucks could not be loaded: ${error.message}`);
+    }
   }
 
   function persistCurrentAccount() {
@@ -1171,7 +1245,7 @@
         ${truck.currentEvent ? `<div class="nearby-event-note"><span aria-hidden="true">🎪</span><div><small>Current Event</small><strong>${escapeHtml(truck.currentEvent)}</strong></div></div>` : ''}
       </div>
       <div class="nearby-truck-actions">
-        <button class="primary-button" data-nearby-order="${truck.id}" type="button">Order Now</button>
+        <button class="primary-button" data-nearby-order="${truck.id}" type="button" ${truck.acceptingOrders === false ? 'disabled' : ''}>${truck.acceptingOrders === false ? 'Currently Closed' : 'Order Now'}</button>
         <button class="secondary-button" data-nearby-directions="${truck.id}" type="button">Directions</button>
       </div>
     </article>`;
@@ -1267,6 +1341,8 @@
   }
 
   function menuForTruck(truckId = selectedTruck().id) {
+    const liveTruck = TRUCKS.find(truck => truck.id === truckId && truck.supabase);
+    if (liveTruck) return (TRUCK_MENUS[truckId] || []).map(item => ({ ...item }));
     const baseMenu = ORDERING_MENU_ITEMS.map(item => ({ ...item, truckId }));
     if (truckId !== TRUCK.id) {
       const cuisineMenu = [
@@ -1344,13 +1420,14 @@
       ? currentAccount.cart.items.filter(cartItem => cartItem.menuItemId === item.id).reduce((total, cartItem) => total + Number(cartItem.quantity || 0), 0)
       : 0;
     const requiresChoice = Boolean(item.requiredChoices?.length);
-    return `<article class="ordering-item-card ${compact ? 'compact' : ''} ${item.available ? '' : 'sold-out'}">
-      <span class="ordering-item-photo" aria-hidden="true">${item.icon}${item.available ? '' : '<b>Sold Out</b>'}</span>
+    const canOrder = item.available && selectedTruck().acceptingOrders !== false;
+    return `<article class="ordering-item-card ${compact ? 'compact' : ''} ${canOrder ? '' : 'sold-out'}">
+      <span class="ordering-item-photo" aria-hidden="true">${item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : item.icon}${canOrder ? '' : `<b>${item.available ? 'Closed' : 'Sold Out'}</b>`}</span>
       <div class="ordering-item-copy"><small>${escapeHtml(item.category)}</small><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.description)}</span><em>${item.calories ? `${item.calories} cal · ` : ''}${customerMoney(item.price)}</em>
         <div class="menu-item-quantity-control" aria-label="Quantity of ${escapeHtml(item.name)}">
-          <button data-menu-item-decrease="${item.id}" type="button" aria-label="Decrease ${escapeHtml(item.name)} quantity" ${item.available && cartQuantity ? '' : 'disabled'}>−</button>
+          <button data-menu-item-decrease="${item.id}" type="button" aria-label="Decrease ${escapeHtml(item.name)} quantity" ${canOrder && cartQuantity ? '' : 'disabled'}>−</button>
           <span><b data-menu-item-quantity="${item.id}">${cartQuantity}</b><small>in cart</small></span>
-          <button data-add-menu-item="${item.id}" type="button" aria-label="${requiresChoice && !cartQuantity ? 'Choose options for' : 'Increase'} ${escapeHtml(item.name)} quantity" ${item.available ? '' : 'disabled'}>+</button>
+          <button data-add-menu-item="${item.id}" type="button" aria-label="${requiresChoice && !cartQuantity ? 'Choose options for' : 'Increase'} ${escapeHtml(item.name)} quantity" ${canOrder ? '' : 'disabled'}>+</button>
         </div>
       </div>
     </article>`;
@@ -1406,7 +1483,10 @@
   }
 
   function addMenuItem(item, modifiers = []) {
-    if (!item || !item.available) return false;
+    if (!item || !item.available || selectedTruck().acceptingOrders === false) {
+      if (selectedTruck().acceptingOrders === false) customerToast(`${selectedTruck().name} is not accepting orders right now.`);
+      return false;
+    }
     if (currentAccount.cart.items.length && currentAccount.cart.truckId !== selectedTruckId && !confirm('Your cart contains items from another truck. Start a new cart?')) return false;
     if (currentAccount.cart.truckId !== selectedTruckId) currentAccount.cart = { truckId: selectedTruckId, orderNumber: generateOrderNumber(), items: [] };
     if (!currentAccount.cart.orderNumber) currentAccount.cart.orderNumber = generateOrderNumber();
@@ -1512,7 +1592,9 @@
   function unavailableCartItems() {
     if (!currentAccount?.cart?.items?.length || !currentAccount.cart.truckId) return [];
     const currentMenu = new Map(menuForTruck(currentAccount.cart.truckId).map(item => [item.id, item]));
-    return currentAccount.cart.items.filter(item => currentMenu.get(item.menuItemId)?.available === false);
+    const truck = TRUCKS.find(item => item.id === currentAccount.cart.truckId);
+    if (truck?.acceptingOrders === false) return currentAccount.cart.items.slice();
+    return currentAccount.cart.items.filter(item => currentMenu.get(item.menuItemId)?.available !== true);
   }
 
   function cartItemMarkup(item, unavailable = false) {
