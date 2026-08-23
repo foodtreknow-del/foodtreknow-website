@@ -38,7 +38,7 @@ test('approved active trucks load with their hours, categories, and real menu it
 
 test('customer marketplace loads before customer UI code', () => {
   const marketplacePosition = html.indexOf('js/customer-marketplace.js?v=customer-marketplace-1');
-  const customerPosition = html.indexOf('js/customer-account.js?v=live-orders-1');
+  const customerPosition = html.indexOf('js/customer-account.js?v=communications-1');
   assert.ok(marketplacePosition >= 0 && marketplacePosition < customerPosition);
 });
 

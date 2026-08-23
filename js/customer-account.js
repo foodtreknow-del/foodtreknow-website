@@ -1009,6 +1009,8 @@
   let orderHistoryFilter = 'current';
   let selectedTruckId = TRUCK.id;
   let lastPlacedOrderId = null;
+  let customerNotifications = [];
+  let customerCommunicationsSubscribed = false;
 
   function readSession() {
     try {
@@ -1075,6 +1077,7 @@
     renderCustomerPage(page);
     refreshCustomerMarketplace();
     hydrateLiveCustomerOrders();
+    hydrateCustomerCommunications();
     window.scrollTo(0, 0);
   }
 
@@ -1218,6 +1221,47 @@
     }
   }
 
+  function updateCustomerNotificationBadge() {
+    const unreadCount = customerNotifications.filter(notification => !notification.is_read).length;
+    document.querySelectorAll('[data-customer-notification-count]').forEach(badge => {
+      badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+      badge.classList.toggle('hidden-view', unreadCount === 0);
+    });
+  }
+
+  async function hydrateCustomerCommunications(announce = false) {
+    const service = window.FoodTrekNowLiveOrders;
+    if (!currentAccount || currentAccount.isGuest || !service?.available) return;
+    try {
+      const previousIds = new Set(customerNotifications.map(notification => notification.id));
+      customerNotifications = await service.loadCustomerNotifications();
+      updateCustomerNotificationBadge();
+      if (currentPage === 'notifications' && !accountView.classList.contains('hidden-view')) renderCustomerPage('notifications');
+      if (announce && customerNotifications.some(notification => !previousIds.has(notification.id))) customerToast('You have a new order update.');
+      if (!customerCommunicationsSubscribed) {
+        service.subscribeCustomerCommunications(currentAccount.id, () => hydrateCustomerCommunications(true));
+        customerCommunicationsSubscribed = true;
+      }
+    } catch (error) {
+      customerToast(`Notifications could not be loaded: ${error.message}`);
+    }
+  }
+
+  async function markCustomerNotificationsRead(notificationIds = null) {
+    const service = window.FoodTrekNowLiveOrders;
+    if (!service?.available || currentAccount?.isGuest) return;
+    try {
+      await service.markCustomerNotificationsRead(notificationIds);
+      const selectedIds = notificationIds ? new Set(notificationIds) : null;
+      customerNotifications.forEach(notification => {
+        if (!selectedIds || selectedIds.has(notification.id)) notification.is_read = true;
+      });
+      updateCustomerNotificationBadge();
+    } catch (error) {
+      customerToast(`Notifications could not be updated: ${error.message}`);
+    }
+  }
+
   function persistCurrentAccount() {
     if (currentAccount) saveCustomerState(currentAccount);
   }
@@ -1276,6 +1320,7 @@
     document.getElementById('adminVendorReviewNav').classList.toggle('hidden-view', currentAccount.role !== 'admin');
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === currentPage));
     updateCartBadge();
+    updateCustomerNotificationBadge();
   }
 
   function pageHeader(eyebrow, title, description = '', action = '') {
@@ -1886,6 +1931,7 @@
     if (page === 'vendorApplication') loadVendorApplication();
     if (page === 'vendorReviews' && currentAccount.role === 'admin') loadVendorReviews();
     updateCartBadge();
+    updateCustomerNotificationBadge();
     document.querySelector('.customer-sidebar')?.classList.remove('open');
     document.getElementById('customerMenuButton').setAttribute('aria-expanded', 'false');
     window.scrollTo(0, 0);
@@ -2022,14 +2068,18 @@
 
   function renderNotifications() {
     const preferences = currentAccount.preferences.notifications;
-    const latestOrder = currentAccount.orders[0];
+    const unreadCount = customerNotifications.filter(notification => !notification.is_read).length;
     const rows = [
       ['orderUpdates', 'Order Updates', 'Status changes, pickup readiness, and order confirmations.'],
       ['promotions', 'Promotions', 'Occasional offers and FoodTrekNow news.'],
       ['favoriteTrucks', 'Favorite Truck Notifications', 'Opening hours, new menu items, and availability from saved trucks.'],
-      ['push', 'Push Notifications', 'UI-only preference until push delivery is connected.']
+      ['push', 'Push Notifications', 'Preference is ready for native Apple and Android notification delivery.']
     ];
-    return `${pageHeader('Stay in the Loop', 'Notifications', 'Choose which updates you would like to receive.')}${latestOrder ? `<section class="customer-card order-notification-card"><p class="eyebrow">Latest Order Update</p><h2>${orderNumberLabel(latestOrder.id)} · ${escapeHtml(latestOrder.statusLabel)}</h2><p>${escapeHtml(latestOrder.truckName)} is keeping this same number through pickup.</p></section>` : ''}<section class="customer-card">${rows.map(([key, title, copy]) => `<div class="setting-row"><div><strong>${title}</strong><small>${copy}</small></div><label class="customer-switch" aria-label="${title}"><input type="checkbox" data-notification-setting="${key}" ${preferences[key] ? 'checked' : ''}><span></span></label></div>`).join('')}</section>`;
+    const feed = customerNotifications.length ? customerNotifications.map(notification => {
+      const order = currentAccount.orders.find(item => item.supabaseOrderId === notification.order_id);
+      return `<article class="communication-notification ${notification.is_read ? '' : 'unread'}"><span class="communication-notification-icon" aria-hidden="true">${notification.kind === 'order_message' ? '💬' : '🛍️'}</span><div><div class="communication-notification-heading"><strong>${escapeHtml(notification.title)}</strong>${notification.is_read ? '' : '<b>New</b>'}</div><p>${escapeHtml(notification.body)}</p><small>${new Date(notification.created_at).toLocaleString()}</small></div>${order ? `<button class="customer-small-button" data-notification-order="${escapeHtml(order.id)}" type="button">View Order</button>` : ''}</article>`;
+    }).join('') : '<div class="empty-customer-state communication-empty"><span>🔔</span><strong>No notifications yet</strong><p>Order updates and truck messages will appear here.</p></div>';
+    return `${pageHeader('Stay in the Loop', 'Notifications', 'Order updates and messages, all in one place.', unreadCount ? '<button class="secondary-button" data-mark-notifications-read type="button">Mark All Read</button>' : '')}<section class="customer-card communication-inbox"><div class="communication-section-heading"><div><p class="eyebrow">Notification Center</p><h2>Recent Updates</h2></div><span>${unreadCount} unread</span></div><div class="communication-notification-list">${feed}</div></section><section class="customer-card communication-preferences"><h2 class="customer-section-title">Preferences</h2>${rows.map(([key, title, copy]) => `<div class="setting-row"><div><strong>${title}</strong><small>${copy}</small></div><label class="customer-switch" aria-label="${title}"><input type="checkbox" data-notification-setting="${key}" ${preferences[key] ? 'checked' : ''}><span></span></label></div>`).join('')}</section>`;
   }
 
   function renderSettings() {
@@ -2147,10 +2197,32 @@
     openModal(`<p class="eyebrow">Secure Account Recovery</p><h2 id="customerModalTitle">Choose a new password</h2><p class="muted">Your recovery link was accepted. Enter a new password for your FoodTrekNow account.</p><form id="customerRecoveryPasswordForm"><label for="recoveryCustomerPassword">New Password</label><input id="recoveryCustomerPassword" class="customer-input" type="password" minlength="8" required autocomplete="new-password"><label for="confirmRecoveryCustomerPassword">Confirm New Password</label><input id="confirmRecoveryCustomerPassword" class="customer-input" type="password" minlength="8" required autocomplete="new-password"><p id="recoveryPasswordMessage" class="form-message"></p><div class="customer-form-actions"><button class="primary-button full" type="submit">Save New Password</button></div></form>`);
   }
 
+  function customerConversationMarkup(messages) {
+    if (!messages.length) return '<div class="communication-empty compact"><span>💬</span><strong>No messages yet</strong><p>Send a pickup question directly to the food truck.</p></div>';
+    return messages.map(message => `<article class="message-bubble ${message.sender_role === 'customer' ? 'mine' : 'theirs'}"><div><strong>${message.sender_role === 'customer' ? 'You' : 'Food Truck'}</strong><small>${new Date(message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</small></div><p>${escapeHtml(message.body)}</p></article>`).join('');
+  }
+
+  async function loadCustomerConversation(order) {
+    const container = modalContent.querySelector('[data-customer-conversation]');
+    if (!container || !order?.supabaseOrderId || !window.FoodTrekNowLiveOrders?.available) return;
+    try {
+      const messages = await window.FoodTrekNowLiveOrders.loadOrderConversation(order.supabaseOrderId);
+      container.innerHTML = customerConversationMarkup(messages);
+      await window.FoodTrekNowLiveOrders.markOrderMessagesRead(order.supabaseOrderId, 'customer');
+      const relatedIds = customerNotifications.filter(notification => notification.order_id === order.supabaseOrderId && !notification.is_read).map(notification => notification.id);
+      if (relatedIds.length) await markCustomerNotificationsRead(relatedIds);
+      container.scrollTop = container.scrollHeight;
+    } catch (error) {
+      container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`;
+    }
+  }
+
   function orderModal(order, receiptOnly = false) {
     if (!order) return;
     const itemLines = order.items.map(item => `<div class="receipt-line"><span>${item.qty} × ${escapeHtml(item.name)}</span><strong>${customerMoney(item.qty * item.price)}</strong></div>`).join('');
-    openModal(`<div class="customer-receipt"><div class="receipt-brand"><p class="eyebrow">${receiptOnly ? 'Receipt' : 'Order Details'}</p><h2 id="customerModalTitle">${escapeHtml(order.truckName)}</h2><p>${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><span class="status-pill ${['completed', 'cancelled'].includes(order.status) ? 'past' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span></div><h3>Items</h3>${itemLines}<div class="receipt-line"><span>Subtotal</span><strong>${customerMoney(order.subtotal)}</strong></div><div class="receipt-line"><span>Tax</span><strong>${customerMoney(order.tax)}</strong></div><div class="receipt-line receipt-total"><strong>Total</strong><strong>${customerMoney(order.total)}</strong></div>${order.status === 'cancelled' ? `<div class="receipt-line refund-line"><strong>Full Refund</strong><strong>−${customerMoney(order.refund?.amount || order.total)}</strong></div>` : ''}<p class="muted">${order.status === 'cancelled' ? 'Refund recorded to the original payment method in this browser-local beta.' : receiptOnly ? 'Paid · Customer receipt view' : 'Pickup status updates appear in your account and notification preferences.'}</p>${isOrderCancellable(order) ? `<button class="customer-small-button danger full" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order &amp; Full Refund</button>` : ''}${order.status === 'completed' ? `<button class="primary-button full" data-reorder="${escapeHtml(order.id)}" type="button">Reorder This Meal</button>` : ''}</div>`);
+    const communication = !receiptOnly && order.supabaseOrderId ? `<section class="order-conversation"><div class="communication-section-heading"><div><p class="eyebrow">Pickup Communication</p><h3>Message ${escapeHtml(order.truckName)}</h3></div><span>Live</span></div><div class="message-thread" data-customer-conversation><p class="muted">Loading messages…</p></div><form id="customerOrderMessageForm" data-order-message-id="${order.supabaseOrderId}"><label for="customerOrderMessage">Message</label><div class="message-composer"><textarea id="customerOrderMessage" class="customer-textarea" maxlength="500" rows="2" required placeholder="Ask a pickup question or share an update"></textarea><button class="primary-button" type="submit">Send</button></div><p class="form-message" data-message-error></p></form></section>` : '';
+    openModal(`<div class="customer-receipt"><div class="receipt-brand"><p class="eyebrow">${receiptOnly ? 'Receipt' : 'Order Details'}</p><h2 id="customerModalTitle">${escapeHtml(order.truckName)}</h2><p>${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><span class="status-pill ${['completed', 'cancelled'].includes(order.status) ? 'past' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span></div><h3>Items</h3>${itemLines}<div class="receipt-line"><span>Subtotal</span><strong>${customerMoney(order.subtotal)}</strong></div><div class="receipt-line"><span>Tax</span><strong>${customerMoney(order.tax)}</strong></div><div class="receipt-line receipt-total"><strong>Total</strong><strong>${customerMoney(order.total)}</strong></div>${order.status === 'cancelled' ? `<div class="receipt-line refund-line"><strong>Full Refund</strong><strong>−${customerMoney(order.refund?.amount || order.total)}</strong></div>` : ''}<p class="muted">${order.status === 'cancelled' ? 'Refund recorded to the original payment method in this browser-local beta.' : receiptOnly ? 'Paid · Customer receipt view' : 'Pickup status updates appear in your account and notification preferences.'}</p>${communication}${isOrderCancellable(order) ? `<button class="customer-small-button danger full" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order &amp; Full Refund</button>` : ''}${order.status === 'completed' ? `<button class="primary-button full" data-reorder="${escapeHtml(order.id)}" type="button">Reorder This Meal</button>` : ''}</div>`);
+    if (communication) loadCustomerConversation(order);
   }
 
   function deleteAccountModal() {
@@ -2271,6 +2343,8 @@
     clearSession();
     sessionStorage.removeItem(GUEST_SESSION_KEY);
     currentAccount = null;
+    customerNotifications = [];
+    customerCommunicationsSubscribed = false;
     showCustomerAuth(wasGuest ? 'welcome' : 'signin');
   });
   document.getElementById('customerMenuButton').addEventListener('click', event => {
@@ -2312,6 +2386,19 @@
   accountModal.addEventListener('click', event => { if (event.target === accountModal) closeModal(); });
 
   accountContent.addEventListener('click', async event => {
+    const markNotifications = event.target.closest('[data-mark-notifications-read]');
+    if (markNotifications) {
+      await markCustomerNotificationsRead();
+      renderCustomerPage('notifications');
+      customerToast('All notifications marked as read.');
+      return;
+    }
+    const notificationOrder = event.target.closest('[data-notification-order]');
+    if (notificationOrder) {
+      const order = currentAccount.orders.find(item => String(item.id) === String(notificationOrder.dataset.notificationOrder));
+      if (order) orderModal(order);
+      return;
+    }
     const vendorDecision = event.target.closest('[data-vendor-decision]');
     if (vendorDecision) {
       const decision = vendorDecision.dataset.vendorDecision;
@@ -2839,6 +2926,26 @@
 
   modalContent.addEventListener('submit', async event => {
     event.preventDefault();
+    if (event.target.id === 'customerOrderMessageForm') {
+      const order = currentAccount.orders.find(item => item.supabaseOrderId === event.target.dataset.orderMessageId);
+      const input = document.getElementById('customerOrderMessage');
+      const error = event.target.querySelector('[data-message-error]');
+      const submit = event.target.querySelector('button[type="submit"]');
+      if (!order || !input.value.trim()) return;
+      submit.disabled = true;
+      error.textContent = '';
+      try {
+        await window.FoodTrekNowLiveOrders.sendOrderMessage(order.supabaseOrderId, input.value, 'customer');
+        input.value = '';
+        await loadCustomerConversation(order);
+        customerToast('Message sent to the food truck.');
+      } catch (messageError) {
+        error.textContent = messageError.message || 'Your message could not be sent.';
+      } finally {
+        submit.disabled = false;
+      }
+      return;
+    }
     if (event.target.id === 'requiredMenuItemForm') {
       const item = menuForTruck().find(menuItem => menuItem.id === document.getElementById('requiredMenuItemId').value);
       const choices = selectedRequiredChoices();

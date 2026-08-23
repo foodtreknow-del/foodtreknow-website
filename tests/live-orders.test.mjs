@@ -13,7 +13,7 @@ function harness() {
   const builder = table => {
     const state = { action: 'select', payload: null };
     return {
-      select() { return this; }, eq() { return this; }, order() { return this; },
+      select() { return this; }, eq() { return this; }, order() { return this; }, limit() { return this; },
       update(payload) { state.action = 'update'; state.payload = payload; calls.push(['update', table, payload]); return this; },
       async single() { return { data: { id: 'order-uuid', status: state.payload?.status }, error: null }; },
       then(resolve) { resolve({ data: [], error: null }); }
@@ -58,9 +58,19 @@ test('customer cancellation uses the protected customer RPC', async () => {
 });
 
 test('live order service loads before vendor and customer applications', () => {
-  const servicePosition = html.indexOf('js/live-orders.js?v=live-orders-1');
-  assert.ok(servicePosition >= 0 && servicePosition < html.indexOf('js/app.js?v=live-orders-1'));
-  assert.ok(servicePosition < html.indexOf('js/customer-account.js?v=live-orders-1'));
+  const servicePosition = html.indexOf('js/live-orders.js?v=communications-1');
+  assert.ok(servicePosition >= 0 && servicePosition < html.indexOf('js/app.js?v=communications-1'));
+  assert.ok(servicePosition < html.indexOf('js/customer-account.js?v=communications-1'));
+});
+
+test('order participants use protected communication RPCs', async () => {
+  const { api, calls } = harness();
+  await api.sendOrderMessage('order-uuid', 'Meet me at the pickup window.', 'vendor');
+  await api.markOrderMessagesRead('order-uuid', 'vendor');
+  await api.markCustomerNotificationsRead(['notification-uuid']);
+  assert.ok(calls.some(entry => entry[1] === 'send_order_message' && entry[2].p_order_id === 'order-uuid' && entry[2].p_sender_role === 'vendor'));
+  assert.ok(calls.some(entry => entry[1] === 'mark_order_messages_read' && entry[2].p_reader_role === 'vendor'));
+  assert.ok(calls.some(entry => entry[1] === 'mark_customer_notifications_read'));
 });
 
 test('vendor and customer applications hydrate, subscribe, and map live status changes', () => {
@@ -71,4 +81,6 @@ test('vendor and customer applications hydrate, subscribe, and map live status c
   assert.match(customerSource, /subscribeCustomer/);
   assert.match(customerSource, /databaseStatusForCustomer/);
   assert.match(customerSource, /source\.supabaseOrderId/);
+  assert.match(vendorSource, /hydrateVendorCommunications/);
+  assert.match(customerSource, /hydrateCustomerCommunications/);
 });
