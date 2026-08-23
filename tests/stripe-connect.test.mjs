@@ -78,14 +78,16 @@ test('Stripe account records are vendor-readable but server-write-only', () => {
 });
 
 test('Edge Functions verify the vendor and keep Stripe calls server-side', () => {
-  assert.match(vendorHelper, /userClient\.auth\.getUser\(\)/);
-  assert.match(vendorHelper, /Only an approved vendor can connect a Stripe account/);
+  assert.match(startFunction, /userClient\.auth\.getUser\(\)/);
+  assert.match(startFunction, /Only an approved vendor can connect a Stripe account/);
   assert.match(startFunction, /authenticatedVendor\(request\)/);
   assert.match(startFunction, /type', 'standard'/);
   assert.match(startFunction, /Idempotency-Key|idempotencyKey/);
-  assert.match(statusFunction, /safeAccountState\(account\)/);
-  assert.match(stripeHelper, /Deno\.env\.get\('STRIPE_SECRET_KEY'\)/);
-  assert.match(stripeHelper, /https:\/\/api\.stripe\.com/);
+  assert.match(statusFunction, /account\.charges_enabled && account\.payouts_enabled/);
+  assert.match(startFunction, /Deno\.env\.get\('STRIPE_SECRET_KEY'\)|requiredEnvironment\('STRIPE_SECRET_KEY'\)/);
+  assert.match(startFunction, /https:\/\/api\.stripe\.com/);
+  assert.doesNotMatch(startFunction, /\.\.\/_shared/);
+  assert.doesNotMatch(statusFunction, /\.\.\/_shared/);
 });
 
 test('Stripe integration source contains no real API keys or webhook secrets', () => {
