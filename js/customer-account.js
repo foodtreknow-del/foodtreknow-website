@@ -1003,6 +1003,17 @@
     if (currentAccount) saveCustomerState(currentAccount);
   }
 
+  function refreshCustomerOrders() {
+    if (!currentAccount) return;
+    const refreshed = currentAccount.isGuest ? readGuestCustomer() : repository.findById(currentAccount.id);
+    if (!refreshed) return;
+    currentAccount = CustomerOrderingService.ensureState(refreshed);
+    if (!accountView.classList.contains('hidden-view')) {
+      renderCustomerShell();
+      renderCustomerPage(currentPage);
+    }
+  }
+
   function customerToast(message) {
     const toast = document.getElementById('customerToast');
     toast.textContent = message;
@@ -1477,7 +1488,7 @@
   }
 
   function confirmationOrder() {
-    return currentAccount.orders.find(order => order.id === lastPlacedOrderId) || currentAccount.orders[0];
+    return currentAccount.orders.find(order => String(order.id) === String(lastPlacedOrderId)) || currentAccount.orders[0];
   }
 
   function isOrderCancellable(order) {
@@ -2135,7 +2146,7 @@
     }
     const orderAgain = event.target.closest('[data-order-again]');
     if (orderAgain) {
-      const order = currentAccount.orders.find(item => item.id === orderAgain.dataset.orderAgain);
+      const order = currentAccount.orders.find(item => String(item.id) === String(orderAgain.dataset.orderAgain));
       if (order) {
         selectedTruckId = order.truckId || TRUCK.id;
         currentAccount.cart = { truckId: selectedTruckId, orderNumber: generateOrderNumber(), items: order.items.map(item => ({ ...item, id: uid('cart') })) };
@@ -2169,9 +2180,9 @@
     const reorder = event.target.closest('[data-reorder]');
     if (reorder) return reorderMeal(reorder.dataset.reorder);
     const orderDetails = event.target.closest('[data-order-details]');
-    if (orderDetails) return orderModal(currentAccount.orders.find(order => order.id === orderDetails.dataset.orderDetails));
+    if (orderDetails) return orderModal(currentAccount.orders.find(order => String(order.id) === String(orderDetails.dataset.orderDetails)));
     const receipt = event.target.closest('[data-receipt]');
-    if (receipt) return orderModal(currentAccount.orders.find(order => order.id === receipt.dataset.receipt), true);
+    if (receipt) return orderModal(currentAccount.orders.find(order => String(order.id) === String(receipt.dataset.receipt)), true);
     const orderFilter = event.target.closest('[data-order-filter]');
     if (orderFilter) {
       orderHistoryFilter = orderFilter.dataset.orderFilter;
@@ -2206,7 +2217,7 @@
   }
 
   function reorderMeal(orderId) {
-    const source = currentAccount.orders.find(order => order.id === orderId);
+    const source = currentAccount.orders.find(order => String(order.id) === String(orderId));
     if (!source) return;
     const { pickupNumber: legacyPickupNumber, ...sourceWithoutPickupNumber } = source;
     const copy = {
@@ -2526,6 +2537,13 @@
       showCustomerAuth();
     }
   });
+
+  if (window.addEventListener) {
+    window.addEventListener('ftn:customer-orders-updated', refreshCustomerOrders);
+    window.addEventListener('storage', event => {
+      if (['ftnCustomerAccountsV1', 'ftnGuestCustomerV1'].includes(event.key)) refreshCustomerOrders();
+    });
+  }
 
   const session = readSession();
   if (session && localStorage.getItem('ftnVendorLoggedIn') !== 'true') {

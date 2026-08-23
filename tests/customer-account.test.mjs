@@ -629,6 +629,69 @@ test('guest checkout browses nearby trucks, orders from a distinct menu, and per
   assert.equal(JSON.parse(localStorage.getItem('ftnCustomerAccountsV1')).some(account => account.id === 'guest-local'), false);
 });
 
+test('vendor actions update customer tracking and picked-up orders can be ordered again', async () => {
+  let account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+  const connectedOrderId = 9876;
+  const connectedOrder = {
+    id: connectedOrderId,
+    truckId: 'capital-city-eats',
+    truckName: 'Capital City Eats',
+    status: 'received',
+    statusLabel: 'Order Received',
+    createdAt: Date.now(),
+    items: [{ name: 'Classic Cheeseburger', qty: 1, price: 11.5 }],
+    subtotal: 11.5,
+    tax: 0.69,
+    total: 12.19
+  };
+  account.orders.unshift(connectedOrder);
+  const accounts = JSON.parse(localStorage.getItem('ftnCustomerAccountsV1'));
+  const accountIndex = accounts.findIndex(item => item.id === account.id);
+  accounts[accountIndex] = account;
+  localStorage.setItem('ftnCustomerAccountsV1', JSON.stringify(accounts));
+  localStorage.setItem('ftnCustomerSessionV1', JSON.stringify({ accountId: account.id }));
+  localStorage.setItem('ftnVendorOrdersV0231', JSON.stringify([{
+    id: connectedOrderId,
+    customer: 'Avery',
+    items: connectedOrder.items,
+    subtotal: connectedOrder.subtotal,
+    tax: connectedOrder.tax,
+    total: connectedOrder.total,
+    status: 'new',
+    time: '1:00 PM',
+    payment: 'Credit Card',
+    paid: true,
+    createdAt: connectedOrder.createdAt
+  }]));
+
+  element('email').value = 'vendor@foodtreknow.com';
+  element('password').value = 'demo123';
+  await emit(element('loginForm'), 'submit', { preventDefault() {} });
+
+  window.moveOrder(connectedOrderId, 'preparing');
+  account = JSON.parse(localStorage.getItem('ftnCustomerAccountsV1')).find(item => item.id === account.id);
+  assert.equal(account.orders.find(order => order.id === connectedOrderId).statusLabel, 'Preparing');
+
+  window.moveOrder(connectedOrderId, 'ready');
+  account = JSON.parse(localStorage.getItem('ftnCustomerAccountsV1')).find(item => item.id === account.id);
+  assert.equal(account.orders.find(order => order.id === connectedOrderId).statusLabel, 'Ready for Pickup');
+
+  window.moveOrder(connectedOrderId, 'pickedup');
+  account = JSON.parse(localStorage.getItem('ftnCustomerAccountsV1')).find(item => item.id === account.id);
+  const pickedUpOrder = account.orders.find(order => order.id === connectedOrderId);
+  assert.equal(pickedUpOrder.status, 'completed');
+  assert.equal(pickedUpOrder.statusLabel, 'Picked Up');
+  assert.ok(pickedUpOrder.completedAt);
+
+  await emit(element('openCustomerPortalButton'), 'click');
+  const orderCount = account.orders.length;
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ reorder: String(connectedOrderId) }) });
+  account = JSON.parse(localStorage.getItem('ftnCustomerAccountsV1')).find(item => item.id === account.id);
+  assert.equal(account.orders.length, orderCount + 1);
+  assert.equal(account.orders[0].statusLabel, 'Order Received');
+  assert.ok(JSON.parse(localStorage.getItem('ftnVendorOrdersV0231')).some(order => String(order.id) === String(account.orders[0].id)));
+});
+
 test('roadmap marks Phase 3.2 complete and names live communication as Phase 4', () => {
   const roadmap = fs.readFileSync(new URL('../PROJECT_ROADMAP.md', import.meta.url), 'utf8');
   assert.match(roadmap, /\[x\] Phase 3 – Customer Account System/);

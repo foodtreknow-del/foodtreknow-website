@@ -1,5 +1,15 @@
 # FoodTrekNow Vendor Platform v0.4.0
 
+## Connected Vendor and Customer Order Workflow
+
+- Connected vendor order actions to the matching customer order tracker through the existing local persistence model
+- Accepting an order now advances the customer status to Preparing
+- Marking an order ready now advances the customer status to Ready for Pickup
+- Confirming pickup now marks the customer order Picked Up and moves it into Past Orders
+- Activated Order Again/Reorder for past meals, including newer numeric order IDs
+- Added same-tab and cross-tab customer refresh handling plus full lifecycle regression coverage
+- Hardened vendor actions and pickup confirmation for numeric and prefixed order IDs
+
 ## Vendor Sales Reports
 
 - Replaced the Reports placeholder with date-filtered sales analytics
