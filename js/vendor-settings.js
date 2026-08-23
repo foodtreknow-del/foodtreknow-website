@@ -179,6 +179,7 @@
       return;
     }
     vendorSettings = saveSettings(candidate);
+    window.FoodTrekNowVendorData?.queueSettingsSync(vendorSettings);
     pendingLogo = vendorSettings.profile.logo;
     applyVendorSettings(vendorSettings);
     setMessage('Settings saved successfully.', 'success');
@@ -215,6 +216,7 @@
   field('onlineToggle')?.addEventListener('change', event => {
     vendorSettings.operations.acceptingOrders = event.target.checked;
     vendorSettings = saveSettings(vendorSettings);
+    window.FoodTrekNowVendorData?.queueSettingsSync(vendorSettings);
     setChecked('vendorAcceptingOrders', event.target.checked);
   });
   field('notificationOrderSound')?.addEventListener('change', event => {

@@ -98,7 +98,7 @@ test('vendor and customer modules initialize together without a startup error', 
   assert.ok(window.FoodTrekNowCustomerAuth);
   assert.ok(elements.get('loginForm').listeners.has('submit'));
   assert.ok(elements.get('openCustomerPortalButton').listeners.has('click'));
-  assert.match(html, /js\/customer-account\.js\?v=customer-auth-1/);
+  assert.match(html, /js\/customer-account\.js\?v=customer-auth-\d+/);
 });
 
 test('customer account UI includes every required area and has unique static IDs', () => {

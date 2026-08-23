@@ -2781,7 +2781,7 @@
   }
 
   async function restoreCustomerSession() {
-    if (localStorage.getItem('ftnVendorLoggedIn') === 'true') return;
+    if (localStorage.getItem('ftnVendorLoggedIn')) return;
     if (sessionStorage.getItem(GUEST_SESSION_KEY) === 'true') {
       openCustomerAccount(readGuestCustomer(), 'nearby');
       return;

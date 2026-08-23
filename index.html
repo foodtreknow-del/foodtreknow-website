@@ -378,7 +378,7 @@
               </div>
             </section>
           </div>
-          <div class="settings-save-bar"><div><strong id="settingsSaveState">Settings are stored in this browser.</strong><small>Prepared for a future Supabase vendor profile adapter.</small></div><button class="primary-button" type="submit">Save All Settings</button></div>
+          <div class="settings-save-bar"><div><strong id="settingsSaveState">Settings are ready to save.</strong><small>Approved vendor accounts sync securely across devices. Demo settings stay in this browser.</small></div><button class="primary-button" type="submit">Save All Settings</button></div>
         </form>
       </section>
     </main>
@@ -412,7 +412,7 @@
           <div class="menu-form-field"><label for="menuItemCategory">Category</label><select id="menuItemCategory" class="menu-select" required></select></div>
           <div class="menu-form-field"><label for="menuItemPrice">Price</label><input id="menuItemPrice" type="number" required min="0" step="0.01" placeholder="0.00" /></div>
           <div class="menu-form-field full-row"><label for="menuItemDescription">Description</label><textarea id="menuItemDescription" rows="3" maxlength="240" placeholder="Describe the item for customers"></textarea></div>
-          <div class="menu-form-field full-row"><label for="menuItemImage">Photo</label><input id="menuItemImage" type="file" accept="image/*" /><p class="field-help">Upload JPG, PNG, or WEBP. Images are saved in this browser for the prototype.</p></div>
+          <div class="menu-form-field full-row"><label for="menuItemImage">Photo</label><input id="menuItemImage" type="file" accept="image/*" /><p class="field-help">Upload JPG, PNG, or WEBP. Approved vendor menus sync securely across devices.</p></div>
           <div class="menu-form-field"><label class="availability-check"><input id="menuItemAvailable" type="checkbox" checked /> Available for customers to order</label></div><div class="menu-form-field"><label class="availability-check"><input id="menuItemFeatured" type="checkbox" /> Featured item</label></div>
         </div>
         <p id="menuFormError" class="form-message" aria-live="polite"></p>
@@ -445,10 +445,11 @@
 <script src="js/supabase-auth.js?v=customer-auth-1"></script>
 <script src="js/vendor-onboarding.js?v=vendor-onboarding-1"></script>
 <script src="js/vendor-auth.js?v=vendor-auth-1"></script>
-<script src="js/app.js"></script>
+<script src="js/vendor-data.js?v=vendor-data-2"></script>
+<script src="js/app.js?v=vendor-data-2"></script>
 <script src="js/vendor-reports.js"></script>
-<script src="js/vendor-settings.js"></script>
-<script src="js/customer-account.js?v=customer-auth-1"></script>
+<script src="js/vendor-settings.js?v=vendor-data-2"></script>
+<script src="js/customer-account.js?v=customer-auth-2"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>
