@@ -708,19 +708,94 @@
     async deleteAccount(accountId) {
       this.repository.remove(accountId);
     }
+
+    async getCurrentAccount() {
+      const session = readSession();
+      return session ? this.repository.findById(session.accountId) : null;
+    }
+
+    async requestPasswordReset() {
+      throw new Error('Password reset email requires the Supabase connection.');
+    }
+
+    async signOut() {}
   }
 
-  // This service is the authentication boundary. A future Supabase adapter can
-  // replace LocalCustomerAuthAdapter without changing the customer UI.
   const repository = new CustomerAccountRepository();
+
+  function buildSupabaseAccount({ user, profile, existing }) {
+    return {
+      id: user.id,
+      firstName: profile.first_name || '',
+      lastName: profile.last_name || '',
+      preferredName: profile.preferred_name || '',
+      mobile: profile.mobile_number || '',
+      email: user.email || existing?.email || '',
+      photo: profile.profile_photo_url || '',
+      role: profile.role || 'customer',
+      emailVerified: Boolean(user.email_confirmed_at),
+      verificationDismissed: existing?.verificationDismissed || false,
+      termsAcceptedAt: existing?.termsAcceptedAt || profile.created_at || user.created_at || new Date().toISOString(),
+      createdAt: profile.created_at || user.created_at || existing?.createdAt || new Date().toISOString(),
+      addresses: existing?.addresses || [],
+      favoriteTrucks: existing?.favoriteTrucks || [],
+      favoriteOrders: existing?.favoriteOrders || [],
+      paymentMethods: existing?.paymentMethods || [],
+      orders: existing?.orders || [],
+      preferredLocation: existing?.preferredLocation || null,
+      nearbyRadiusMiles: Number(existing?.nearbyRadiusMiles) || 5,
+      cart: existing?.cart || { truckId: null, items: [] },
+      preferences: existing?.preferences || defaultPreferences()
+    };
+  }
+
+  class UnavailableCustomerAuthAdapter {
+    constructor() {
+      this.isSupabase = true;
+    }
+    unavailable() {
+      throw new Error('The secure account service is temporarily unavailable. Guest checkout is still available.');
+    }
+    signUp() { return this.unavailable(); }
+    signIn() { return this.unavailable(); }
+    updateProfile() { return this.unavailable(); }
+    changePassword() { return this.unavailable(); }
+    deleteAccount() { return this.unavailable(); }
+    requestPasswordReset() { return this.unavailable(); }
+    getCurrentAccount() { return Promise.resolve(null); }
+    signOut() { return Promise.resolve(); }
+  }
+
+  function createCustomerAuthAdapter() {
+    if (!window.FoodTrekNowSupabaseConfig?.enabled) return new LocalCustomerAuthAdapter(repository);
+    if (!window.FoodTrekNowSupabaseClient || !window.FoodTrekNowSupabaseAuth?.createAdapter) {
+      return new UnavailableCustomerAuthAdapter();
+    }
+    const redirectUrl = /^https?:$/.test(window.location.protocol)
+      ? `${window.location.origin}${window.location.pathname}`
+      : '';
+    return window.FoodTrekNowSupabaseAuth.createAdapter({
+      client: window.FoodTrekNowSupabaseClient,
+      repository,
+      buildAccount: buildSupabaseAccount,
+      redirectUrl
+    });
+  }
+
   const CustomerAuthService = {
-    adapter: new LocalCustomerAuthAdapter(repository),
+    adapter: createCustomerAuthAdapter(),
     setAdapter(adapter) { this.adapter = adapter; },
+    usesSupabase() { return Boolean(this.adapter?.isSupabase); },
     signUp(input) { return this.adapter.signUp(input); },
     signIn(identifier, password) { return this.adapter.signIn(identifier, password); },
+    getCurrentAccount() { return this.adapter.getCurrentAccount(); },
+    requestPasswordReset(identifier) { return this.adapter.requestPasswordReset(identifier); },
     updateProfile(accountId, updates) { return this.adapter.updateProfile(accountId, updates); },
     changePassword(accountId, currentPassword, nextPassword) { return this.adapter.changePassword(accountId, currentPassword, nextPassword); },
-    deleteAccount(accountId) { return this.adapter.deleteAccount(accountId); }
+    updateRecoveredPassword(nextPassword) { return this.adapter.updateRecoveredPassword?.(nextPassword); },
+    deleteAccount(accountId) { return this.adapter.deleteAccount(accountId); },
+    signOut() { return this.adapter.signOut(); },
+    onAuthStateChange(callback) { return this.adapter.onAuthStateChange?.(callback); }
   };
   window.FoodTrekNowCustomerAuth = CustomerAuthService;
 
@@ -1729,7 +1804,7 @@
             <div class="customer-form-actions"><button class="primary-button" type="submit">Save Profile</button></div>
           </form>
         </section>
-        <aside class="customer-card"><h2 class="customer-section-title">Security</h2><p class="muted">Use a unique password to protect your account and order information.</p><button class="secondary-button full" data-customer-action="change-password" type="button">Change Password</button><div class="demo-note"><strong>Email verification</strong><br>${currentAccount.emailVerified ? 'Verified' : 'Pending — delivery placeholder only'}</div></aside>
+        <aside class="customer-card"><h2 class="customer-section-title">Security</h2><p class="muted">Use a unique password to protect your account and order information.</p><button class="secondary-button full" data-customer-action="change-password" type="button">Change Password</button><div class="demo-note"><strong>Email verification</strong><br>${currentAccount.emailVerified ? 'Verified by Supabase' : 'Pending — check your email for the secure link'}</div></aside>
       </div>`;
   }
 
@@ -1797,7 +1872,7 @@
         <div class="setting-row"><div><strong>Personalized Offers</strong><small>Use your saved favorites to tailor food truck suggestions.</small></div><label class="customer-switch"><input type="checkbox" data-privacy-setting="personalizedOffers" ${preferences.personalizedOffers ? 'checked' : ''}><span></span></label></div>
         <div class="setting-row"><div><strong>Activity History</strong><small>Keep order activity available for one-tap reordering.</small></div><label class="customer-switch"><input type="checkbox" data-privacy-setting="activityHistory" ${preferences.activityHistory ? 'checked' : ''}><span></span></label></div>
       </section>
-      <section class="customer-card danger-zone" style="margin-top:18px"><h2>Delete Account</h2><p class="muted">Permanently remove this local customer profile, addresses, favorites, payment preferences, and order history. This cannot be undone.</p><button class="customer-small-button danger" data-customer-action="delete-account" type="button">Delete My Account</button></section>`;
+      <section class="customer-card danger-zone" style="margin-top:18px"><h2>Delete Account</h2><p class="muted">Permanently remove your customer profile, addresses, favorites, payment preferences, and order history. This cannot be undone.</p><button class="customer-small-button danger" data-customer-action="delete-account" type="button">Delete My Account</button></section>`;
   }
 
   function openModal(html) {
@@ -1853,6 +1928,10 @@
     openModal(`<p class="eyebrow">Security</p><h2 id="customerModalTitle">Change Password</h2><form id="customerPasswordForm"><label for="currentCustomerPassword">Current Password</label><input id="currentCustomerPassword" class="customer-input" type="password" required autocomplete="current-password"><label for="nextCustomerPassword">New Password</label><input id="nextCustomerPassword" class="customer-input" type="password" minlength="8" required autocomplete="new-password"><label for="confirmCustomerPassword">Confirm New Password</label><input id="confirmCustomerPassword" class="customer-input" type="password" minlength="8" required autocomplete="new-password"><p id="passwordChangeMessage" class="form-message"></p><div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" type="submit">Update Password</button></div></form>`);
   }
 
+  function passwordRecoveryModal() {
+    openModal(`<p class="eyebrow">Secure Account Recovery</p><h2 id="customerModalTitle">Choose a new password</h2><p class="muted">Your recovery link was accepted. Enter a new password for your FoodTrekNow account.</p><form id="customerRecoveryPasswordForm"><label for="recoveryCustomerPassword">New Password</label><input id="recoveryCustomerPassword" class="customer-input" type="password" minlength="8" required autocomplete="new-password"><label for="confirmRecoveryCustomerPassword">Confirm New Password</label><input id="confirmRecoveryCustomerPassword" class="customer-input" type="password" minlength="8" required autocomplete="new-password"><p id="recoveryPasswordMessage" class="form-message"></p><div class="customer-form-actions"><button class="primary-button full" type="submit">Save New Password</button></div></form>`);
+  }
+
   function orderModal(order, receiptOnly = false) {
     if (!order) return;
     const itemLines = order.items.map(item => `<div class="receipt-line"><span>${item.qty} × ${escapeHtml(item.name)}</span><strong>${customerMoney(item.qty * item.price)}</strong></div>`).join('');
@@ -1860,10 +1939,21 @@
   }
 
   function deleteAccountModal() {
-    openModal(`<p class="eyebrow">Permanent Action</p><h2 id="customerModalTitle">Delete your account?</h2><p>This permanently removes all locally saved customer data. Type <strong>DELETE</strong> to confirm.</p><form id="customerDeleteForm"><label for="deleteAccountConfirm">Confirmation</label><input id="deleteAccountConfirm" class="customer-input" autocomplete="off" required placeholder="Type DELETE"><p id="deleteAccountMessage" class="form-message"></p><div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="customer-small-button danger" type="submit">Permanently Delete Account</button></div></form>`);
+    openModal(`<p class="eyebrow">Permanent Action</p><h2 id="customerModalTitle">Delete your account?</h2><p>This permanently removes your customer account and associated data. Type <strong>DELETE</strong> to confirm.</p><form id="customerDeleteForm"><label for="deleteAccountConfirm">Confirmation</label><input id="deleteAccountConfirm" class="customer-input" autocomplete="off" required placeholder="Type DELETE"><p id="deleteAccountMessage" class="form-message"></p><div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="customer-small-button danger" type="submit">Permanently Delete Account</button></div></form>`);
   }
 
-  document.getElementById('openCustomerPortalButton').addEventListener('click', () => {
+  document.getElementById('openCustomerPortalButton').addEventListener('click', async () => {
+    if (CustomerAuthService.usesSupabase()) {
+      try {
+        const account = currentAccount || await CustomerAuthService.getCurrentAccount();
+        if (account) openCustomerAccount(account);
+        else showCustomerAuth();
+      } catch (error) {
+        showCustomerAuth('signin');
+        document.getElementById('customerSignInMessage').textContent = error.message;
+      }
+      return;
+    }
     const session = readSession();
     const account = session ? repository.findById(session.accountId) : null;
     if (account) openCustomerAccount(account);
@@ -1909,10 +1999,16 @@
     }
     try {
       const account = await CustomerAuthService.signUp(input);
-      saveSession(account.id, true);
       event.target.reset();
-      openCustomerAccount(account);
-      customerToast('Account created. Welcome to FoodTrekNow!');
+      if (account.requiresEmailVerification) {
+        clearSession();
+        showCustomerAuth('signin');
+        document.getElementById('customerSignInMessage').textContent = 'Account created. Check your email and select the verification link before signing in.';
+      } else {
+        saveSession(account.id, true);
+        openCustomerAccount(account);
+        customerToast('Account created. Welcome to FoodTrekNow!');
+      }
     } catch (error) {
       message.textContent = error.message;
     }
@@ -1933,14 +2029,30 @@
     }
   });
 
-  document.getElementById('customerForgotForm').addEventListener('submit', event => {
+  document.getElementById('customerForgotForm').addEventListener('submit', async event => {
     event.preventDefault();
     const identifier = document.getElementById('customerForgotIdentifier').value.trim();
-    document.getElementById('customerForgotMessage').textContent = identifier ? 'Reset instructions placeholder ready. Supabase will deliver email or SMS in a future phase.' : '';
+    const message = document.getElementById('customerForgotMessage');
+    message.textContent = '';
+    if (!identifier) return;
+    try {
+      await CustomerAuthService.requestPasswordReset(identifier);
+      message.textContent = 'If that email belongs to an account, a secure reset link has been sent.';
+    } catch (error) {
+      message.textContent = error.message;
+    }
   });
 
-  document.getElementById('customerSignOutButton').addEventListener('click', () => {
+  document.getElementById('customerSignOutButton').addEventListener('click', async () => {
     const wasGuest = Boolean(currentAccount?.isGuest);
+    if (!wasGuest) {
+      try {
+        await CustomerAuthService.signOut();
+      } catch (error) {
+        customerToast(error.message);
+        return;
+      }
+    }
     clearSession();
     sessionStorage.removeItem(GUEST_SESSION_KEY);
     currentAccount = null;
@@ -2381,10 +2493,14 @@
       message.textContent = 'That email or mobile number is already in use.';
       return;
     }
-    currentAccount = await CustomerAuthService.updateProfile(currentAccount.id, updates);
-    renderCustomerShell();
-    renderCustomerPage('profile');
-    customerToast('Profile saved.');
+    try {
+      currentAccount = await CustomerAuthService.updateProfile(currentAccount.id, updates);
+      renderCustomerShell();
+      renderCustomerPage('profile');
+      customerToast(currentAccount.emailVerified ? 'Profile saved.' : 'Profile saved. Verify your new email address to complete the change.');
+    } catch (error) {
+      message.textContent = error.message;
+    }
   });
 
   modalContent.addEventListener('click', event => {
@@ -2525,16 +2641,43 @@
         message.textContent = error.message;
       }
     }
+    if (event.target.id === 'customerRecoveryPasswordForm') {
+      const nextPassword = document.getElementById('recoveryCustomerPassword').value;
+      const confirmPassword = document.getElementById('confirmRecoveryCustomerPassword').value;
+      const message = document.getElementById('recoveryPasswordMessage');
+      if (nextPassword.length < 8) {
+        message.textContent = 'New password must be at least 8 characters.';
+        return;
+      }
+      if (nextPassword !== confirmPassword) {
+        message.textContent = 'New passwords do not match.';
+        return;
+      }
+      try {
+        await CustomerAuthService.updateRecoveredPassword(nextPassword);
+        closeModal();
+        const account = await CustomerAuthService.getCurrentAccount();
+        if (account) openCustomerAccount(account);
+        customerToast('Your password has been reset.');
+      } catch (error) {
+        message.textContent = error.message;
+      }
+    }
     if (event.target.id === 'customerDeleteForm') {
       if (document.getElementById('deleteAccountConfirm').value !== 'DELETE') {
         document.getElementById('deleteAccountMessage').textContent = 'Type DELETE exactly to confirm.';
         return;
       }
-      await CustomerAuthService.deleteAccount(currentAccount.id);
-      clearSession();
-      currentAccount = null;
-      closeModal();
-      showCustomerAuth();
+      try {
+        await CustomerAuthService.deleteAccount(currentAccount.id);
+        clearSession();
+        currentAccount = null;
+        closeModal();
+        showCustomerAuth();
+        customerToast('Your account has been permanently deleted.');
+      } catch (error) {
+        document.getElementById('deleteAccountMessage').textContent = error.message;
+      }
     }
   });
 
@@ -2545,12 +2688,37 @@
     });
   }
 
-  const session = readSession();
-  if (session && localStorage.getItem('ftnVendorLoggedIn') !== 'true') {
+  async function restoreCustomerSession() {
+    if (localStorage.getItem('ftnVendorLoggedIn') === 'true') return;
+    if (sessionStorage.getItem(GUEST_SESSION_KEY) === 'true') {
+      openCustomerAccount(readGuestCustomer(), 'nearby');
+      return;
+    }
+    if (CustomerAuthService.usesSupabase()) {
+      try {
+        const account = await CustomerAuthService.getCurrentAccount();
+        if (account) {
+          saveSession(account.id, true);
+          openCustomerAccount(account);
+        } else {
+          clearSession();
+        }
+      } catch (error) {
+        clearSession();
+        showCustomerAuth('signin');
+        document.getElementById('customerSignInMessage').textContent = error.message;
+      }
+      return;
+    }
+    const session = readSession();
+    if (!session) return;
     const account = repository.findById(session.accountId);
     if (account) openCustomerAccount(account);
     else clearSession();
-  } else if (sessionStorage.getItem(GUEST_SESSION_KEY) === 'true' && localStorage.getItem('ftnVendorLoggedIn') !== 'true') {
-    openCustomerAccount(readGuestCustomer(), 'nearby');
   }
+
+  CustomerAuthService.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') setTimeout(passwordRecoveryModal, 0);
+  });
+  restoreCustomerSession();
 })();

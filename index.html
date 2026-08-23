@@ -102,8 +102,8 @@
       <h1>I'm Hungry</h1>
       <p class="muted">Sign in to see your orders, favorites, and saved details.</p>
       <form id="customerSignInForm" novalidate>
-        <label for="customerSignInIdentifier">Email or Mobile Number</label>
-        <input id="customerSignInIdentifier" class="customer-input" type="text" autocomplete="username" required placeholder="you@example.com or (555) 555-0123" />
+        <label for="customerSignInIdentifier">Email Address</label>
+        <input id="customerSignInIdentifier" class="customer-input" type="email" autocomplete="username" required placeholder="you@example.com" />
         <label for="customerSignInPassword">Password</label>
         <input id="customerSignInPassword" class="customer-input" type="password" autocomplete="current-password" required placeholder="Enter your password" />
         <div class="customer-form-row">
@@ -141,10 +141,10 @@
       <button class="customer-panel-back" data-show-signin type="button">← Back to Sign In</button>
       <p class="eyebrow">Account Recovery</p>
       <h1>Reset your password</h1>
-      <p class="muted">Enter your email or mobile number. This prototype will show the future reset flow without sending a message.</p>
+      <p class="muted">Enter your account email and we will send you a secure password-reset link.</p>
       <form id="customerForgotForm">
-        <label for="customerForgotIdentifier">Email or Mobile Number</label>
-        <input id="customerForgotIdentifier" class="customer-input" type="text" required />
+        <label for="customerForgotIdentifier">Email Address</label>
+        <input id="customerForgotIdentifier" class="customer-input" type="email" autocomplete="email" required />
         <p id="customerForgotMessage" class="customer-success-message" aria-live="polite"></p>
         <button class="primary-button full customer-large-button" type="submit">Send Reset Instructions</button>
       </form>
@@ -184,7 +184,7 @@
         <div class="customer-mobile-actions"><button id="customerMobileCartButton" class="customer-mobile-cart-button" type="button" aria-label="View cart"><span>🛒</span><b class="customer-nav-cart-count hidden-view" data-customer-cart-count>0</b></button><button id="customerMenuButton" class="customer-menu-button" type="button" aria-expanded="false" aria-controls="customerAccountNav">Menu</button></div>
       </header>
       <div id="customerVerificationBanner" class="verification-banner hidden-view">
-        <span>✉</span><div><strong>Verify your email address</strong><p>Verification is a placeholder for now. Supabase will handle delivery in a future phase.</p></div><button id="dismissVerificationButton" type="button" aria-label="Dismiss">×</button>
+        <span>✉</span><div><strong>Verify your email address</strong><p>Open the secure verification link Supabase sent to your email.</p></div><button id="dismissVerificationButton" type="button" aria-label="Dismiss">×</button>
       </div>
       <div id="customerAccountContent"></div>
     </main>
@@ -437,10 +437,14 @@
   </div>
   <div id="toast" class="toast" aria-live="polite"></div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js?v=customer-auth-1"></script>
+<script src="js/supabase-client.js?v=customer-auth-1"></script>
+<script src="js/supabase-auth.js?v=customer-auth-1"></script>
 <script src="js/app.js"></script>
 <script src="js/vendor-reports.js"></script>
 <script src="js/vendor-settings.js"></script>
-<script src="js/customer-account.js?v=single-size-drinks-2"></script>
+<script src="js/customer-account.js?v=customer-auth-1"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>
