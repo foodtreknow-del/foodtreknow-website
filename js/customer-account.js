@@ -1128,6 +1128,8 @@
     document.getElementById('customerMiniProfile').innerHTML = `${avatarMarkup(currentAccount)}<div><strong>${escapeHtml(name)} ${escapeHtml(currentAccount.lastName)}</strong><small>${currentAccount.isGuest ? 'Guest checkout · Saved on this device' : escapeHtml(currentAccount.email)}</small></div>`;
     document.getElementById('customerVerificationBanner').classList.toggle('hidden-view', currentAccount.emailVerified || currentAccount.verificationDismissed);
     document.getElementById('customerSignOutButton').textContent = currentAccount.isGuest ? 'Exit Guest Checkout' : 'Sign Out';
+    document.getElementById('vendorApplicationNav').classList.toggle('hidden-view', Boolean(currentAccount.isGuest) || currentAccount.role === 'admin');
+    document.getElementById('adminVendorReviewNav').classList.toggle('hidden-view', currentAccount.role !== 'admin');
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === currentPage));
     updateCartBadge();
   }
@@ -1715,9 +1717,13 @@
       orders: renderOrders,
       payments: renderPayments,
       notifications: renderNotifications,
-      settings: renderSettings
+      settings: renderSettings,
+      vendorApplication: renderVendorApplication,
+      vendorReviews: renderVendorReviews
     };
     accountContent.innerHTML = (renderers[page] || renderers.overview)();
+    if (page === 'vendorApplication') loadVendorApplication();
+    if (page === 'vendorReviews' && currentAccount.role === 'admin') loadVendorReviews();
     updateCartBadge();
     document.querySelector('.customer-sidebar')?.classList.remove('open');
     document.getElementById('customerMenuButton').setAttribute('aria-expanded', 'false');
@@ -1873,6 +1879,54 @@
         <div class="setting-row"><div><strong>Activity History</strong><small>Keep order activity available for one-tap reordering.</small></div><label class="customer-switch"><input type="checkbox" data-privacy-setting="activityHistory" ${preferences.activityHistory ? 'checked' : ''}><span></span></label></div>
       </section>
       <section class="customer-card danger-zone" style="margin-top:18px"><h2>Delete Account</h2><p class="muted">Permanently remove your customer profile, addresses, favorites, payment preferences, and order history. This cannot be undone.</p><button class="customer-small-button danger" data-customer-action="delete-account" type="button">Delete My Account</button></section>`;
+  }
+
+  function vendorApplicationForm(application = null) {
+    return `<form id="vendorApplicationForm" class="customer-card"><h2 class="customer-section-title">Food Truck Information</h2><div class="customer-form-grid">
+      <div><label for="vendorApplicationBusinessName">Legal Business Name</label><input id="vendorApplicationBusinessName" class="customer-input" maxlength="100" required value="${escapeHtml(application?.business_name || '')}"></div>
+      <div><label for="vendorApplicationTruckName">Food Truck Name</label><input id="vendorApplicationTruckName" class="customer-input" maxlength="100" required value="${escapeHtml(application?.truck_name || '')}"></div>
+      <div><label for="vendorApplicationCuisine">Cuisine</label><input id="vendorApplicationCuisine" class="customer-input" maxlength="80" required placeholder="Tacos, barbecue, desserts..." value="${escapeHtml(application?.cuisine || '')}"></div>
+      <div><label for="vendorApplicationMobile">Business Mobile</label><input id="vendorApplicationMobile" class="customer-input" type="tel" maxlength="20" required value="${escapeHtml(application?.business_mobile || currentAccount.mobile || '')}"></div>
+      <div><label for="vendorApplicationEmail">Business Email</label><input id="vendorApplicationEmail" class="customer-input" type="email" maxlength="120" required value="${escapeHtml(application?.business_email || currentAccount.email || '')}"></div>
+      <div><label for="vendorApplicationCity">Primary City</label><input id="vendorApplicationCity" class="customer-input" maxlength="60" required value="${escapeHtml(application?.city || '')}"></div>
+      <div><label for="vendorApplicationState">State</label><input id="vendorApplicationState" class="customer-input" maxlength="2" required placeholder="NC" value="${escapeHtml(application?.state || '')}"></div><div></div>
+      <div style="grid-column:1/-1"><label for="vendorApplicationDescription">Tell us about your truck</label><textarea id="vendorApplicationDescription" class="customer-textarea" maxlength="500" rows="4">${escapeHtml(application?.description || '')}</textarea></div>
+    </div><p id="vendorApplicationMessage" class="form-message" aria-live="polite"></p><div class="customer-form-actions"><button class="primary-button" type="submit">${application ? 'Resubmit Application' : 'Submit Vendor Application'}</button></div></form>`;
+  }
+
+  function renderVendorApplication() {
+    return `<div class="vendor-application-shell">${pageHeader('Food Truck Partners', 'Become a FoodTrekNow Vendor', 'Submit your business for administrator review.')}<section id="vendorApplicationContent" class="customer-card"><p class="muted">Loading your application…</p></section></div>`;
+  }
+
+  async function loadVendorApplication() {
+    const container = document.getElementById('vendorApplicationContent');
+    if (!container) return;
+    try {
+      const application = await window.FoodTrekNowVendorOnboarding.getMyApplication();
+      if (!application) return void (container.outerHTML = `<div id="vendorApplicationContent">${vendorApplicationForm()}</div>`);
+      if (application.status === 'rejected') {
+        container.outerHTML = `<div id="vendorApplicationContent"><section class="customer-card vendor-application-status"><span class="vendor-status-badge rejected">Rejected</span><h2>Application needs attention</h2><p>${escapeHtml(application.review_notes || 'Review the information below and resubmit when ready.')}</p></section><div style="height:16px"></div>${vendorApplicationForm(application)}</div>`;
+        return;
+      }
+      const descriptions = { pending: 'Your information is securely saved. A FoodTrekNow administrator will review it before vendor access is enabled.', approved: 'Your business is approved. Sign out and sign back in to load vendor access for your food truck.', withdrawn: 'This application was withdrawn. You may submit it again.' };
+      container.className = 'customer-card vendor-application-status';
+      container.innerHTML = `<span class="vendor-status-badge ${application.status}">${escapeHtml(application.status)}</span><h2>${escapeHtml(application.truck_name)}</h2><p>${escapeHtml(descriptions[application.status] || '')}</p>${application.review_notes ? `<p><strong>Administrator note:</strong> ${escapeHtml(application.review_notes)}</p>` : ''}`;
+    } catch (error) { container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`; }
+  }
+
+  function renderVendorReviews() {
+    return `${pageHeader('Administrator', 'Vendor Approvals', 'Review food truck applications and control access to the vendor platform.')}<section id="vendorReviewContent" class="customer-card"><p class="muted">Loading vendor applications…</p></section>`;
+  }
+
+  async function loadVendorReviews() {
+    const container = document.getElementById('vendorReviewContent');
+    if (!container) return;
+    try {
+      const applications = await window.FoodTrekNowVendorOnboarding.listApplications();
+      if (!applications.length) return void (container.innerHTML = '<div class="empty-customer-state"><span>🚚</span><h2>No vendor applications yet</h2><p>New food truck submissions will appear here.</p></div>');
+      container.className = 'vendor-review-list';
+      container.innerHTML = applications.map(application => `<article class="customer-card vendor-review-card" data-vendor-review-card="${application.id}"><div><span class="vendor-status-badge ${application.status}">${escapeHtml(application.status)}</span><h2>${escapeHtml(application.truck_name)}</h2><p><strong>${escapeHtml(application.business_name)}</strong> · ${escapeHtml(application.cuisine)}</p><p>${escapeHtml(application.description || 'No description provided.')}</p><div class="vendor-review-meta"><span>${escapeHtml(application.city)}, ${escapeHtml(application.state)}</span><span>${escapeHtml(application.business_email)}</span><span>${escapeHtml(application.business_mobile)}</span></div></div>${application.status === 'pending' ? `<div class="vendor-review-actions"><button class="customer-small-button primary" data-vendor-decision="approved" data-vendor-application-id="${application.id}" type="button">Approve Vendor</button><button class="customer-small-button danger" data-vendor-decision="rejected" data-vendor-application-id="${application.id}" type="button">Reject</button></div><label class="vendor-review-notes">Review Notes<textarea class="customer-textarea" data-vendor-review-notes rows="2" placeholder="Optional note for the applicant"></textarea></label>` : `<div><strong>Reviewed</strong><p>${escapeHtml(application.review_notes || 'No review note.')}</p></div>`}</article>`).join('');
+    } catch (error) { container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`; }
   }
 
   function openModal(html) {
@@ -2096,7 +2150,21 @@
   document.getElementById('closeCustomerAccountModal').addEventListener('click', closeModal);
   accountModal.addEventListener('click', event => { if (event.target === accountModal) closeModal(); });
 
-  accountContent.addEventListener('click', event => {
+  accountContent.addEventListener('click', async event => {
+    const vendorDecision = event.target.closest('[data-vendor-decision]');
+    if (vendorDecision) {
+      const decision = vendorDecision.dataset.vendorDecision;
+      const label = decision === 'approved' ? 'approve this vendor and create their food truck' : 'reject this vendor application';
+      if (!confirm(`Are you sure you want to ${label}?`)) return;
+      const card = vendorDecision.closest('[data-vendor-review-card]');
+      const notes = card?.querySelector('[data-vendor-review-notes]')?.value || '';
+      try {
+        await window.FoodTrekNowVendorOnboarding.review(vendorDecision.dataset.vendorApplicationId, decision, notes);
+        customerToast(decision === 'approved' ? 'Vendor approved and food truck created.' : 'Vendor application rejected.');
+        await loadVendorReviews();
+      } catch (error) { customerToast(error.message); }
+      return;
+    }
     const actionButton = event.target.closest('[data-customer-action]');
     if (actionButton) {
       const actions = {
@@ -2387,6 +2455,30 @@
   });
 
   accountContent.addEventListener('submit', async event => {
+    if (event.target.id === 'vendorApplicationForm') {
+      event.preventDefault();
+      const message = document.getElementById('vendorApplicationMessage');
+      const input = {
+        businessName: document.getElementById('vendorApplicationBusinessName').value.trim(),
+        truckName: document.getElementById('vendorApplicationTruckName').value.trim(),
+        cuisine: document.getElementById('vendorApplicationCuisine').value.trim(),
+        businessMobile: document.getElementById('vendorApplicationMobile').value.trim(),
+        businessEmail: document.getElementById('vendorApplicationEmail').value.trim(),
+        city: document.getElementById('vendorApplicationCity').value.trim(),
+        state: document.getElementById('vendorApplicationState').value.trim(),
+        description: document.getElementById('vendorApplicationDescription').value.trim()
+      };
+      if (!input.businessName || !input.truckName || !input.cuisine || normalizePhone(input.businessMobile).length < 10 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.businessEmail) || !input.city || input.state.length !== 2) {
+        message.textContent = 'Complete every required field with a valid email, mobile number, and two-letter state.';
+        return;
+      }
+      try {
+        await window.FoodTrekNowVendorOnboarding.submit(input);
+        customerToast('Vendor application submitted for review.');
+        await loadVendorApplication();
+      } catch (error) { message.textContent = error.message; }
+      return;
+    }
     if (event.target.id === 'customerCheckoutForm') {
       event.preventDefault();
       if (!currentAccount.cart.items.length) {
