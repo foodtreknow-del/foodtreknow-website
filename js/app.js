@@ -6,10 +6,14 @@ const demoButton=document.getElementById('demoLoginButton');
 const STORAGE_KEY='ftnVendorOrdersV0231';
 const SOUND_KEY='ftnVendorSound';
 let soundOn=localStorage.getItem(SOUND_KEY)!=='off';
+let activeVendorContext=null;
+const vendorStorageKey=base=>window.FoodTrekNowVendorStorageKey?window.FoodTrekNowVendorStorageKey(base):base;
+const hasSecureVendorTruck=()=>Boolean(localStorage.getItem('ftnActiveVendorTruckId'));
 
-function showDashboard(){loginView.classList.add('hidden-view');dashboardView.classList.remove('hidden-view');document.body.classList.remove('login-page');localStorage.setItem('ftnVendorLoggedIn','true');orders=loadOrders();render();}
-function showLogin(){dashboardView.classList.add('hidden-view');loginView.classList.remove('hidden-view');document.body.classList.add('login-page');localStorage.removeItem('ftnVendorLoggedIn');}
-form.addEventListener('submit',e=>{e.preventDefault();const email=document.getElementById('email').value.trim().toLowerCase();const password=document.getElementById('password').value.trim();if(email==='vendor@foodtreknow.com'&&password==='demo123'){message.textContent='';showDashboard();}else message.textContent='Login not recognized. Use vendor@foodtreknow.com and demo123.';});
+function applyVendorIdentity(context){if(!context?.truck)return;document.getElementById('pageTitle').textContent=context.truck.name;const settingsApi=window.FoodTrekNowVendorSettings;if(settingsApi){const settings=settingsApi.loadSettings();settings.profile={...settings.profile,truckName:context.truck.name,cuisine:context.truck.cuisine||'',description:context.truck.description||'',phone:context.truck.contact_mobile||context.vendor.contact_mobile||'',email:context.truck.contact_email||context.vendor.contact_email||'',city:(context.truck.location_name||'').split(',')[0]?.trim()||'',state:(context.truck.location_name||'').split(',')[1]?.trim()||''};settings.operations={...settings.operations,acceptingOrders:Boolean(context.truck.accepting_orders),prepTime:Number(context.truck.estimated_prep_minutes)||20,minimumOrder:Number(context.truck.minimum_order)||0,taxRate:Number(context.truck.tax_rate||0)*100,pickupInstructions:context.truck.pickup_instructions||''};settingsApi.applyVendorSettings(settingsApi.saveSettings(settings));}}
+function showDashboard(context=null,mode='demo'){activeVendorContext=context;loginView.classList.add('hidden-view');dashboardView.classList.remove('hidden-view');document.body.classList.remove('login-page');localStorage.setItem('ftnVendorLoggedIn',mode);orders=loadOrders();categories=typeof loadCategories==='function'?loadCategories():categories;menuItems=typeof loadMenuItems==='function'?loadMenuItems():menuItems;if(context)applyVendorIdentity(context);render();}
+function showLogin(){activeVendorContext=null;dashboardView.classList.add('hidden-view');loginView.classList.remove('hidden-view');document.body.classList.add('login-page');localStorage.removeItem('ftnVendorLoggedIn');}
+form.addEventListener('submit',async e=>{e.preventDefault();const email=document.getElementById('email').value.trim().toLowerCase();const password=document.getElementById('password').value.trim();message.textContent='';if(email==='vendor@foodtreknow.com'&&password==='demo123'){window.FoodTrekNowVendorAuth?.clearTruck();showDashboard(null,'demo');return;}try{const context=await window.FoodTrekNowVendorAuth.signIn(email,password);form.reset();showDashboard(context,'supabase');notify(`Welcome to ${context.truck.name}`);}catch(error){message.textContent=error.message;}});
 if(demoButton)demoButton.addEventListener('click',()=>{document.getElementById('email').value='vendor@foodtreknow.com';document.getElementById('password').value='demo123';message.textContent='';});
 
 const now=Date.now();
@@ -27,10 +31,11 @@ let lastNewId=null;
 let pickupConfirmationOrderId=null;
 function normalizeOrders(list){return list.map(o=>{if(o.status==='completed'){o.status='pickedup';o.pickedUpAt=o.pickedUpAt||o.completedAt||Date.now();}return o;});}
 function recoverActiveCustomerOrders(vendorOrders){
- const recovered=[...vendorOrders],knownIds=new Set(recovered.map(order=>String(order.id))),customers=[];
+ const recovered=[...vendorOrders],knownIds=new Set(recovered.map(order=>String(order.id))),customers=[],secureTruckId=localStorage.getItem('ftnActiveVendorTruckId');
  try{const accounts=JSON.parse(localStorage.getItem('ftnCustomerAccountsV1'));if(Array.isArray(accounts))customers.push(...accounts);}catch{}
  try{const guest=JSON.parse(localStorage.getItem('ftnGuestCustomerV1'));if(guest)customers.push(guest);}catch{}
  customers.forEach(customer=>(customer.orders||[]).forEach(order=>{
+  if(secureTruckId&&String(order.truckId)!==String(secureTruckId))return;
   if(knownIds.has(String(order.id))||['completed','cancelled','pickedup'].includes(order.status))return;
   recovered.unshift({
    id:order.id,truckId:order.truckId,truckName:order.truckName,
@@ -46,8 +51,8 @@ function recoverActiveCustomerOrders(vendorOrders){
  }));
  return recovered;
 }
-function loadOrders(){try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));const stored=Array.isArray(saved)&&saved.length?saved:seedOrders;return normalizeOrders(recoverActiveCustomerOrders(stored));}catch{return normalizeOrders(recoverActiveCustomerOrders(seedOrders));}}
-function saveOrders(){localStorage.setItem(STORAGE_KEY,JSON.stringify(orders));}
+function loadOrders(){try{const saved=JSON.parse(localStorage.getItem(vendorStorageKey(STORAGE_KEY)));const fallback=hasSecureVendorTruck()?[]:seedOrders;const stored=Array.isArray(saved)?saved:fallback;return normalizeOrders(recoverActiveCustomerOrders(stored));}catch{return normalizeOrders(recoverActiveCustomerOrders(hasSecureVendorTruck()?[]:seedOrders));}}
+function saveOrders(){localStorage.setItem(vendorStorageKey(STORAGE_KEY),JSON.stringify(orders));}
 function customerStatusForVendorStatus(status){
  if(status==='new')return {status:'received',statusLabel:'Order Received'};
  if(status==='preparing')return {status:'preparing',statusLabel:'Preparing'};
@@ -114,20 +119,20 @@ window.showDetails=id=>{const o=orders.find(x=>String(x.id)===String(id));if(!o)
 function closeModal(){document.getElementById('orderModal').classList.add('hidden');}
 document.getElementById('closeModal').addEventListener('click',closeModal);document.getElementById('orderModal').addEventListener('click',e=>{if(e.target.id==='orderModal')closeModal();});
 
-document.querySelectorAll('.nav-link[data-page]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.app-page').forEach(p=>p.classList.add('hidden-view'));document.getElementById(`${btn.dataset.page}Page`).classList.remove('hidden-view');if(btn.dataset.page==='orders')refreshVendorOrders();if(btn.dataset.page==='menu'&&typeof renderMenu==='function')renderMenu();const map={dashboard:['Vendor Dashboard','Capital City Eats'],orders:['Order Management','Orders'],menu:['Menu Management','Menu'],reports:['Sales & Performance','Reports'],settings:['Vendor Profile','Settings']};document.getElementById('pageEyebrow').textContent=map[btn.dataset.page][0];document.getElementById('pageTitle').textContent=map[btn.dataset.page][1];}));
+document.querySelectorAll('.nav-link[data-page]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.app-page').forEach(p=>p.classList.add('hidden-view'));document.getElementById(`${btn.dataset.page}Page`).classList.remove('hidden-view');if(btn.dataset.page==='orders')refreshVendorOrders();if(btn.dataset.page==='menu'&&typeof renderMenu==='function')renderMenu();const truckName=activeVendorContext?.truck?.name||'Capital City Eats';const map={dashboard:['Vendor Dashboard',truckName],orders:['Order Management','Orders'],menu:['Menu Management','Menu'],reports:['Sales & Performance','Reports'],settings:['Vendor Profile','Settings']};document.getElementById('pageEyebrow').textContent=map[btn.dataset.page][0];document.getElementById('pageTitle').textContent=map[btn.dataset.page][1];}));
 document.querySelectorAll('.filter-tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.filter-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');activeFilter=btn.dataset.filter;renderOrdersPage();}));
 document.getElementById('orderSearch').addEventListener('input',renderOrdersPage);
 document.getElementById('simulateOrderButton').addEventListener('click',()=>{const names=['Jordan','Taylor','Chris','Alicia','Robert','Nina'];const choices=[[{name:'Smash Burger',qty:2,price:11.50},{name:'Seasoned Fries',qty:1,price:4.50}],[{name:'Chicken Tacos',qty:3,price:5.25},{name:'Lemonade',qty:2,price:4.00}],[{name:'BBQ Bowl',qty:1,price:16.00},{name:'Mac & Cheese',qty:1,price:5.50}]];const items=choices[Math.floor(Math.random()*choices.length)];const subtotal=items.reduce((s,i)=>s+i.qty*i.price,0);const tax=Number((subtotal*.06).toFixed(2));const id=Math.max(...orders.map(o=>o.id))+1;const createdAt=Date.now();orders.unshift({id,customer:names[Math.floor(Math.random()*names.length)],items,subtotal,tax,total:Number((subtotal+tax).toFixed(2)),status:'new',time:new Date(createdAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}),payment:'Credit Card',paid:true,createdAt});lastNewId=id;render();tone('new');notify(`New order #${id} received`);setTimeout(()=>{lastNewId=null;document.querySelectorAll('.new-flash').forEach(el=>el.classList.remove('new-flash'));},3800);});
 function updateSoundButton(){const b=document.getElementById('soundToggleButton');if(b)b.textContent=soundOn?'🔔 Sound On':'🔕 Sound Off';}
 document.getElementById('soundToggleButton').addEventListener('click',()=>{soundOn=!soundOn;localStorage.setItem(SOUND_KEY,soundOn?'on':'off');updateSoundButton();if(soundOn)tone('new');notify(soundOn?'Order sounds enabled':'Order sounds muted');});
 document.getElementById('onlineToggle').addEventListener('change',e=>{const on=e.target.checked;document.getElementById('statusText').textContent=on?'Online':'Offline';document.getElementById('statusDot').className=`status-dot ${on?'online':'offline'}`;notify(on?'Truck is online':'Truck is offline');});
-document.getElementById('logoutButton').addEventListener('click',showLogin);
+document.getElementById('logoutButton').addEventListener('click',async()=>{const mode=localStorage.getItem('ftnVendorLoggedIn');if(mode==='supabase'){try{await window.FoodTrekNowVendorAuth.signOut();}catch(error){notify(error.message);return;}}showLogin();});
 if(window.addEventListener){
  window.addEventListener('ftn:vendor-orders-updated',refreshVendorOrders);
- window.addEventListener('storage',event=>{if(event.key===STORAGE_KEY)refreshVendorOrders();});
+ window.addEventListener('storage',event=>{if(event.key===vendorStorageKey(STORAGE_KEY))refreshVendorOrders();});
 }
 setInterval(()=>{if(!dashboardView.classList.contains('hidden-view')){updateLiveTimers();}},1000);
-if(localStorage.getItem('ftnVendorLoggedIn')==='true')showDashboard();else updateSoundButton();
+async function restoreVendorLogin(){const mode=localStorage.getItem('ftnVendorLoggedIn');if(mode==='demo'||mode==='true'){window.FoodTrekNowVendorAuth?.clearTruck();showDashboard(null,'demo');return;}if(mode==='supabase'){try{const context=await window.FoodTrekNowVendorAuth.restore();if(context){showDashboard(context,'supabase');return;}}catch{}showLogin();}else updateSoundButton();}
 
 
 // Phase 3 Menu Management
@@ -145,9 +150,9 @@ const defaultMenuItems=[
 let categories=loadCategories();
 let menuItems=loadMenuItems();
 let pendingMenuImage='';
-function loadCategories(){try{const x=JSON.parse(localStorage.getItem(CATEGORY_STORAGE_KEY));return Array.isArray(x)&&x.length?x:defaultCategories.slice();}catch{return defaultCategories.slice();}}
-function loadMenuItems(){try{const x=JSON.parse(localStorage.getItem(MENU_STORAGE_KEY));return Array.isArray(x)&&x.length?x.map((i,n)=>({...i,featured:Boolean(i.featured),order:Number(i.order)||n+1})):defaultMenuItems.map(i=>({...i}));}catch{return defaultMenuItems.map(i=>({...i}));}}
-function saveMenuData(){localStorage.setItem(MENU_STORAGE_KEY,JSON.stringify(menuItems));localStorage.setItem(CATEGORY_STORAGE_KEY,JSON.stringify(categories));}
+function loadCategories(){try{const x=JSON.parse(localStorage.getItem(vendorStorageKey(CATEGORY_STORAGE_KEY)));return Array.isArray(x)&&x.length?x:defaultCategories.slice();}catch{return defaultCategories.slice();}}
+function loadMenuItems(){try{const x=JSON.parse(localStorage.getItem(vendorStorageKey(MENU_STORAGE_KEY)));const fallback=hasSecureVendorTruck()?[]:defaultMenuItems;return Array.isArray(x)?x.map((i,n)=>({...i,featured:Boolean(i.featured),order:Number(i.order)||n+1})):fallback.map(i=>({...i}));}catch{return (hasSecureVendorTruck()?[]:defaultMenuItems).map(i=>({...i}));}}
+function saveMenuData(){localStorage.setItem(vendorStorageKey(MENU_STORAGE_KEY),JSON.stringify(menuItems));localStorage.setItem(vendorStorageKey(CATEGORY_STORAGE_KEY),JSON.stringify(categories));}
 function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function categoryIcon(c){c=c.toLowerCase();return c.includes('drink')?'🥤':c.includes('taco')?'🌮':c.includes('side')?'🍟':c.includes('dessert')?'🍰':c.includes('chicken')?'🍗':'🍔';}
 function menuCard(item){return `<article class="menu-item-card ${item.available?'':'sold-out'}" draggable="true" data-item-id="${item.id}"><div class="drag-handle" title="Drag to reorder">☰</div><div class="menu-item-image">${item.image?`<img src="${item.image}" alt="${escapeHtml(item.name)}" />`:`<span class="menu-item-placeholder">${categoryIcon(item.category)}</span>`}${item.featured?'<span class="featured-chip">★ Featured</span>':''}<span class="availability-chip ${item.available?'':'soldout'}">${item.available?'Available':'Sold Out'}</span></div><div class="menu-item-body"><div class="menu-item-title-row"><h3>${escapeHtml(item.name)}</h3><span class="menu-price">${money(Number(item.price))}</span></div><span class="menu-category">${escapeHtml(item.category)}</span><p class="menu-description">${escapeHtml(item.description||'No description added.')}</p><div class="menu-item-actions"><button class="small-button details" type="button" onclick="editMenuItem(${item.id})">Edit</button><button class="small-button danger-button" type="button" onclick="deleteMenuItem(${item.id})">Delete</button><button class="small-button menu-toggle-button ${item.available?'':'soldout'}" type="button" onclick="toggleMenuAvailability(${item.id})">${item.available?'Mark Sold Out':'Make Available'}</button></div></div></article>`;}
@@ -174,3 +179,4 @@ document.getElementById('closeCategoryModal').onclick=()=>document.getElementByI
 document.getElementById('categoryForm').addEventListener('submit',e=>{e.preventDefault();const input=document.getElementById('newCategoryName'),name=input.value.trim();if(!name||categories.includes(name)){document.getElementById('categoryFormError').textContent='Enter a unique category name.';return;}categories.push(name);input.value='';document.getElementById('categoryFormError').textContent='';renderCategories();renderMenu();notify('Category added');});
 document.getElementById('previewCustomerMenuButton').onclick=()=>{renderCustomerPreview();document.getElementById('customerPreviewModal').classList.remove('hidden')};document.getElementById('closeCustomerPreviewModal').onclick=()=>document.getElementById('customerPreviewModal').classList.add('hidden');document.getElementById('customerPreviewModal').addEventListener('click',e=>{if(e.target.id==='customerPreviewModal')e.currentTarget.classList.add('hidden')});
 renderMenu();
+restoreVendorLogin();

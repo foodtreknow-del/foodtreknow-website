@@ -2,6 +2,7 @@
   'use strict';
 
   const ORDER_STORAGE_KEY = 'ftnVendorOrdersV0231';
+  const orderStorageKey = () => window.FoodTrekNowVendorStorageKey ? window.FoodTrekNowVendorStorageKey(ORDER_STORAGE_KEY) : ORDER_STORAGE_KEY;
   const rangeLabels = { today: 'Today', 7: 'Last 7 Days', 30: 'Last 30 Days', all: 'All Time' };
   let activeRange = 'today';
 
@@ -77,7 +78,7 @@
 
   function getVendorOrders() {
     try {
-      const saved = JSON.parse(localStorage.getItem(ORDER_STORAGE_KEY));
+      const saved = JSON.parse(localStorage.getItem(orderStorageKey()));
       if (Array.isArray(saved)) return saved;
     } catch {}
     try {
@@ -177,7 +178,7 @@
   document.querySelector('[data-page="reports"]')?.addEventListener('click', () => renderSalesReport(rangeSelect?.value || activeRange));
   if (window.addEventListener) {
     window.addEventListener('ftn:vendor-orders-updated', () => { if (!document.getElementById('reportsPage')?.classList.contains('hidden-view')) renderSalesReport(activeRange); });
-    window.addEventListener('storage', event => { if (event.key === ORDER_STORAGE_KEY && !document.getElementById('reportsPage')?.classList.contains('hidden-view')) renderSalesReport(activeRange); });
+    window.addEventListener('storage', event => { if (event.key === orderStorageKey() && !document.getElementById('reportsPage')?.classList.contains('hidden-view')) renderSalesReport(activeRange); });
   }
 
   window.FoodTrekNowVendorReports = { calculateSalesReport, filterOrdersByRange, buildSalesCsv, renderSalesReport, getRangeStart };

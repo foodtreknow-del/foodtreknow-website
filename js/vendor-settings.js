@@ -3,6 +3,7 @@
 
   const SETTINGS_STORAGE_KEY = 'ftnVendorSettingsV1';
   const SOUND_STORAGE_KEY = 'ftnVendorSound';
+  const storageKey = base => window.FoodTrekNowVendorStorageKey ? window.FoodTrekNowVendorStorageKey(base) : base;
   const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const standardHours = Object.fromEntries(dayNames.map(day => [day.toLowerCase(), { enabled: day !== 'Sunday', open: '11:00', close: day === 'Friday' || day === 'Saturday' ? '21:00' : '20:00' }]));
   const defaults = {
@@ -32,7 +33,7 @@
 
   function loadSettings() {
     try {
-      const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      const saved = localStorage.getItem(storageKey(SETTINGS_STORAGE_KEY));
       if (saved) return normalizeSettings(JSON.parse(saved));
       const initial = cloneDefaults();
       initial.notifications.orderSound = localStorage.getItem(SOUND_STORAGE_KEY) !== 'off';
@@ -44,7 +45,7 @@
 
   function saveSettings(value) {
     const normalized = normalizeSettings(value);
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(normalized));
+    localStorage.setItem(storageKey(SETTINGS_STORAGE_KEY), JSON.stringify(normalized));
     return normalized;
   }
 
