@@ -76,6 +76,7 @@ Deno.serve(async request => {
   if (request.method !== 'POST') return json(request, { error: 'Method not allowed.' }, 405);
   if (!isAllowedOrigin(request)) return json(request, { error: 'This website origin is not allowed.' }, 403);
   try {
+    const body = await request.json().catch(() => ({}));
     const { serviceClient, user, vendor } = await vendorContext(request);
     const priceId = requiredEnvironment('STRIPE_VENDOR_MONTHLY_PRICE_ID');
     if (!priceId.startsWith('price_')) throw new Error('The FoodTrekNow vendor price is invalid.');
@@ -87,6 +88,10 @@ Deno.serve(async request => {
     }
     if (current?.stripe_subscription_id && !['canceled', 'incomplete_expired'].includes(current.status)) {
       throw new Error('Use Manage Billing to update or complete the existing subscription.');
+    }
+    const trialEligible = !current?.stripe_subscription_id;
+    if (trialEligible && body?.trialAccepted !== true) {
+      throw new Error('Agree to the 14-day free trial terms before continuing to Stripe.');
     }
 
     let customerId = current?.stripe_customer_id || '';
@@ -118,8 +123,14 @@ Deno.serve(async request => {
     checkoutForm.set('metadata[foodtreknow_vendor_subscription]', 'true');
     checkoutForm.set('subscription_data[metadata][foodtreknow_vendor_profile_id]', vendor.id);
     checkoutForm.set('subscription_data[metadata][foodtreknow_vendor_subscription]', 'true');
+    if (trialEligible) {
+      checkoutForm.set('subscription_data[trial_period_days]', '14');
+      checkoutForm.set('subscription_data[trial_settings][end_behavior][missing_payment_method]', 'cancel');
+      checkoutForm.set('payment_method_collection', 'always');
+    }
     checkoutForm.set('billing_address_collection', 'auto');
-    const session = await stripePost('/v1/checkout/sessions', checkoutForm, `foodtreknow-vendor-subscription-${vendor.id}-${priceId}`);
+    const checkoutAttempt = current?.stripe_subscription_id || 'first-trial-14-days';
+    const session = await stripePost('/v1/checkout/sessions', checkoutForm, `foodtreknow-vendor-subscription-${vendor.id}-${priceId}-${checkoutAttempt}`);
     return json(request, { checkoutUrl: session.url });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'The subscription could not be started.';

@@ -61,7 +61,8 @@ function responseState(row: Record<string, any> | null) {
     cancel_at_period_end: Boolean(row?.cancel_at_period_end),
     grace_period_ends_at: row?.grace_period_ends_at || null,
     last_invoice_status: row?.last_invoice_status || null,
-    has_customer: Boolean(row?.stripe_customer_id)
+    has_customer: Boolean(row?.stripe_customer_id),
+    trial_eligible: !row?.stripe_subscription_id
   };
 }
 

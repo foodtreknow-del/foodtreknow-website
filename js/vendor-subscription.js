@@ -4,12 +4,12 @@
   const client = window.FoodTrekNowSupabaseClient;
   const config = window.FoodTrekNowSupabaseConfig;
   const field = id => document.getElementById(id);
-  let currentState = { status: 'not_started', access_allowed: false, has_customer: false };
+  let currentState = { status: 'not_started', access_allowed: false, has_customer: false, trial_eligible: true };
   const states = {
-    not_started: { badge: 'Subscription required', title: 'Activate your vendor account', message: 'Subscribe for $14.99 per month to use FoodTrekNow vendor operations.' },
+    not_started: { badge: 'Free trial available', title: 'Start your 14-day free trial', message: 'Enter a payment method securely with Stripe. You will not be charged for 14 days.' },
     incomplete: { badge: 'Action needed', title: 'Finish subscription checkout', message: 'Stripe still needs payment information before your vendor account can be activated.' },
     incomplete_expired: { badge: 'Checkout expired', title: 'Start subscription again', message: 'The previous checkout expired before payment was completed.' },
-    trialing: { badge: 'Trial active', title: 'Vendor account active', message: 'Your FoodTrekNow vendor subscription is currently in its trial period.' },
+    trialing: { badge: 'Trial active', title: 'Your 14-day free trial is active', message: 'You have full vendor access and will not be charged until the trial ends.' },
     active: { badge: 'Active', title: '$14.99 monthly plan active', message: 'Your vendor account has full access to FoodTrekNow operations.' },
     past_due: { badge: 'Payment past due', title: 'Update your payment method', message: 'Stripe could not collect the renewal. Update billing before the seven-day grace period ends.' },
     unpaid: { badge: 'Access paused', title: 'Subscription payment required', message: 'Vendor operations are paused until the outstanding subscription payment is resolved.' },
@@ -25,9 +25,21 @@
     const subscribe = field('startVendorSubscriptionButton');
     const manage = field('manageVendorBillingButton');
     const refresh = field('refreshVendorSubscriptionButton');
+    const trialAgreement = field('vendorTrialAgreement');
+    const trialCheckbox = field('vendorTrialAgreementCheckbox');
+    const canStart = ['not_started', 'canceled', 'incomplete_expired'].includes(currentState.status);
+    const needsTrialAgreement = Boolean(currentState.trial_eligible && canStart);
+    trialAgreement?.classList.toggle('hidden-view', !needsTrialAgreement);
+    if (trialCheckbox) trialCheckbox.disabled = busy || !needsTrialAgreement;
     if (subscribe) {
-      subscribe.disabled = busy || !secureVendorSignedIn() || ['active', 'trialing', 'past_due', 'unpaid', 'paused', 'incomplete'].includes(currentState.status);
-      subscribe.textContent = busy && label ? label : ['canceled', 'incomplete_expired'].includes(currentState.status) ? 'Restart Subscription' : 'Subscribe for $14.99/month';
+      subscribe.disabled = busy || !secureVendorSignedIn() || !canStart || (needsTrialAgreement && !trialCheckbox?.checked);
+      subscribe.textContent = busy && label
+        ? label
+        : needsTrialAgreement
+          ? 'Start 14-Day Free Trial'
+          : ['canceled', 'incomplete_expired'].includes(currentState.status)
+            ? 'Restart for $14.99/month'
+            : 'Subscribe for $14.99/month';
     }
     if (manage) manage.disabled = busy || !secureVendorSignedIn() || !currentState.has_customer;
     if (refresh) refresh.disabled = busy || !secureVendorSignedIn();
@@ -35,7 +47,7 @@
 
   function renderState(rawState = {}) {
     const status = normalizeStatus(rawState.status);
-    currentState = { ...rawState, status, access_allowed: Boolean(rawState.access_allowed), has_customer: Boolean(rawState.has_customer) };
+    currentState = { ...rawState, status, access_allowed: Boolean(rawState.access_allowed), has_customer: Boolean(rawState.has_customer), trial_eligible: Boolean(rawState.trial_eligible) };
     const copy = states[status];
     const badge = field('vendorSubscriptionBadge');
     if (badge) { badge.textContent = copy.badge; badge.className = `stripe-status-badge subscription-${status.replaceAll('_', '-')}`; }
@@ -44,9 +56,12 @@
     const detail = field('vendorSubscriptionDetail');
     if (detail) {
       if (status === 'past_due' && rawState.grace_period_ends_at) detail.textContent = `Grace period ends ${dateLabel(rawState.grace_period_ends_at)}.`;
-      else if (rawState.cancel_at_period_end && rawState.current_period_end) detail.textContent = `Access remains active through ${dateLabel(rawState.current_period_end)}.`;
-      else if (['active', 'trialing'].includes(status) && rawState.current_period_end) detail.textContent = `Next billing date: ${dateLabel(rawState.current_period_end)}.`;
-      else detail.textContent = 'Monthly subscription · Cancel through Stripe billing management.';
+      else if (status === 'trialing' && rawState.cancel_at_period_end && rawState.current_period_end) detail.textContent = `Trial canceled. Access remains active through ${dateLabel(rawState.current_period_end)} and you will not be charged.`;
+      else if (status === 'active' && rawState.cancel_at_period_end && rawState.current_period_end) detail.textContent = `Cancellation scheduled. Access remains active through ${dateLabel(rawState.current_period_end)}; there will be no further renewal.`;
+      else if (status === 'trialing' && rawState.current_period_end) detail.textContent = `Free trial ends ${dateLabel(rawState.current_period_end)}. $14.99 monthly billing begins then unless canceled.`;
+      else if (status === 'active' && rawState.current_period_end) detail.textContent = `Next $14.99 billing date: ${dateLabel(rawState.current_period_end)}.`;
+      else if (currentState.trial_eligible) detail.textContent = 'Cancel during the trial and pay nothing. Afterward, cancel anytime with no fee; access continues through the paid billing period.';
+      else detail.textContent = 'Monthly subscription · Cancel anytime with no fee. Access continues through the current paid billing period.';
     }
     field('vendorSubscriptionGate')?.classList.toggle('hidden-view', currentState.access_allowed || !secureVendorSignedIn());
     window.dispatchEvent(new CustomEvent('ftn:vendor-subscription', { detail: currentState }));
@@ -54,7 +69,7 @@
     return currentState;
   }
 
-  async function invoke(functionName) {
+  async function invoke(functionName, payload = {}) {
     if (!client?.auth?.getSession || !client.auth.getUser || !client.auth.refreshSession || !config?.url || !config?.publishableKey) throw new Error('Secure vendor billing is unavailable.');
     const { data: authData, error: authError } = await client.auth.getSession();
     let accessToken = authData?.session?.access_token;
@@ -73,7 +88,7 @@
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
-      body: '{}'
+      body: JSON.stringify(payload)
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data?.error) throw new Error(data?.error || 'Stripe could not complete the request.');
@@ -99,8 +114,13 @@
   async function startSubscription() {
     const errorNode = field('vendorSubscriptionError');
     if (errorNode) errorNode.textContent = '';
+    const trialCheckbox = field('vendorTrialAgreementCheckbox');
+    if (currentState.trial_eligible && !trialCheckbox?.checked) {
+      if (errorNode) errorNode.textContent = 'Agree to the 14-day free trial terms before continuing.';
+      return;
+    }
     setBusy(true, 'Opening Stripe…');
-    try { const data = await invoke('stripe-vendor-subscription-start'); window.location.assign(verifiedStripeUrl(data.checkoutUrl)); }
+    try { const data = await invoke('stripe-vendor-subscription-start', { trialAccepted: Boolean(trialCheckbox?.checked) }); window.location.assign(verifiedStripeUrl(data.checkoutUrl)); }
     catch (error) { if (errorNode) errorNode.textContent = error.message; setBusy(false); }
   }
 
@@ -124,6 +144,7 @@
   }
 
   field('startVendorSubscriptionButton')?.addEventListener('click', startSubscription);
+  field('vendorTrialAgreementCheckbox')?.addEventListener('change', () => setBusy(false));
   field('manageVendorBillingButton')?.addEventListener('click', manageBilling);
   field('refreshVendorSubscriptionButton')?.addEventListener('click', () => refreshStatus().catch(() => {}));
   field('vendorSubscriptionGateButton')?.addEventListener('click', () => document.querySelector('[data-page="settings"]')?.click());

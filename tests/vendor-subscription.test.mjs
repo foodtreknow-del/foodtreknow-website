@@ -53,8 +53,8 @@ const context = {
 context.window = context;
 vm.runInNewContext(browserSource, context, { filename: 'vendor-subscription.js' });
 
-test('vendor settings clearly presents the $14.99 monthly platform plan', () => {
-  for (const copy of ['$14.99', 'per month', 'Manage Billing &amp; Invoices', 'Customer food-order payments remain separate']) {
+test('vendor settings clearly presents the 14-day trial and $14.99 monthly platform plan', () => {
+  for (const copy of ['14-day free trial', '$14.99', 'per month after trial', 'no cancellation fee', 'Manage Billing &amp; Invoices', 'Customer food-order payments remain separate']) {
     assert.ok(html.includes(copy), `Missing subscription UI copy: ${copy}`);
   }
   assert.match(html, /js\/vendor-subscription\.js/);
@@ -94,9 +94,23 @@ test('Stripe Checkout creates a platform-owned recurring subscription', () => {
   assert.match(startFunction, /checkoutForm\.set\('mode', 'subscription'\)/);
   assert.match(startFunction, /line_items\[0\]\[price\]/);
   assert.match(startFunction, /subscription_data\[metadata\]\[foodtreknow_vendor_profile_id\]/);
+  assert.match(startFunction, /trialEligible = !current\?\.stripe_subscription_id/);
+  assert.match(startFunction, /body\?\.trialAccepted !== true/);
+  assert.match(startFunction, /subscription_data\[trial_period_days\][^\n]*'14'/);
+  assert.match(startFunction, /payment_method_collection[^\n]*'always'/);
+  assert.match(startFunction, /trial_settings\]\[end_behavior\]\[missing_payment_method\][^\n]*'cancel'/);
   assert.match(startFunction, /\/v1\/checkout\/sessions/);
   assert.doesNotMatch(startFunction, /Stripe-Account/);
   assert.doesNotMatch(startFunction, /14\.99.*unit_amount|unit_amount.*14\.99/);
+});
+
+test('trial is offered once and cancellation copy preserves access through the current period', () => {
+  assert.match(statusFunction, /trial_eligible: !row\?\.stripe_subscription_id/);
+  assert.match(browserSource, /Agree to the 14-day free trial terms/);
+  assert.match(browserSource, /trialAccepted: Boolean\(trialCheckbox\?\.checked\)/);
+  assert.match(browserSource, /Trial canceled\. Access remains active through/);
+  assert.match(browserSource, /Cancellation scheduled\. Access remains active through/);
+  assert.match(browserSource, /there will be no further renewal/);
 });
 
 test('billing portal is authenticated and bound to the saved Stripe customer', () => {
