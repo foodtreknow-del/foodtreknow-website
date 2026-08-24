@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="assets/foodtreknow-logo.png" />
 <link rel="stylesheet" href="css/vendor.css?v=official-logo-3" />
 <link rel="stylesheet" href="css/vendor-reports.css" />
-<link rel="stylesheet" href="css/vendor-settings.css?v=stripe-connect-1" />
+<link rel="stylesheet" href="css/vendor-settings.css?v=vendor-subscription-1" />
 <link rel="stylesheet" href="css/customer-account.css?v=communications-2" />
 <link rel="stylesheet" href="css/customer-ordering.css" />
 <link rel="stylesheet" href="css/beta-banner.css" />
@@ -236,6 +236,11 @@
         </div>
       </header>
 
+      <section id="vendorSubscriptionGate" class="vendor-subscription-gate hidden-view" aria-live="polite">
+        <div><span>Vendor subscription required</span><strong>Activate your $14.99 monthly plan to use orders, menus, reports, and live truck controls.</strong></div>
+        <button id="vendorSubscriptionGateButton" class="primary-button" type="button">View Subscription</button>
+      </section>
+
       <section id="dashboardPage" class="app-page">
         <section class="summary-grid">
           <article class="summary-card sales-summary"><span>Today's Sales</span><strong id="salesTotal">$0.00</strong></article>
@@ -339,6 +344,23 @@
                 <div><label for="vendorState">State</label><input id="vendorState" class="settings-input" type="text" maxlength="2"></div>
                 <div><label for="vendorZip">ZIP Code</label><input id="vendorZip" class="settings-input" type="text" maxlength="10"></div>
               </div>
+            </section>
+
+            <section class="panel settings-panel vendor-subscription-panel" aria-labelledby="vendorSubscriptionHeading">
+              <div class="settings-panel-heading"><span class="settings-icon subscription-icon" aria-hidden="true">$</span><div><h3 id="vendorSubscriptionHeading">FoodTrekNow Vendor Plan</h3><p>Monthly access to vendor ordering, menus, sales reports, and operations.</p></div></div>
+              <div class="vendor-plan-price"><strong>$14.99</strong><span>per month</span></div>
+              <div class="stripe-status-row">
+                <span id="vendorSubscriptionBadge" class="stripe-status-badge subscription-not-started">Subscription required</span>
+                <div><strong id="vendorSubscriptionTitle">Activate your vendor account</strong><p id="vendorSubscriptionMessage">Subscribe for $14.99 per month to use FoodTrekNow vendor operations.</p></div>
+              </div>
+              <p id="vendorSubscriptionDetail" class="vendor-subscription-detail">Monthly subscription · Cancel through Stripe billing management.</p>
+              <p id="vendorSubscriptionError" class="settings-message error" aria-live="polite"></p>
+              <div class="stripe-connect-actions">
+                <button id="startVendorSubscriptionButton" class="primary-button" type="button">Subscribe for $14.99/month</button>
+                <button id="manageVendorBillingButton" class="secondary-button" type="button">Manage Billing &amp; Invoices</button>
+                <button id="refreshVendorSubscriptionButton" class="secondary-button" type="button">Check Status</button>
+              </div>
+              <p class="stripe-security-note">Subscription checkout and billing management open securely on Stripe. Customer food-order payments remain separate and go to your connected food truck account.</p>
             </section>
 
             <section class="panel settings-panel stripe-connect-panel" aria-labelledby="stripeConnectHeading">
@@ -477,9 +499,10 @@
 <script src="js/customer-marketplace.js?v=customer-marketplace-1"></script>
 <script src="js/live-orders.js?v=communications-1"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=communications-1"></script>
+<script src="js/app.js?v=vendor-subscription-1"></script>
 <script src="js/vendor-reports.js"></script>
 <script src="js/vendor-settings.js?v=vendor-data-2"></script>
+<script src="js/vendor-subscription.js?v=vendor-subscription-1"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>
 <script src="js/customer-account.js?v=online-override-1"></script>

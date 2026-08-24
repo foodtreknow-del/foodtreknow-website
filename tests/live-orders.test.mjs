@@ -59,7 +59,7 @@ test('customer cancellation uses the protected customer RPC', async () => {
 
 test('live order service loads before vendor and customer applications', () => {
   const servicePosition = html.indexOf('js/live-orders.js?v=communications-1');
-  assert.ok(servicePosition >= 0 && servicePosition < html.indexOf('js/app.js?v=communications-1'));
+  assert.ok(servicePosition >= 0 && servicePosition < html.indexOf('js/app.js?v='));
   assert.ok(servicePosition < html.indexOf('js/customer-account.js?v=online-override-1'));
 });
 
