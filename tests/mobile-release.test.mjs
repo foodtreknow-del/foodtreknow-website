@@ -13,7 +13,8 @@ test('Capacitor is configured inside the existing FoodTrekNow project', () => {
   assert.equal(capacitor.webDir, 'www');
   assert.equal(capacitor.server.androidScheme, 'https');
   assert.equal(capacitor.android.allowMixedContent, false);
-  assert.match(packageConfig.dependencies['@capacitor/core'], /^\^8\./);
+  assert.equal(packageConfig.dependencies['@capacitor/core'], '8.5.0');
+  assert.equal(packageConfig.dependencies['@capacitor/android'], '8.5.0');
   assert.match(packageConfig.scripts['mobile:sync'], /build:web.*cap sync/);
 });
 

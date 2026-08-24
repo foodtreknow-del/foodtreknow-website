@@ -1,0 +1,75 @@
+name: Android Test Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "assets/**"
+      - "css/**"
+      - "js/**"
+      - "index.html"
+      - "manifest.webmanifest"
+      - "service-worker.js"
+      - "capacitor.config.json"
+      - "package.json"
+      - "scripts/build-web.mjs"
+      - ".github/workflows/android-test-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out FoodTrekNow
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android API 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install pinned dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Run application tests
+        run: npm test
+
+      - name: Build public web assets
+        run: npm run build:web
+
+      - name: Generate and synchronize Android project
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Verify Android API levels
+        run: |
+          grep -q "compileSdkVersion = 36" android/variables.gradle
+          grep -q "targetSdkVersion = 36" android/variables.gradle
+
+      - name: Build debug APK
+        run: ./android/gradlew -p android assembleDebug --no-daemon
+
+      - name: Upload FoodTrekNow test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FoodTrekNow-Android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
