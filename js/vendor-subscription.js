@@ -55,10 +55,16 @@
   }
 
   async function invoke(functionName) {
-    if (!client?.auth?.getSession || !config?.url || !config?.publishableKey) throw new Error('Secure vendor billing is unavailable.');
+    if (!client?.auth?.getSession || !client.auth.getUser || !client.auth.refreshSession || !config?.url || !config?.publishableKey) throw new Error('Secure vendor billing is unavailable.');
     const { data: authData, error: authError } = await client.auth.getSession();
-    const accessToken = authData?.session?.access_token;
+    let accessToken = authData?.session?.access_token;
     if (authError || !accessToken) throw new Error('Your vendor session has expired. Please sign in again.');
+    const { error: validationError } = await client.auth.getUser(accessToken);
+    if (validationError) {
+      const { data: refreshed, error: refreshError } = await client.auth.refreshSession();
+      accessToken = refreshed?.session?.access_token;
+      if (refreshError || !accessToken) throw new Error('Your vendor session has expired. Please sign in again.');
+    }
     const endpoint = new URL(`/functions/v1/${encodeURIComponent(functionName)}`, config.url);
     const response = await fetch(endpoint, {
       method: 'POST',

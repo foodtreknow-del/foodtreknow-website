@@ -128,6 +128,8 @@ test('browser subscription state renders active access without exposing secrets'
   assert.match(element('vendorSubscriptionTitle').textContent, /14\.99/);
   assert.ok(dispatched.some(event => event.type === 'ftn:vendor-subscription'));
   assert.match(browserSource, /client\.auth\.getSession\(\)/);
+  assert.match(browserSource, /client\.auth\.getUser\(accessToken\)/);
+  assert.match(browserSource, /client\.auth\.refreshSession\(\)/);
   assert.match(browserSource, /Authorization: `Bearer \$\{accessToken\}`/);
   assert.match(browserSource, /apikey: config\.publishableKey/);
   assert.match(browserSource, /fetch\(endpoint/);
