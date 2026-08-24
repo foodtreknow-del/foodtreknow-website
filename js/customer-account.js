@@ -1078,7 +1078,45 @@
     refreshCustomerMarketplace();
     hydrateLiveCustomerOrders();
     hydrateCustomerCommunications();
+    handleStripeCheckoutReturn();
     window.scrollTo(0, 0);
+  }
+
+  let checkoutReturnInProgress = false;
+
+  async function handleStripeCheckoutReturn() {
+    if (checkoutReturnInProgress || !currentAccount || currentAccount.isGuest || !window.location?.href) return;
+    const url = new URL(window.location.href);
+    const checkoutResult = url.searchParams.get('checkout');
+    if (!checkoutResult) return;
+    checkoutReturnInProgress = true;
+    try {
+      if (checkoutResult === 'cancelled') {
+        renderCustomerPage('cart');
+        customerToast('Stripe Checkout was closed. Your cart is still here.');
+        return;
+      }
+      const sessionId = url.searchParams.get('session_id') || '';
+      if (checkoutResult !== 'success' || !sessionId) return;
+      customerToast('Confirming your Stripe payment…');
+      const result = await window.FoodTrekNowCustomerPayments?.completeCheckout(sessionId);
+      if (!result?.order?.order_number) throw new Error('Your paid order could not be loaded.');
+      currentAccount.cart = { truckId: null, items: [] };
+      CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
+      await hydrateLiveCustomerOrders();
+      lastPlacedOrderId = Number(result.order.order_number);
+      renderCustomerPage('confirmation');
+      customerToast(`${orderNumberLabel(lastPlacedOrderId)} was paid and sent to the truck.`);
+    } catch (error) {
+      renderCustomerPage('orders');
+      customerToast(error.message || 'We could not confirm the payment yet. Check Order History in a moment.');
+    } finally {
+      url.searchParams.delete('checkout');
+      url.searchParams.delete('session_id');
+      url.searchParams.delete('draft_id');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      checkoutReturnInProgress = false;
+    }
   }
 
   function displayMarketplaceTime(value, fallback) {
@@ -1754,6 +1792,12 @@
     const totals = cartTotals();
     const defaultPayment = currentAccount.paymentMethods.find(method => method.isDefault) || currentAccount.paymentMethods[0];
     const defaultAddress = currentAccount.addresses.find(address => address.isDefault) || currentAccount.addresses[0];
+    const secureStripeCheckout = Boolean(truck.supabase && !currentAccount.isGuest && window.FoodTrekNowCustomerPayments?.available);
+    const paymentMarkup = secureStripeCheckout
+      ? `<div class="stripe-checkout-choice"><strong>Pay securely with Stripe</strong><p>Your payment goes directly to ${escapeHtml(truck.name)}. Available methods may include card, Apple Pay, Google Pay, and Cash App Pay based on your device and the truck's Stripe settings.</p><small>FoodTrekNow never receives or stores your full card number or security code.</small></div>`
+      : defaultPayment
+        ? `<label class="checkout-choice"><input name="paymentMethod" value="${defaultPayment.id}" type="radio" checked><span><strong>${escapeHtml(defaultPayment.brand)} ••••${escapeHtml(defaultPayment.last4)}</strong><small>${defaultPayment.isDefault ? 'Default payment preference' : `Expires ${escapeHtml(defaultPayment.expiry)}`}</small></span></label>`
+        : '<p>Pay at pickup (prototype).</p>';
     const pickupInformation = currentAccount.isGuest
       ? `<div class="checkout-card-content guest-pickup-fields"><h2>Pickup Information</h2><p>Enter the contact details the truck should use for this order.</p><label for="guestCheckoutName"><strong>Name</strong></label><input id="guestCheckoutName" class="customer-input" value="${escapeHtml(`${currentAccount.firstName || ''} ${currentAccount.lastName || ''}`.trim().replace(/^Guest$/, ''))}" autocomplete="name" required placeholder="Your name"><label for="guestCheckoutMobile"><strong>Mobile Number</strong></label><input id="guestCheckoutMobile" class="customer-input" type="tel" value="${escapeHtml(currentAccount.mobile)}" autocomplete="tel" required placeholder="(555) 555-0123"><label for="guestCheckoutEmail"><strong>Email Address</strong></label><input id="guestCheckoutEmail" class="customer-input" type="email" value="${escapeHtml(currentAccount.email)}" autocomplete="email" required placeholder="you@example.com"></div>`
       : `<div><h2>Pickup Information</h2><p><strong>${escapeHtml(currentAccount.firstName)} ${escapeHtml(currentAccount.lastName)}</strong><br>${escapeHtml(currentAccount.mobile)} · ${escapeHtml(currentAccount.email)}</p></div>`;
@@ -1764,9 +1808,9 @@
         <section class="checkout-card"><span class="checkout-step">1</span>${pickupInformation}</section>
         <section class="checkout-card"><span class="checkout-step">2</span><div class="checkout-card-content"><h2>Pickup Time</h2><label class="checkout-choice"><input name="pickupTime" value="asap" type="radio" checked><span><strong>ASAP</strong><small>Ready in about ${truck.pickupMinutes} minutes</small></span></label><label class="checkout-choice disabled"><input name="pickupTime" value="later" type="radio" disabled><span><strong>Schedule Later</strong><small>Coming in a future update</small></span></label></div></section>
         <section class="checkout-card"><span class="checkout-step">3</span><div class="checkout-card-content"><h2>Saved Address <small>Future Delivery</small></h2><p>${defaultAddress ? `${escapeHtml(defaultAddress.label)} · ${escapeHtml(defaultAddress.street)}, ${escapeHtml(defaultAddress.city)}` : 'Add a saved address from your profile when delivery becomes available.'}</p></div></section>
-        <section class="checkout-card"><span class="checkout-step">4</span><div class="checkout-card-content"><h2>Payment Method</h2>${defaultPayment ? `<label class="checkout-choice"><input name="paymentMethod" value="${defaultPayment.id}" type="radio" checked><span><strong>${escapeHtml(defaultPayment.brand)} ••••${escapeHtml(defaultPayment.last4)}</strong><small>${defaultPayment.isDefault ? 'Default payment method' : `Expires ${escapeHtml(defaultPayment.expiry)}`}</small></span></label>` : '<p>Pay at pickup (prototype).</p>'}<button class="checkout-link" data-customer-action="view-payments" type="button">Manage Payment Methods</button></div></section>
+        <section class="checkout-card"><span class="checkout-step">4</span><div class="checkout-card-content"><h2>Payment Method</h2>${paymentMarkup}${secureStripeCheckout ? '' : '<button class="checkout-link" data-customer-action="view-payments" type="button">Manage Payment Methods</button>'}</div></section>
         <section class="checkout-card checkout-fields"><span class="checkout-step">5</span><div class="checkout-card-content"><label for="checkoutPromoCode"><strong>Promo Code</strong></label><div class="promo-row"><input id="checkoutPromoCode" class="customer-input" placeholder="Enter code"><button class="secondary-button" data-ordering-action="apply-promo" type="button">Apply</button></div><label for="checkoutOrderNotes"><strong>Order Notes</strong></label><textarea id="checkoutOrderNotes" class="customer-textarea" rows="3" maxlength="300" placeholder="Notes for the truck team"></textarea><p id="checkoutMessage" class="form-message"></p></div></section>
-      </div><aside class="checkout-order-summary"><p class="order-number-banner"><small>Order Number</small><strong>${orderNumberLabel(currentAccount.cart.orderNumber)}</strong></p><p class="eyebrow">Final Summary</p><h2>${escapeHtml(truck.name)}</h2>${currentAccount.cart.items.map(item => `<div class="checkout-item-line"><span>${item.quantity}× ${escapeHtml(item.name)}</span><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong></div>`).join('')}${checkoutSummaryMarkup(totals)}<button class="primary-button full" type="submit">Place Order</button><button class="secondary-button full" data-customer-page-back="cart" type="button">Back to Cart</button></aside></div></form>
+      </div><aside class="checkout-order-summary"><p class="order-number-banner"><small>Order Number</small><strong>${orderNumberLabel(currentAccount.cart.orderNumber)}</strong></p><p class="eyebrow">Final Summary</p><h2>${escapeHtml(truck.name)}</h2>${currentAccount.cart.items.map(item => `<div class="checkout-item-line"><span>${item.quantity}× ${escapeHtml(item.name)}</span><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong></div>`).join('')}${checkoutSummaryMarkup(totals)}<button class="primary-button full" type="submit">${secureStripeCheckout ? 'Continue to Secure Payment' : 'Place Order'}</button><button class="secondary-button full" data-customer-page-back="cart" type="button">Back to Cart</button></aside></div></form>
     </div>`;
   }
 
@@ -2790,6 +2834,35 @@
         promoCode: document.getElementById('checkoutPromoCode').value.trim(),
         orderNotes: document.getElementById('checkoutOrderNotes').value.trim()
       };
+      if (truck.supabase && !currentAccount.isGuest) {
+        const checkoutMessage = document.getElementById('checkoutMessage');
+        const submitButton = event.target.querySelector('button[type="submit"]');
+        if (!window.FoodTrekNowCustomerPayments?.available) {
+          checkoutMessage.textContent = 'Secure Stripe Checkout is temporarily unavailable. Please try again shortly.';
+          return;
+        }
+        checkoutMessage.textContent = 'Opening secure Stripe Checkout…';
+        if (submitButton) submitButton.disabled = true;
+        try {
+          await window.FoodTrekNowCustomerPayments.startCheckout({
+            truckId: truck.id,
+            items: currentAccount.cart.items.map(item => ({
+              menuItemId: item.menuItemId,
+              quantity: Number(item.quantity),
+              modifiers: item.modifiers || [],
+              instructions: item.instructions || ''
+            })),
+            customerName: order.customerName,
+            customerMobile: order.customerMobile,
+            customerEmail: order.customerEmail,
+            orderNotes: order.orderNotes
+          });
+        } catch (error) {
+          checkoutMessage.textContent = error.message || 'Stripe Checkout could not be opened. Please try again.';
+          if (submitButton) submitButton.disabled = false;
+        }
+        return;
+      }
       let liveOrderPlaced = false;
       if (truck.supabase && !currentAccount.isGuest && window.FoodTrekNowLiveOrders?.available) {
         const checkoutMessage = document.getElementById('checkoutMessage');
