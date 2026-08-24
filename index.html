@@ -68,6 +68,7 @@
       <button id="demoLoginButton" class="secondary-button full" type="button">Fill Demo Login</button>
       <div class="demo-note"><strong>Demo login</strong><br />Email: vendor@foodtreknow.com<br />Password: demo123</div>
       <button class="vendor-login-button full" type="submit" form="loginForm">Vendor Log In</button>
+      <nav class="entry-legal-links" aria-label="FoodTrekNow legal information"><a href="terms.html">Terms of Service</a><a href="privacy.html">Privacy Policy</a><a href="privacy.html#your-choices">Privacy Choices</a></nav>
     </section>
   </main>
 </div>
@@ -139,7 +140,7 @@
           <div><label for="createPassword">Password</label><input id="createPassword" class="customer-input" type="password" minlength="8" autocomplete="new-password" required placeholder="At least 8 characters" /></div>
           <div><label for="createConfirmPassword">Confirm Password</label><input id="createConfirmPassword" class="customer-input" type="password" minlength="8" autocomplete="new-password" required /></div>
         </div>
-        <label class="customer-check-row terms-row"><input id="createAcceptTerms" type="checkbox" required /> I accept the <button class="inline-link" type="button" data-info-message="Terms of Service placeholder">Terms of Service</button> and <button class="inline-link" type="button" data-info-message="Privacy Policy placeholder">Privacy Policy</button>.</label>
+        <div class="customer-check-row terms-row"><input id="createAcceptTerms" type="checkbox" required /><label for="createAcceptTerms">I accept the <a class="inline-link" href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a class="inline-link" href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</label></div>
         <p id="customerCreateMessage" class="form-message" aria-live="polite"></p>
         <button class="primary-button full customer-large-button" type="submit">Create Account</button>
       </form>
@@ -188,6 +189,7 @@
         <button id="adminVendorReviewNav" class="customer-nav-link hidden-view" data-customer-page="vendorReviews" type="button"><span>✓</span> Vendor Approvals</button>
       </nav>
       <button id="customerSignOutButton" class="customer-signout-button" type="button">Sign Out</button>
+      <nav class="app-legal-links" aria-label="Customer legal information"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="privacy.html#your-choices">Choices</a></nav>
     </aside>
     <main class="customer-main">
       <header class="customer-mobile-header">
@@ -225,6 +227,7 @@
         <button class="nav-link" data-page="settings">Settings</button>
       </nav>
       <button id="logoutButton" class="secondary-button full">Log Out</button>
+      <nav class="app-legal-links vendor-app-legal-links" aria-label="Vendor legal information"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="privacy.html#your-choices">Choices</a></nav>
     </aside>
 
     <main class="main-content">
@@ -355,10 +358,10 @@
                 <div><strong id="vendorSubscriptionTitle">Start your 14-day free trial</strong><p id="vendorSubscriptionMessage">Enter a payment method securely with Stripe. You will not be charged for 14 days.</p></div>
               </div>
               <p id="vendorSubscriptionDetail" class="vendor-subscription-detail">Cancel during the trial and pay nothing. Afterward, cancel anytime with no fee; access continues through the paid billing period.</p>
-              <label id="vendorTrialAgreement" class="vendor-trial-agreement" for="vendorTrialAgreementCheckbox">
+              <div id="vendorTrialAgreement" class="vendor-trial-agreement">
                 <input id="vendorTrialAgreementCheckbox" type="checkbox">
-                <span>I agree to start my 14-day free trial. Unless I cancel before it ends, Stripe will charge $14.99 per month. I may cancel anytime with no cancellation fee, and access continues through the current trial or paid billing period.</span>
-              </label>
+                <label for="vendorTrialAgreementCheckbox"><span>I agree to start my 14-day free trial under the <a href="terms.html" target="_blank" rel="noopener">Vendor Subscription Terms</a>. Unless I cancel before it ends, Stripe will charge $14.99 per month. I may cancel anytime with no cancellation fee, and access continues through the current trial or paid billing period. See the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+              </div>
               <p id="vendorSubscriptionError" class="settings-message error" aria-live="polite"></p>
               <div class="stripe-connect-actions">
                 <button id="startVendorSubscriptionButton" class="primary-button" type="button" disabled>Start 14-Day Free Trial</button>

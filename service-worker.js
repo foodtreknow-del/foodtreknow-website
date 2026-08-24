@@ -1,7 +1,9 @@
-const CACHE_NAME = 'foodtreknow-shell-v7';
+const CACHE_NAME = 'foodtreknow-shell-v8';
 const APP_SHELL = [
   './',
   './index.html',
+  './terms.html',
+  './privacy.html',
   './manifest.webmanifest',
   './assets/foodtreknow-logo.png',
   './css/vendor.css',
@@ -10,6 +12,7 @@ const APP_SHELL = [
   './css/customer-account.css',
   './css/customer-ordering.css',
   './css/beta-banner.css',
+  './css/legal.css',
   './js/app.js',
   './js/customer-account.js',
   './js/customer-marketplace.js',
@@ -48,14 +51,19 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
 
   if (event.request.mode === 'navigate') {
+    const offlinePage = url.pathname.endsWith('/terms.html')
+      ? './terms.html'
+      : url.pathname.endsWith('/privacy.html')
+        ? './privacy.html'
+        : './index.html';
     event.respondWith(
       fetch(event.request)
         .then(response => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
+          caches.open(CACHE_NAME).then(cache => cache.put(offlinePage, copy));
           return response;
         })
-        .catch(() => caches.match('./index.html'))
+        .catch(() => caches.match(offlinePage))
     );
     return;
   }
