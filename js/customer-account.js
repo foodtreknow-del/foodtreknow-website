@@ -1164,7 +1164,12 @@
           logo: truck.logo_url || '',
           latitude: Number(truck.latitude) || fallbackLocation.latitude + (index + 1) * 0.002,
           longitude: Number(truck.longitude) || fallbackLocation.longitude + (index + 1) * 0.002,
-          operatingDays: openHours.length ? openHours.map(row => row.day_of_week) : [0, 1, 2, 3, 4, 5, 6],
+          // The vendor's live Online toggle is an explicit override of the
+          // saved weekly schedule. Keep an online truck discoverable even if
+          // today's recurring hours are marked closed.
+          operatingDays: truck.accepting_orders
+            ? [0, 1, 2, 3, 4, 5, 6]
+            : openHours.length ? openHours.map(row => row.day_of_week) : [0, 1, 2, 3, 4, 5, 6],
           opensAt: displayMarketplaceTime(todayHours?.opens_at, '11:00 AM'),
           closesAt: displayMarketplaceTime(todayHours?.closes_at, '8:00 PM'),
           pickupMinutes: Number(truck.estimated_prep_minutes) || 20,

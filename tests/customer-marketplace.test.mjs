@@ -38,7 +38,7 @@ test('approved active trucks load with their hours, categories, and real menu it
 
 test('customer marketplace loads before customer UI code', () => {
   const marketplacePosition = html.indexOf('js/customer-marketplace.js?v=customer-marketplace-1');
-  const customerPosition = html.indexOf('js/customer-account.js?v=communications-1');
+  const customerPosition = html.indexOf('js/customer-account.js?v=online-override-1');
   assert.ok(marketplacePosition >= 0 && marketplacePosition < customerPosition);
 });
 
@@ -49,4 +49,8 @@ test('customer UI merges Supabase trucks without removing sample functionality',
   assert.match(customerSource, /customerCanOrderTruck/);
   assert.match(customerSource, /Sign In to Order/);
   assert.match(customerSource, /item\.image \? `<img/);
+});
+
+test('a vendor live Online toggle overrides a closed recurring schedule', () => {
+  assert.match(customerSource, /operatingDays: truck\.accepting_orders\s*\? \[0, 1, 2, 3, 4, 5, 6\]/);
 });
