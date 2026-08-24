@@ -1,0 +1,12 @@
+{
+  "appId": "com.foodtreknow.app",
+  "appName": "FoodTrekNow",
+  "webDir": "www",
+  "backgroundColor": "#fffaf5",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
