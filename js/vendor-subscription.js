@@ -55,7 +55,13 @@
 
   async function invoke(functionName) {
     if (!client?.functions?.invoke) throw new Error('Secure vendor billing is unavailable.');
-    const { data, error } = await client.functions.invoke(functionName, { body: {} });
+    const { data: authData, error: authError } = await client.auth.getSession();
+    const accessToken = authData?.session?.access_token;
+    if (authError || !accessToken) throw new Error('Your vendor session has expired. Please sign in again.');
+    const { data, error } = await client.functions.invoke(functionName, {
+      body: {},
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
     if (error) {
       let message = data?.error || '';
       if (!message && error.context?.json) {

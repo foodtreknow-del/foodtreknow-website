@@ -128,6 +128,8 @@ test('browser subscription state renders active access without exposing secrets'
   assert.match(element('vendorSubscriptionTitle').textContent, /14\.99/);
   assert.ok(dispatched.some(event => event.type === 'ftn:vendor-subscription'));
   assert.match(browserSource, /error\.context\?\.json/);
+  assert.match(browserSource, /client\.auth\.getSession\(\)/);
+  assert.match(browserSource, /Authorization: `Bearer \$\{accessToken\}`/);
   assert.doesNotMatch(browserSource, /STRIPE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|sk_(?:test|live)_/);
 });
 
