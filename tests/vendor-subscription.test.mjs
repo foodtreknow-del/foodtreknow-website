@@ -100,7 +100,7 @@ test('Stripe Checkout creates a platform-owned recurring subscription', () => {
 });
 
 test('billing portal is authenticated and bound to the saved Stripe customer', () => {
-  assert.match(portalFunction, /userClient\.auth\.getUser\(\)/);
+  assert.match(portalFunction, /userClient\.auth\.getUser\(token\)/);
   assert.match(portalFunction, /stripe_customer_id/);
   assert.match(portalFunction, /\/v1\/billing_portal\/sessions/);
   assert.match(portalFunction, /return_url/);
@@ -137,4 +137,11 @@ test('subscription source contains no real Stripe keys or webhook secrets', () =
   const allSource = [migration, startFunction, statusFunction, portalFunction, webhookFunction, browserSource].join('\n');
   assert.doesNotMatch(allSource, /\b(?:sk|rk)_(?:test|live)_[A-Za-z0-9]{12,}/);
   assert.doesNotMatch(allSource, /\bwhsec_[A-Za-z0-9]{12,}/);
+});
+
+test('subscription functions verify the explicit caller bearer token', () => {
+  for (const source of [startFunction, statusFunction, portalFunction]) {
+    assert.match(source, /authorization\.slice\(['"]Bearer ['"]\.length\)\.trim\(\)/);
+    assert.match(source, /auth\.getUser\(token\)/);
+  }
 });
