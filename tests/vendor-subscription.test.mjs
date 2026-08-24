@@ -130,6 +130,8 @@ test('webhook synchronizes subscription, invoice, and cancellation lifecycle', (
   assert.match(webhookFunction, /parent\?\.subscription_details\?\.subscription/);
   assert.match(webhookFunction, /verifyStripeSignature/);
   assert.match(webhookFunction, /STRIPE_BILLING_WEBHOOK_SECRET/);
+  assert.match(webhookFunction, /STRIPE_LIVE_BILLING_WEBHOOK_SECRET/);
+  assert.match(webhookFunction, /STRIPE_LIVE_WEBHOOK_SECRET/);
 });
 
 test('browser subscription state renders active access without exposing secrets', () => {

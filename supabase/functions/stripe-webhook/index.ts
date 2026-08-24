@@ -35,7 +35,12 @@ async function verifyStripeSignature(payload: string, signatureHeader: string) {
   const signatures = values.filter(([key]) => key === 'v1').map(([, value]) => value);
   if (!timestamp || !signatures.length) return false;
   if (Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return false;
-  const secrets = [Deno.env.get('STRIPE_WEBHOOK_SECRET'), Deno.env.get('STRIPE_BILLING_WEBHOOK_SECRET')].filter(Boolean) as string[];
+  const secrets = [
+    Deno.env.get('STRIPE_WEBHOOK_SECRET'),
+    Deno.env.get('STRIPE_BILLING_WEBHOOK_SECRET'),
+    Deno.env.get('STRIPE_LIVE_WEBHOOK_SECRET'),
+    Deno.env.get('STRIPE_LIVE_BILLING_WEBHOOK_SECRET')
+  ].filter(Boolean) as string[];
   if (!secrets.length) throw new Error('No Stripe webhook signing secret is configured.');
   for (const secret of secrets) if (await verifyWithSecret(payload, timestamp, signatures, secret)) return true;
   return false;
