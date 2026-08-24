@@ -2,6 +2,7 @@
   'use strict';
 
   const client = window.FoodTrekNowSupabaseClient;
+  const config = window.FoodTrekNowSupabaseConfig;
   const field = id => document.getElementById(id);
   let currentState = { status: 'not_started', access_allowed: false, has_customer: false };
   const states = {
@@ -54,23 +55,23 @@
   }
 
   async function invoke(functionName) {
-    if (!client?.functions?.invoke) throw new Error('Secure vendor billing is unavailable.');
+    if (!client?.auth?.getSession || !config?.url || !config?.publishableKey) throw new Error('Secure vendor billing is unavailable.');
     const { data: authData, error: authError } = await client.auth.getSession();
     const accessToken = authData?.session?.access_token;
     if (authError || !accessToken) throw new Error('Your vendor session has expired. Please sign in again.');
-    const { data, error } = await client.functions.invoke(functionName, {
-      body: {},
-      headers: { Authorization: `Bearer ${accessToken}` }
+    const endpoint = new URL(`/functions/v1/${encodeURIComponent(functionName)}`, config.url);
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        apikey: config.publishableKey,
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: '{}'
     });
-    if (error) {
-      let message = data?.error || '';
-      if (!message && error.context?.json) {
-        try { message = (await error.context.json())?.error || ''; } catch (_) { /* Response body was unavailable. */ }
-      }
-      throw new Error(message || error.message || 'Stripe could not complete the request.');
-    }
-    if (data?.error) throw new Error(data.error);
-    return data || {};
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data?.error) throw new Error(data?.error || 'Stripe could not complete the request.');
+    return data;
   }
 
   function verifiedStripeUrl(value) {
