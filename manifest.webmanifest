@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "FoodTrekNow",
+  "short_name": "FoodTrekNow",
+  "description": "Discover food trucks, order ahead, and manage live pickup orders.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fffaf5",
+  "theme_color": "#f97316",
+  "categories": ["food", "shopping", "lifestyle"],
+  "icons": [
+    {
+      "src": "assets/foodtreknow-logo.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
