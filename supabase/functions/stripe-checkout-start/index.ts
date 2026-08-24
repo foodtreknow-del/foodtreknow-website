@@ -76,12 +76,14 @@ Deno.serve(async request => {
   if (request.method !== 'POST') return json(request, { error: 'Method not allowed.' }, 405);
   if (!isAllowedOrigin(request)) return json(request, { error: 'This website origin is not allowed.' }, 403);
   let draftId = '';
+  let openedSessionId = '';
+  let connectedAccountId = '';
   let serviceClient: ReturnType<typeof createClient> | null = null;
   try {
     const authenticated = await authenticatedCustomer(request);
     serviceClient = authenticated.serviceClient;
     const body = await request.json();
-    const { data, error } = await authenticated.userClient.rpc('create_payment_checkout_draft', {
+    const { data, error } = await authenticated.userClient.rpc('create_payment_checkout_draft_with_credit', {
       p_truck_id: body.truckId,
       p_items: Array.isArray(body.items) ? body.items.map((item: Record<string, unknown>) => ({
         menu_item_id: item.menuItemId,
@@ -92,12 +94,33 @@ Deno.serve(async request => {
       p_customer_name: String(body.customerName || ''),
       p_customer_mobile: body.customerMobile || null,
       p_customer_email: body.customerEmail || null,
-      p_order_notes: body.orderNotes || null
+      p_order_notes: body.orderNotes || null,
+      p_use_vendor_credit: body.useVendorCredit !== false
     });
     if (error) throw error;
     const draft = Array.isArray(data) ? data[0] : data;
     if (!draft?.draft_id || !draft?.stripe_account_id) throw new Error('The secure checkout draft was not created.');
     draftId = draft.draft_id;
+    connectedAccountId = draft.stripe_account_id;
+
+    if (Number(draft.stripe_due_cents) === 0) {
+      const creditSessionId = `credit_${draftId}`;
+      const { error: creditUpdateError } = await serviceClient.from('payment_checkout_drafts').update({
+        stripe_checkout_session_id: creditSessionId,
+        status: 'paid'
+      }).eq('id', draftId);
+      if (creditUpdateError) throw creditUpdateError;
+      const { data: finalized, error: finalizeError } = await serviceClient.rpc('finalize_paid_checkout', {
+        p_draft_id: draftId,
+        p_checkout_session_id: creditSessionId,
+        p_payment_intent_id: '',
+        p_charge_id: '',
+        p_amount_paid_cents: 0,
+        p_payment_label: 'Food Truck Credit'
+      });
+      if (finalizeError) throw finalizeError;
+      return json(request, { order: Array.isArray(finalized) ? finalized[0] : finalized, paidWithCredit: true });
+    }
 
     const form = new URLSearchParams();
     const lines = Array.isArray(draft.line_items) ? draft.line_items : [];
@@ -124,15 +147,31 @@ Deno.serve(async request => {
       form,
       `foodtreknow-checkout-${draftId}`
     );
+    openedSessionId = session.id;
     const { error: updateError } = await serviceClient.from('payment_checkout_drafts').update({
       stripe_checkout_session_id: session.id,
       status: 'checkout_open',
       expires_at: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : draft.expires_at
     }).eq('id', draftId);
     if (updateError) throw updateError;
-    return json(request, { checkoutUrl: session.url, sessionId: session.id, draftId });
+    return json(request, {
+      checkoutUrl: session.url,
+      sessionId: session.id,
+      draftId,
+      vendorCreditAppliedCents: Number(draft.vendor_credit_applied_cents || 0),
+      stripeDueCents: Number(draft.stripe_due_cents)
+    });
   } catch (error) {
     if (draftId && serviceClient) {
+      if (openedSessionId && connectedAccountId) {
+        try {
+          await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(openedSessionId)}/expire`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${requiredEnvironment('STRIPE_SECRET_KEY')}`, 'Stripe-Account': connectedAccountId }
+          });
+        } catch {}
+      }
+      await serviceClient.rpc('release_checkout_credit', { p_draft_id: draftId });
       await serviceClient.from('payment_checkout_drafts').update({ status: 'failed' }).eq('id', draftId);
     }
     const message = error instanceof Error ? error.message : 'Checkout could not be started.';

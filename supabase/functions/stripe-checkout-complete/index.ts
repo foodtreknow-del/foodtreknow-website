@@ -67,7 +67,7 @@ Deno.serve(async request => {
     const session = await stripeSession(sessionId, draft.stripe_account_id);
     if (session.metadata?.foodtreknow_draft_id !== draft.id) throw new Error('Stripe returned a mismatched checkout.');
     if (session.payment_status !== 'paid') throw new Error('Stripe has not confirmed this payment yet.');
-    if (Number(session.amount_total) !== Number(draft.total_cents)) throw new Error('The Stripe payment amount does not match this order.');
+    if (Number(session.amount_total) !== Number(draft.stripe_due_cents)) throw new Error('The Stripe payment amount does not match this order.');
     const paymentIntent = session.payment_intent;
     const paymentIntentId = typeof paymentIntent === 'string' ? paymentIntent : paymentIntent?.id || '';
     const latestCharge = typeof paymentIntent === 'object' ? paymentIntent?.latest_charge : null;

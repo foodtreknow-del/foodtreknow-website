@@ -28,6 +28,7 @@
 
   async function startCheckout(payload) {
     const result = await invoke('stripe-checkout-start', payload);
+    if (result?.order) return result;
     window.location.assign(trustedStripeCheckoutUrl(result?.checkoutUrl));
     return result;
   }
@@ -36,9 +37,28 @@
     return invoke('stripe-checkout-complete', { sessionId });
   }
 
+  function cancelCheckout(draftId) {
+    return invoke('stripe-checkout-cancel', { draftId });
+  }
+
+  function cancelPaidOrder(orderId, resolution) {
+    return invoke('stripe-order-cancel', { orderId, resolution });
+  }
+
+  async function loadVendorCredits() {
+    if (!client) return [];
+    const { data, error } = await client.from('vendor_credit_accounts')
+      .select('customer_id,truck_id,balance_cents,lifetime_issued_cents,lifetime_redeemed_cents,updated_at');
+    if (error) throw error;
+    return data || [];
+  }
+
   window.FoodTrekNowCustomerPayments = Object.freeze({
     available: Boolean(client),
     startCheckout,
-    completeCheckout
+    completeCheckout,
+    cancelCheckout,
+    cancelPaidOrder,
+    loadVendorCredits
   });
 })();

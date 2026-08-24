@@ -1009,6 +1009,7 @@
   let orderHistoryFilter = 'current';
   let selectedTruckId = TRUCK.id;
   let lastPlacedOrderId = null;
+  let vendorCreditsByTruck = new Map();
   let customerNotifications = [];
   let customerCommunicationsSubscribed = false;
 
@@ -1078,11 +1079,21 @@
     refreshCustomerMarketplace();
     hydrateLiveCustomerOrders();
     hydrateCustomerCommunications();
+    hydrateVendorCredits();
     handleStripeCheckoutReturn();
     window.scrollTo(0, 0);
   }
 
   let checkoutReturnInProgress = false;
+
+  async function hydrateVendorCredits() {
+    if (!currentAccount || currentAccount.isGuest || !window.FoodTrekNowCustomerPayments?.available) return;
+    try {
+      const credits = await window.FoodTrekNowCustomerPayments.loadVendorCredits();
+      vendorCreditsByTruck = new Map(credits.map(credit => [credit.truck_id, Number(credit.balance_cents || 0)]));
+      if (['checkout', 'payments'].includes(currentPage)) renderCustomerPage(currentPage);
+    } catch {}
+  }
 
   async function handleStripeCheckoutReturn() {
     if (checkoutReturnInProgress || !currentAccount || currentAccount.isGuest || !window.location?.href) return;
@@ -1092,6 +1103,8 @@
     checkoutReturnInProgress = true;
     try {
       if (checkoutResult === 'cancelled') {
+        const draftId = url.searchParams.get('draft_id');
+        if (draftId) await window.FoodTrekNowCustomerPayments?.cancelCheckout(draftId);
         renderCustomerPage('cart');
         customerToast('Stripe Checkout was closed. Your cart is still here.');
         return;
@@ -1209,6 +1222,9 @@
       truckId: row.truck_id,
       truckName: row.trucks?.name || 'Food Truck',
       ...mappedStatus,
+      statusLabel: row.status === 'cancelled'
+        ? row.cancellation_resolution === 'vendor_credit' ? 'Cancelled · Food Truck Credit' : row.refund_status === 'succeeded' ? 'Cancelled · Refunded' : 'Cancelled · Refund Pending'
+        : mappedStatus.statusLabel,
       createdAt: Date.parse(row.created_at),
       estimatedReadyAt: Date.parse(row.created_at) + prepMinutes * 60 * 1000,
       pickupInstructions: row.trucks?.pickup_instructions || `Show Order #${row.order_number} at the truck window.`,
@@ -1229,12 +1245,20 @@
       serviceFee: Number(row.service_fee),
       total: Number(row.total),
       paymentLabel: row.payment_label || 'Pay at Pickup',
+      vendorCreditApplied: Number(row.vendor_credit_applied_cents || 0) / 100,
+      refundStatus: row.refund_status || 'none',
+      cancellationResolution: row.cancellation_resolution || null,
       orderNotes: row.order_notes || '',
       acceptedAt: row.preparing_at ? Date.parse(row.preparing_at) : null,
       readyAt: row.ready_at ? Date.parse(row.ready_at) : null,
       completedAt: row.picked_up_at ? Date.parse(row.picked_up_at) : null,
       cancelledAt: row.cancelled_at ? Date.parse(row.cancelled_at) : null,
-      refund: row.status === 'cancelled' ? { status: 'refunded', amount: Number(row.total), processedAt: Date.parse(row.cancelled_at || row.updated_at), method: row.payment_label || 'Original payment method' } : null
+      refund: row.status === 'cancelled' ? {
+        status: row.refund_status || (row.cancellation_resolution === 'vendor_credit' ? 'credited' : 'pending'),
+        amount: row.cancellation_resolution === 'vendor_credit' ? Number(row.total) : Number(row.refunded_amount_cents || 0) / 100,
+        processedAt: Date.parse(row.cancelled_at || row.updated_at),
+        method: row.cancellation_resolution === 'vendor_credit' ? `${row.trucks?.name || 'Food truck'} credit` : 'Original Stripe payment'
+      } : null
     };
   }
 
@@ -1793,6 +1817,10 @@
     const defaultPayment = currentAccount.paymentMethods.find(method => method.isDefault) || currentAccount.paymentMethods[0];
     const defaultAddress = currentAccount.addresses.find(address => address.isDefault) || currentAccount.addresses[0];
     const secureStripeCheckout = Boolean(truck.supabase && !currentAccount.isGuest && window.FoodTrekNowCustomerPayments?.available);
+    const availableVendorCredit = Number(vendorCreditsByTruck.get(truck.id) || 0) / 100;
+    const vendorCreditMarkup = secureStripeCheckout && availableVendorCredit > 0
+      ? `<label class="checkout-choice vendor-credit-choice"><input id="useVendorCredit" type="checkbox" checked><span><strong>Use ${customerMoney(availableVendorCredit)} ${escapeHtml(truck.name)} credit</strong><small>This credit works only with this food truck. Stripe will charge any remaining balance.</small></span></label>`
+      : '';
     const paymentMarkup = secureStripeCheckout
       ? `<div class="stripe-checkout-choice"><strong>Pay securely with Stripe</strong><p>Your payment goes directly to ${escapeHtml(truck.name)}. Available methods may include card, Apple Pay, Google Pay, and Cash App Pay based on your device and the truck's Stripe settings.</p><small>FoodTrekNow never receives or stores your full card number or security code.</small></div>`
       : defaultPayment
@@ -1808,7 +1836,7 @@
         <section class="checkout-card"><span class="checkout-step">1</span>${pickupInformation}</section>
         <section class="checkout-card"><span class="checkout-step">2</span><div class="checkout-card-content"><h2>Pickup Time</h2><label class="checkout-choice"><input name="pickupTime" value="asap" type="radio" checked><span><strong>ASAP</strong><small>Ready in about ${truck.pickupMinutes} minutes</small></span></label><label class="checkout-choice disabled"><input name="pickupTime" value="later" type="radio" disabled><span><strong>Schedule Later</strong><small>Coming in a future update</small></span></label></div></section>
         <section class="checkout-card"><span class="checkout-step">3</span><div class="checkout-card-content"><h2>Saved Address <small>Future Delivery</small></h2><p>${defaultAddress ? `${escapeHtml(defaultAddress.label)} · ${escapeHtml(defaultAddress.street)}, ${escapeHtml(defaultAddress.city)}` : 'Add a saved address from your profile when delivery becomes available.'}</p></div></section>
-        <section class="checkout-card"><span class="checkout-step">4</span><div class="checkout-card-content"><h2>Payment Method</h2>${paymentMarkup}${secureStripeCheckout ? '' : '<button class="checkout-link" data-customer-action="view-payments" type="button">Manage Payment Methods</button>'}</div></section>
+        <section class="checkout-card"><span class="checkout-step">4</span><div class="checkout-card-content"><h2>Payment Method</h2>${paymentMarkup}${vendorCreditMarkup}${secureStripeCheckout ? '' : '<button class="checkout-link" data-customer-action="view-payments" type="button">Manage Payment Methods</button>'}</div></section>
         <section class="checkout-card checkout-fields"><span class="checkout-step">5</span><div class="checkout-card-content"><label for="checkoutPromoCode"><strong>Promo Code</strong></label><div class="promo-row"><input id="checkoutPromoCode" class="customer-input" placeholder="Enter code"><button class="secondary-button" data-ordering-action="apply-promo" type="button">Apply</button></div><label for="checkoutOrderNotes"><strong>Order Notes</strong></label><textarea id="checkoutOrderNotes" class="customer-textarea" rows="3" maxlength="300" placeholder="Notes for the truck team"></textarea><p id="checkoutMessage" class="form-message"></p></div></section>
       </div><aside class="checkout-order-summary"><p class="order-number-banner"><small>Order Number</small><strong>${orderNumberLabel(currentAccount.cart.orderNumber)}</strong></p><p class="eyebrow">Final Summary</p><h2>${escapeHtml(truck.name)}</h2>${currentAccount.cart.items.map(item => `<div class="checkout-item-line"><span>${item.quantity}× ${escapeHtml(item.name)}</span><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong></div>`).join('')}${checkoutSummaryMarkup(totals)}<button class="primary-button full" type="submit">${secureStripeCheckout ? 'Continue to Secure Payment' : 'Place Order'}</button><button class="secondary-button full" data-customer-page-back="cart" type="button">Back to Cart</button></aside></div></form>
     </div>`;
@@ -1827,7 +1855,12 @@
       customerToast('This order is already being prepared and can no longer be cancelled automatically.');
       return;
     }
-    openModal(`<div class="cancel-order-modal"><p class="eyebrow">Cancel ${orderNumberLabel(order.id)}</p><h2 id="customerModalTitle">Cancel this order?</h2><p>${escapeHtml(order.truckName)} has received your order but has not started preparing it.</p><div class="refund-summary"><span>Full refund</span><strong>${customerMoney(order.total)}</strong></div><p class="muted">The cancellation and full refund are recorded in this browser-local beta. No real payment processor is connected yet.</p><div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Keep My Order</button><button class="customer-small-button danger" data-confirm-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order &amp; Refund</button></div></div>`);
+    if (order.supabaseOrderId && order.paymentLabel !== 'Pay at Pickup') {
+      const stripePaid = Math.max(0, order.total - Number(order.vendorCreditApplied || 0));
+      openModal(`<div class="cancel-order-modal"><p class="eyebrow">Cancel ${orderNumberLabel(order.id)}</p><h2 id="customerModalTitle">How should we return your payment?</h2><p>${escapeHtml(order.truckName)} has received your order but has not started preparing it.</p><div class="cancellation-options"><button class="cancellation-option" data-confirm-cancel-order="${escapeHtml(order.id)}" data-cancel-resolution="original_payment" type="button"><span>↩</span><div><strong>Refund original payment</strong><small>${customerMoney(stripePaid)} returns through Stripe${order.vendorCreditApplied ? ` and ${customerMoney(order.vendorCreditApplied)} returns as ${escapeHtml(order.truckName)} credit` : ''}. Bank posting times vary.</small></div></button><button class="cancellation-option credit" data-confirm-cancel-order="${escapeHtml(order.id)}" data-cancel-resolution="vendor_credit" type="button"><span>¤</span><div><strong>Get ${escapeHtml(order.truckName)} credit</strong><small>${customerMoney(order.total)} is available immediately for a future order from this truck only.</small></div></button></div><p id="cancelOrderMessage" class="form-message"></p><button class="secondary-button full" data-close-customer-modal type="button">Keep My Order</button></div>`);
+      return;
+    }
+    openModal(`<div class="cancel-order-modal"><p class="eyebrow">Cancel ${orderNumberLabel(order.id)}</p><h2 id="customerModalTitle">Cancel this order?</h2><p>${escapeHtml(order.truckName)} has received your order but has not started preparing it.</p><div class="refund-summary"><span>Full refund</span><strong>${customerMoney(order.total)}</strong></div><p class="muted">This demo order is stored only on this device.</p><div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Keep My Order</button><button class="customer-small-button danger" data-confirm-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order &amp; Refund</button></div></div>`);
   }
 
   function renderOrderConfirmation() {
@@ -2099,12 +2132,22 @@
   function orderHistoryCard(order) {
     const isFavorite = currentAccount.favoriteOrders.includes(order.id);
     const isPast = ['completed', 'cancelled'].includes(order.status);
-    return `<article class="customer-card customer-order-card"><div><span class="status-pill ${isPast ? 'past' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span><h3>${escapeHtml(order.truckName)} · ${orderNumberLabel(order.id)}</h3><p class="muted">${formatDate(order.createdAt)}</p><div class="order-item-summary">${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</div>${order.status === 'cancelled' ? `<p class="refund-confirmation">Full refund: ${customerMoney(order.refund?.amount || order.total)}</p>` : ''}</div><div><div class="order-total">${customerMoney(order.total)}</div><div class="customer-card-actions"><button class="customer-small-button" data-order-details="${escapeHtml(order.id)}" type="button">Order Details</button>${isOrderCancellable(order) ? `<button class="customer-small-button danger" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button>` : ''}${order.status === 'completed' ? `<button class="customer-small-button" data-receipt="${escapeHtml(order.id)}" type="button">Receipt</button><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button><button class="customer-small-button" data-toggle-order-favorite="${escapeHtml(order.id)}" type="button">${isFavorite ? '♥ Saved' : '♡ Save Favorite'}</button>` : ''}${order.status === 'cancelled' ? `<button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Order Again</button>` : ''}</div></div></article>`;
+    const cancellationCopy = !order.supabaseOrderId
+      ? `Full refund: ${customerMoney(order.refund?.amount || order.total)}`
+      : order.cancellationResolution === 'vendor_credit'
+        ? `${customerMoney(order.refund?.amount || order.total)} ${order.truckName} credit issued`
+        : order.refundStatus === 'succeeded' ? `${customerMoney(order.refund?.amount || 0)} refunded through Stripe` : 'Stripe refund processing';
+    return `<article class="customer-card customer-order-card"><div><span class="status-pill ${isPast ? 'past' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span><h3>${escapeHtml(order.truckName)} · ${orderNumberLabel(order.id)}</h3><p class="muted">${formatDate(order.createdAt)}</p><div class="order-item-summary">${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</div>${order.status === 'cancelled' ? `<p class="refund-confirmation">${escapeHtml(cancellationCopy)}</p>` : ''}</div><div><div class="order-total">${customerMoney(order.total)}</div><div class="customer-card-actions"><button class="customer-small-button" data-order-details="${escapeHtml(order.id)}" type="button">Order Details</button>${isOrderCancellable(order) ? `<button class="customer-small-button danger" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button>` : ''}${order.status === 'completed' ? `<button class="customer-small-button" data-receipt="${escapeHtml(order.id)}" type="button">Receipt</button><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button><button class="customer-small-button" data-toggle-order-favorite="${escapeHtml(order.id)}" type="button">${isFavorite ? '♥ Saved' : '♡ Save Favorite'}</button>` : ''}${order.status === 'cancelled' ? `<button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Order Again</button>` : ''}</div></div></article>`;
   }
 
   function renderPayments() {
     const methods = currentAccount.paymentMethods;
+    const credits = [...vendorCreditsByTruck.entries()].filter(([, cents]) => cents > 0).map(([truckId, cents]) => ({
+      truck: TRUCKS.find(truck => truck.id === truckId),
+      amount: cents / 100
+    }));
     return `${pageHeader('Checkout', 'Payment Methods', 'Saved payment methods are a UI-only prototype. No card numbers are retained.', '<button class="primary-button" data-customer-action="add-payment" type="button">+ Add Payment Method</button>')}
+      ${credits.length ? `<section class="customer-card vendor-credit-wallet"><p class="eyebrow">Food Truck Credits</p><h2 class="customer-section-title">Available Credits</h2><p class="muted">Each credit can be used only with the food truck that issued it.</p>${credits.map(credit => `<div class="setting-row"><div><strong>${escapeHtml(credit.truck?.name || 'Food Truck')}</strong><small>Automatically available at this truck's secure checkout</small></div><b>${customerMoney(credit.amount)}</b></div>`).join('')}</section>` : ''}
       <div class="customer-quick-grid">${methods.length ? methods.map(method => `
         <article class="customer-card payment-card"><div class="payment-card-top"><strong>${escapeHtml(method.brand)}</strong>${method.isDefault ? '<span class="default-pill">Default</span>' : ''}</div><div class="payment-card-number">•••• •••• •••• ${escapeHtml(method.last4)}</div><div class="payment-card-bottom"><span>${escapeHtml(method.name)}</span><span>EXP ${escapeHtml(method.expiry)}</span></div></article>`).join('') : '<div class="customer-card empty-customer-state"><span>▣</span><strong>No payment methods saved</strong><p>Add a card preference for faster checkout.</p></div>'}</div>
       ${methods.length ? `<div class="customer-card" style="margin-top:18px"><h2 class="customer-section-title">Manage Methods</h2>${methods.map(method => `<div class="setting-row"><div><strong>${escapeHtml(method.brand)} ending in ${escapeHtml(method.last4)}</strong><small>${escapeHtml(method.name)} · Expires ${escapeHtml(method.expiry)}</small></div><div class="customer-card-actions">${method.isDefault ? '' : `<button class="customer-small-button" data-default-payment="${method.id}" type="button">Make Default</button>`}<button class="customer-small-button danger" data-delete-payment="${method.id}" type="button">Delete</button></div></div>`).join('')}</div>` : ''}`;
@@ -2264,8 +2307,16 @@
   function orderModal(order, receiptOnly = false) {
     if (!order) return;
     const itemLines = order.items.map(item => `<div class="receipt-line"><span>${item.qty} × ${escapeHtml(item.name)}</span><strong>${customerMoney(item.qty * item.price)}</strong></div>`).join('');
+    const creditPaymentLine = order.vendorCreditApplied ? `<div class="receipt-line"><span>${escapeHtml(order.truckName)} credit used</span><strong>−${customerMoney(order.vendorCreditApplied)}</strong></div>` : '';
+    const cancellationLine = order.status === 'cancelled'
+      ? !order.supabaseOrderId
+        ? `<div class="receipt-line refund-line"><strong>Full refund</strong><strong>−${customerMoney(order.refund?.amount || order.total)}</strong></div>`
+        : order.cancellationResolution === 'vendor_credit'
+        ? `<div class="receipt-line refund-line"><strong>${escapeHtml(order.truckName)} credit issued</strong><strong>${customerMoney(order.refund?.amount || order.total)}</strong></div>`
+        : `<div class="receipt-line refund-line"><strong>Stripe refund ${order.refundStatus === 'succeeded' ? '' : 'pending'}</strong><strong>−${customerMoney(order.refund?.amount || 0)}</strong></div>`
+      : '';
     const communication = !receiptOnly && order.supabaseOrderId ? `<section class="order-conversation"><div class="communication-section-heading"><div><p class="eyebrow">Pickup Communication</p><h3>Message ${escapeHtml(order.truckName)}</h3></div><span>Live</span></div><div class="message-thread" data-customer-conversation><p class="muted">Loading messages…</p></div><form id="customerOrderMessageForm" data-order-message-id="${order.supabaseOrderId}"><label for="customerOrderMessage">Message</label><div class="message-composer"><textarea id="customerOrderMessage" class="customer-textarea" maxlength="500" rows="2" required placeholder="Ask a pickup question or share an update"></textarea><button class="primary-button" type="submit">Send</button></div><p class="form-message" data-message-error></p></form></section>` : '';
-    openModal(`<div class="customer-receipt"><div class="receipt-brand"><p class="eyebrow">${receiptOnly ? 'Receipt' : 'Order Details'}</p><h2 id="customerModalTitle">${escapeHtml(order.truckName)}</h2><p>${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><span class="status-pill ${['completed', 'cancelled'].includes(order.status) ? 'past' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span></div><h3>Items</h3>${itemLines}<div class="receipt-line"><span>Subtotal</span><strong>${customerMoney(order.subtotal)}</strong></div><div class="receipt-line"><span>Tax</span><strong>${customerMoney(order.tax)}</strong></div><div class="receipt-line receipt-total"><strong>Total</strong><strong>${customerMoney(order.total)}</strong></div>${order.status === 'cancelled' ? `<div class="receipt-line refund-line"><strong>Full Refund</strong><strong>−${customerMoney(order.refund?.amount || order.total)}</strong></div>` : ''}<p class="muted">${order.status === 'cancelled' ? 'Refund recorded to the original payment method in this browser-local beta.' : receiptOnly ? 'Paid · Customer receipt view' : 'Pickup status updates appear in your account and notification preferences.'}</p>${communication}${isOrderCancellable(order) ? `<button class="customer-small-button danger full" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order &amp; Full Refund</button>` : ''}${order.status === 'completed' ? `<button class="primary-button full" data-reorder="${escapeHtml(order.id)}" type="button">Reorder This Meal</button>` : ''}</div>`);
+    openModal(`<div class="customer-receipt"><div class="receipt-brand"><p class="eyebrow">${receiptOnly ? 'Receipt' : 'Order Details'}</p><h2 id="customerModalTitle">${escapeHtml(order.truckName)}</h2><p>${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><span class="status-pill ${['completed', 'cancelled'].includes(order.status) ? 'past' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span></div><h3>Items</h3>${itemLines}<div class="receipt-line"><span>Subtotal</span><strong>${customerMoney(order.subtotal)}</strong></div><div class="receipt-line"><span>Tax</span><strong>${customerMoney(order.tax)}</strong></div>${creditPaymentLine}<div class="receipt-line receipt-total"><strong>Total</strong><strong>${customerMoney(order.total)}</strong></div>${cancellationLine}<p class="muted">${order.status === 'cancelled' ? !order.supabaseOrderId ? 'Demo refund recorded on this device.' : order.cancellationResolution === 'vendor_credit' ? `Credit is available only at ${escapeHtml(order.truckName)}.` : 'Stripe refund timing depends on the customer’s bank.' : receiptOnly ? 'Paid · Customer receipt view' : 'Pickup status updates appear in your account and notification preferences.'}</p>${communication}${isOrderCancellable(order) ? `<button class="customer-small-button danger full" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button>` : ''}${order.status === 'completed' ? `<button class="primary-button full" data-reorder="${escapeHtml(order.id)}" type="button">Reorder This Meal</button>` : ''}</div>`);
     if (communication) loadCustomerConversation(order);
   }
 
@@ -2844,7 +2895,7 @@
         checkoutMessage.textContent = 'Opening secure Stripe Checkout…';
         if (submitButton) submitButton.disabled = true;
         try {
-          await window.FoodTrekNowCustomerPayments.startCheckout({
+          const checkoutResult = await window.FoodTrekNowCustomerPayments.startCheckout({
             truckId: truck.id,
             items: currentAccount.cart.items.map(item => ({
               menuItemId: item.menuItemId,
@@ -2855,8 +2906,18 @@
             customerName: order.customerName,
             customerMobile: order.customerMobile,
             customerEmail: order.customerEmail,
-            orderNotes: order.orderNotes
+            orderNotes: order.orderNotes,
+            useVendorCredit: document.getElementById('useVendorCredit')?.checked !== false
           });
+          if (checkoutResult?.order?.order_number) {
+            currentAccount.cart = { truckId: null, items: [] };
+            CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
+            await hydrateLiveCustomerOrders();
+            await hydrateVendorCredits();
+            lastPlacedOrderId = Number(checkoutResult.order.order_number);
+            renderCustomerPage('confirmation');
+            customerToast(`${orderNumberLabel(lastPlacedOrderId)} was paid with ${truck.name} credit and sent to the truck.`);
+          }
         } catch (error) {
           checkoutMessage.textContent = error.message || 'Stripe Checkout could not be opened. Please try again.';
           if (submitButton) submitButton.disabled = false;
@@ -2973,7 +3034,31 @@
     const confirmCancelOrder = event.target.closest('[data-confirm-cancel-order]');
     if (confirmCancelOrder) {
       const selectedOrder = currentAccount.orders.find(order => String(order.id) === String(confirmCancelOrder.dataset.confirmCancelOrder));
-      if (selectedOrder?.supabaseOrderId) {
+      const resolution = confirmCancelOrder.dataset.cancelResolution;
+      if (selectedOrder?.supabaseOrderId && resolution) {
+        modalContent.querySelectorAll('[data-confirm-cancel-order]').forEach(button => { button.disabled = true; });
+        const message = document.getElementById('cancelOrderMessage');
+        if (message) message.textContent = resolution === 'vendor_credit' ? 'Creating your food truck credit…' : 'Requesting your Stripe refund…';
+        try {
+          const result = await window.FoodTrekNowCustomerPayments.cancelPaidOrder(selectedOrder.supabaseOrderId, resolution);
+          closeModal();
+          await hydrateLiveCustomerOrders();
+          await hydrateVendorCredits();
+          orderHistoryFilter = 'past';
+          renderCustomerPage('orders');
+          const creditAmount = Number(result?.cancellation?.total_credit_issued_cents || 0) / 100;
+          const refundStatus = result?.refund?.status;
+          customerToast(resolution === 'vendor_credit'
+            ? `${customerMoney(creditAmount)} ${selectedOrder.truckName} credit is ready.`
+            : refundStatus === 'succeeded' ? 'Stripe confirmed your refund.' : 'Your refund request is being processed.');
+          return;
+        } catch (error) {
+          if (message) message.textContent = error.message || 'This order can no longer be cancelled.';
+          modalContent.querySelectorAll('[data-confirm-cancel-order]').forEach(button => { button.disabled = false; });
+          return;
+        }
+      }
+      if (selectedOrder?.supabaseOrderId && !resolution) {
         try {
           await window.FoodTrekNowLiveOrders.cancelCustomerOrder(selectedOrder.supabaseOrderId);
         } catch (error) {

@@ -35,7 +35,7 @@ test('Checkout is created as a direct charge on the selected connected account',
 test('payment completion verifies ownership, paid state, and server total', () => {
   assert.match(completeFunction, /eq\('customer_id', userData\.user\.id\)/);
   assert.match(completeFunction, /session\.payment_status !== 'paid'/);
-  assert.match(completeFunction, /Number\(session\.amount_total\) !== Number\(draft\.total_cents\)/);
+  assert.match(completeFunction, /Number\(session\.amount_total\) !== Number\(draft\.stripe_due_cents\)/);
   assert.match(completeFunction, /finalize_paid_checkout/);
 });
 

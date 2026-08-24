@@ -72,9 +72,30 @@ Deno.serve(async request => {
         if (finalizeError) throw finalizeError;
       }
     } else if (['checkout.session.expired', 'checkout.session.async_payment_failed'].includes(event.type)) {
+      const { data: expiringDraft } = await serviceClient.from('payment_checkout_drafts')
+        .select('id').eq('stripe_checkout_session_id', session.id).is('order_id', null).maybeSingle();
+      if (expiringDraft?.id) await serviceClient.rpc('release_checkout_credit', { p_draft_id: expiringDraft.id });
       await serviceClient.from('payment_checkout_drafts').update({
         status: event.type === 'checkout.session.expired' ? 'expired' : 'failed'
       }).eq('stripe_checkout_session_id', session.id).is('order_id', null);
+    } else if (event.type === 'refund.updated') {
+      const refund = event.data?.object;
+      const paymentIntentId = typeof refund?.payment_intent === 'string' ? refund.payment_intent : refund?.payment_intent?.id;
+      if (paymentIntentId && ['succeeded', 'failed', 'canceled'].includes(refund.status)) {
+        const { data: order } = await serviceClient.from('orders').select('id,stripe_account_id')
+          .eq('stripe_payment_intent_id', paymentIntentId).maybeSingle();
+        if (order) {
+          if (event.account && event.account !== order.stripe_account_id) throw new Error('Refund connected account did not match.');
+          const { error: refundError } = await serviceClient.rpc('complete_order_refund', {
+            p_order_id: order.id,
+            p_refund_id: refund.id,
+            p_refunded_cents: Number(refund.amount || 0),
+            p_succeeded: refund.status === 'succeeded',
+            p_failure: refund.status === 'succeeded' ? null : `Stripe refund status: ${refund.status}`
+          });
+          if (refundError) throw refundError;
+        }
+      }
     }
     await serviceClient.from('stripe_webhook_events').update({ processed_at: new Date().toISOString(), error_message: null }).eq('id', event.id);
     return new Response(JSON.stringify({ received: true }), { headers: { 'Content-Type': 'application/json' } });
