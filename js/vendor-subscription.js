@@ -56,7 +56,13 @@
   async function invoke(functionName) {
     if (!client?.functions?.invoke) throw new Error('Secure vendor billing is unavailable.');
     const { data, error } = await client.functions.invoke(functionName, { body: {} });
-    if (error) throw new Error(data?.error || error.message || 'Stripe could not complete the request.');
+    if (error) {
+      let message = data?.error || '';
+      if (!message && error.context?.json) {
+        try { message = (await error.context.json())?.error || ''; } catch (_) { /* Response body was unavailable. */ }
+      }
+      throw new Error(message || error.message || 'Stripe could not complete the request.');
+    }
     if (data?.error) throw new Error(data.error);
     return data || {};
   }

@@ -85,6 +85,8 @@ test('subscription access includes paid plans and a bounded past-due grace perio
   assert.match(webhookFunction, /is_active: \['active', 'trialing'\]\.includes\(record\.status\)/);
   assert.match(appSource, /ftn:vendor-subscription/);
   assert.match(appSource, /button\.dataset\.page!==['"]settings['"]/);
+  assert.match(appSource, /!settingsButton\.classList\.contains\(['"]active['"]\)/);
+  assert.doesNotMatch(appSource, /if\(!vendorSubscriptionAccess\)\{document\.querySelector\(['"]\.nav-link\[data-page=['"]settings['"]\]['"]\)\?\.click\(\);\}/);
 });
 
 test('Stripe Checkout creates a platform-owned recurring subscription', () => {
@@ -125,6 +127,7 @@ test('browser subscription state renders active access without exposing secrets'
   assert.equal(element('vendorSubscriptionBadge').textContent, 'Active');
   assert.match(element('vendorSubscriptionTitle').textContent, /14\.99/);
   assert.ok(dispatched.some(event => event.type === 'ftn:vendor-subscription'));
+  assert.match(browserSource, /error\.context\?\.json/);
   assert.doesNotMatch(browserSource, /STRIPE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|sk_(?:test|live)_/);
 });
 
