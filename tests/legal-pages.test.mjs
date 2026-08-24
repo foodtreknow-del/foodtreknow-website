@@ -23,6 +23,9 @@ test('public Terms and Privacy pages contain launch-critical disclosures', async
   assert.match(privacy, /retention and security/i);
   assert.match(privacy, /Delete My Account/i);
   assert.match(privacy, /id="your-choices"/i);
+  assert.match(privacy, /mailto:kevinl@foodtreknow\.com/i);
+  assert.match(terms, /mailto:kevinl@foodtreknow\.com/i);
+  assert.doesNotMatch(`${terms}\n${privacy}`, /(?:support|privacy|legal)@foodtreknow\.com/i);
 });
 
 test('legal pages and privacy choices are linked throughout customer and vendor flows', async () => {
