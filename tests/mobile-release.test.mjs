@@ -16,6 +16,9 @@ test('Capacitor is configured inside the existing FoodTrekNow project', () => {
   assert.equal(packageConfig.dependencies['@capacitor/core'], '8.5.0');
   assert.equal(packageConfig.dependencies['@capacitor/android'], '8.5.0');
   assert.match(packageConfig.scripts['mobile:sync'], /build:web.*cap sync/);
+  assert.match(packageConfig.scripts['mobile:sync:android'], /build:web.*cap sync android/);
+  assert.match(packageConfig.scripts['mobile:assets:android'], /capacitor-assets generate --android/);
+  assert.equal(packageConfig.devDependencies['@capacitor/assets'], '3.0.5');
 });
 
 test('mobile web build copies only public application assets', () => {

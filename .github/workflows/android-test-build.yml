@@ -11,6 +11,7 @@ on:
       - "index.html"
       - "manifest.webmanifest"
       - "service-worker.js"
+      - "android/**"
       - "capacitor.config.json"
       - "package.json"
       - "scripts/build-web.mjs"
@@ -53,10 +54,8 @@ jobs:
       - name: Build public web assets
         run: npm run build:web
 
-      - name: Generate and synchronize Android project
-        run: |
-          npx cap add android
-          npx cap sync android
+      - name: Synchronize Android project
+        run: npx cap sync android
 
       - name: Verify Android API levels
         run: |
