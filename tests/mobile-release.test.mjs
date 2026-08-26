@@ -29,5 +29,7 @@ test('mobile web build copies only public application assets', () => {
   assert.doesNotMatch(buildScript, /supabase|tests|\.git/);
   assert.match(ignore, /^www\/$/m);
   assert.match(ignore, /\*\.keystore/);
+  assert.match(ignore, /^\.android-signing\/$/m);
+  assert.match(ignore, /^\.android-tools\/$/m);
   assert.match(ignore, /\*\.mobileprovision/);
 });
