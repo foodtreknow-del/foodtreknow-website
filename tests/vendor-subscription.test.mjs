@@ -92,6 +92,7 @@ test('subscription access includes paid plans and a bounded past-due grace perio
 test('Stripe Checkout creates a platform-owned recurring subscription', () => {
   assert.match(startFunction, /STRIPE_VENDOR_MONTHLY_PRICE_ID/);
   assert.match(startFunction, /checkoutForm\.set\('mode', 'subscription'\)/);
+  assert.match(startFunction, /managed_payments\[enabled\][^\n]*'false'/);
   assert.match(startFunction, /line_items\[0\]\[price\]/);
   assert.match(startFunction, /subscription_data\[metadata\]\[foodtreknow_vendor_profile_id\]/);
   assert.match(startFunction, /trialEligible = !current\?\.stripe_subscription_id/);
@@ -99,6 +100,7 @@ test('Stripe Checkout creates a platform-owned recurring subscription', () => {
   assert.match(startFunction, /subscription_data\[trial_period_days\][^\n]*'14'/);
   assert.match(startFunction, /payment_method_collection[^\n]*'always'/);
   assert.match(startFunction, /trial_settings\]\[end_behavior\]\[missing_payment_method\][^\n]*'cancel'/);
+  assert.match(startFunction, /vendor-subscription-standard-checkout-v2/);
   assert.match(startFunction, /\/v1\/checkout\/sessions/);
   assert.doesNotMatch(startFunction, /Stripe-Account/);
   assert.doesNotMatch(startFunction, /14\.99.*unit_amount|unit_amount.*14\.99/);

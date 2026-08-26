@@ -113,6 +113,10 @@ Deno.serve(async request => {
 
     const checkoutForm = new URLSearchParams();
     checkoutForm.set('mode', 'subscription');
+    // FoodTrekNow vendor memberships are SaaS subscriptions. Use standard
+    // Stripe Checkout instead of Managed Payments, which rejects this
+    // subscription product's tax classification.
+    checkoutForm.set('managed_payments[enabled]', 'false');
     checkoutForm.set('customer', customerId);
     checkoutForm.set('line_items[0][price]', priceId);
     checkoutForm.set('line_items[0][quantity]', '1');
@@ -130,7 +134,7 @@ Deno.serve(async request => {
     }
     checkoutForm.set('billing_address_collection', 'auto');
     const checkoutAttempt = current?.stripe_subscription_id || 'first-trial-14-days';
-    const session = await stripePost('/v1/checkout/sessions', checkoutForm, `foodtreknow-vendor-subscription-${vendor.id}-${priceId}-${checkoutAttempt}`);
+    const session = await stripePost('/v1/checkout/sessions', checkoutForm, `foodtreknow-vendor-subscription-standard-checkout-v2-${vendor.id}-${priceId}-${checkoutAttempt}`);
     return json(request, { checkoutUrl: session.url });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'The subscription could not be started.';
