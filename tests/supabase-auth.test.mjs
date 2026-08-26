@@ -6,6 +6,7 @@ import vm from 'node:vm';
 const authSource = fs.readFileSync(new URL('../js/supabase-auth.js', import.meta.url), 'utf8');
 const configSource = fs.readFileSync(new URL('../js/supabase-config.js', import.meta.url), 'utf8');
 const clientSource = fs.readFileSync(new URL('../js/supabase-client.js', import.meta.url), 'utf8');
+const customerAccountSource = fs.readFileSync(new URL('../js/customer-account.js', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const lifecycleMigration = fs.readFileSync(new URL('../supabase/migrations/202608230002_customer_auth_lifecycle.sql', import.meta.url), 'utf8');
 
@@ -86,6 +87,12 @@ test('Supabase is loaded and configured before the customer account module', () 
   assert.ok(library >= 0 && library < config && config < client && client < adapter && adapter < customer);
   assert.match(configSource, /sb_publishable_/);
   assert.doesNotMatch(configSource + clientSource + authSource, /sb_secret_|service_role/i);
+});
+
+test('production customer authentication fails closed when secure configuration is unavailable', () => {
+  assert.match(customerAccountSource, /secureConfig\?\.enabled === false[^\n]*LocalCustomerAuthAdapter/);
+  assert.match(customerAccountSource, /!secureConfig\?\.enabled[^\n]*UnavailableCustomerAuthAdapter|!secureConfig\?\.enabled[\s\S]*return new UnavailableCustomerAuthAdapter/);
+  assert.doesNotMatch(customerAccountSource, /if \(!window\.FoodTrekNowSupabaseConfig\?\.enabled\) return new LocalCustomerAuthAdapter/);
 });
 
 test('customer sign-up sends safe profile metadata and requires email verification', async () => {

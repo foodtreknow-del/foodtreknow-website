@@ -79,6 +79,7 @@ const actionTarget = dataset => ({
 globalThis.window = globalThis;
 globalThis.localStorage = new StorageMock();
 globalThis.sessionStorage = new StorageMock();
+globalThis.FoodTrekNowSupabaseConfig = { enabled: false };
 globalThis.document = {
   body: element('body'),
   getElementById: element,

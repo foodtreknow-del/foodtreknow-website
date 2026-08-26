@@ -769,8 +769,12 @@
   }
 
   function createCustomerAuthAdapter() {
-    if (!window.FoodTrekNowSupabaseConfig?.enabled) return new LocalCustomerAuthAdapter(repository);
-    if (!window.FoodTrekNowSupabaseClient || !window.FoodTrekNowSupabaseAuth?.createAdapter) {
+    const secureConfig = window.FoodTrekNowSupabaseConfig;
+    // Local authentication is available only when it is explicitly configured.
+    // If the production Supabase configuration fails to load, fail closed instead
+    // of silently opening a legacy local session that cannot read live orders.
+    if (secureConfig?.enabled === false) return new LocalCustomerAuthAdapter(repository);
+    if (!secureConfig?.enabled || !window.FoodTrekNowSupabaseClient || !window.FoodTrekNowSupabaseAuth?.createAdapter) {
       return new UnavailableCustomerAuthAdapter();
     }
     const redirectUrl = /^https?:$/.test(window.location.protocol)
