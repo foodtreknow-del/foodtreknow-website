@@ -73,6 +73,9 @@ jobs:
           [[ -n "$ANDROID_KEY_PASSWORD" ]] || { echo "Missing ANDROID_KEY_PASSWORD secret."; exit 1; }
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/foodtreknow-upload.jks"
 
+      - name: Make Gradle wrapper executable
+        run: chmod +x android/gradlew
+
       - name: Build signed Google Play bundle
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/foodtreknow-upload.jks

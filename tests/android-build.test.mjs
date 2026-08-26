@@ -16,6 +16,7 @@ test('Android workflow generates a tested API 36 debug application', () => {
   assert.match(workflow, /npx cap sync android/);
   assert.doesNotMatch(workflow, /npx cap add android/);
   assert.match(workflow, /targetSdkVersion = 36/);
+  assert.match(workflow, /chmod \+x android\/gradlew/);
   assert.match(workflow, /assembleDebug/);
 });
 
@@ -26,6 +27,7 @@ test('production workflow builds a versioned signed Android App Bundle', () => {
   assert.match(releaseWorkflow, /ANDROID_KEYSTORE_PASSWORD/);
   assert.match(releaseWorkflow, /ANDROID_KEY_ALIAS/);
   assert.match(releaseWorkflow, /ANDROID_KEY_PASSWORD/);
+  assert.match(releaseWorkflow, /chmod \+x android\/gradlew/);
   assert.match(releaseWorkflow, /bundleRelease/);
   assert.match(releaseWorkflow, /jarsigner -verify -verbose -certs/);
   assert.match(releaseWorkflow, /app-release\.aab/);
