@@ -11,6 +11,8 @@ const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const manifest = fs.readFileSync(new URL('../android/app/src/main/AndroidManifest.xml', import.meta.url), 'utf8');
 const iosInfo = fs.readFileSync(new URL('../ios/App/App/Info.plist', import.meta.url), 'utf8');
 const migration = fs.readFileSync(new URL('../supabase/migrations/202608270001_live_truck_locations.sql', import.meta.url), 'utf8');
+const subscriptionMigration = fs.readFileSync(new URL('../supabase/migrations/202608230010_vendor_subscriptions.sql', import.meta.url), 'utf8');
+const visibilityFix = fs.readFileSync(new URL('../supabase/migrations/202608270002_fix_public_truck_visibility.sql', import.meta.url), 'utf8');
 const privacy = fs.readFileSync(new URL('../privacy.html', import.meta.url), 'utf8');
 
 function locationHarness() {
@@ -84,6 +86,15 @@ test('live locations use a private-by-default table, ownership RPC, expiry, and 
   assert.match(migration, /supabase_realtime add table public\.truck_live_locations/);
   assert.match(marketplaceSource, /subscribeLocations/);
   assert.match(marketplaceSource, /truck_live_locations/);
+});
+
+test('public active truck reads do not require private vendor profile access', () => {
+  for (const migration of [subscriptionMigration, visibilityFix]) {
+    assert.match(migration, /create policy trucks_public_read/i);
+    assert.match(migration, /is_active\s+or public\.owns_truck\(id\)/i);
+  }
+  assert.doesNotMatch(visibilityFix, /grant select on public\.vendor_profiles to anon/i);
+  assert.doesNotMatch(visibilityFix, /from public\.vendor_profiles/i);
 });
 
 test('Android requests only foreground location and the privacy policy explains both roles', () => {

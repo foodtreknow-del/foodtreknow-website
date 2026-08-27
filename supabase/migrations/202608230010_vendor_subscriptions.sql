@@ -97,11 +97,7 @@ drop policy if exists trucks_public_read on public.trucks;
 create policy trucks_public_read on public.trucks for select
 using (
   is_active
-  or public.is_admin()
-  or exists (
-    select 1 from public.vendor_profiles vendor
-    where vendor.id = trucks.vendor_id and vendor.owner_id = auth.uid()
-  )
+  or public.owns_truck(id)
 );
 
 create or replace function public.enforce_truck_subscription_activation()
