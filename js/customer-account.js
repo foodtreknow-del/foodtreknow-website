@@ -849,6 +849,9 @@
 
   function resolveSampleCustomerLocation(savedLocation) {
     const location = savedLocation || { method: 'current', label: 'Current Location' };
+    if (location.method === 'current' && Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude))) {
+      return { latitude: Number(location.latitude), longitude: Number(location.longitude), label: location.label || 'Current Location' };
+    }
     if (location.method === 'city') {
       const city = String(location.city || '').toLowerCase();
       const center = city.includes('durham') ? SAMPLE_LOCATION_CENTERS.durham : city.includes('cary') ? SAMPLE_LOCATION_CENTERS.cary : SAMPLE_LOCATION_CENTERS.raleigh;
@@ -1016,6 +1019,8 @@
   let vendorCreditsByTruck = new Map();
   let customerNotifications = [];
   let customerCommunicationsSubscribed = false;
+  let customerMarketplaceSubscribed = false;
+  let customerMarketplaceRefreshTimer = null;
 
   function readSession() {
     try {
@@ -1045,6 +1050,8 @@
   }
 
   function showCustomerAuth(panel = 'welcome') {
+    clearInterval(customerMarketplaceRefreshTimer);
+    customerMarketplaceRefreshTimer = null;
     hidePrimaryViews();
     authView.classList.remove('hidden-view');
     document.body.classList.remove('login-page');
@@ -1081,6 +1088,14 @@
     renderCustomerShell();
     renderCustomerPage(page);
     refreshCustomerMarketplace();
+    if (!customerMarketplaceSubscribed && window.FoodTrekNowCustomerMarketplace?.subscribeLocations) {
+      window.FoodTrekNowCustomerMarketplace.subscribeLocations(() => refreshCustomerMarketplace(true));
+      customerMarketplaceSubscribed = true;
+    }
+    clearInterval(customerMarketplaceRefreshTimer);
+    customerMarketplaceRefreshTimer = setInterval(() => {
+      if (currentAccount && !accountView.classList.contains('hidden-view')) refreshCustomerMarketplace(true);
+    }, 60000);
     hydrateLiveCustomerOrders();
     hydrateCustomerCommunications();
     hydrateVendorCredits();
@@ -1144,9 +1159,10 @@
     return `${hour % 12 || 12}:${minute} ${hour >= 12 ? 'PM' : 'AM'}`;
   }
 
-  async function refreshCustomerMarketplace() {
+  async function refreshCustomerMarketplace(force = false) {
     const service = window.FoodTrekNowCustomerMarketplace;
     if (!service?.available) return;
+    if (force) marketplaceLoadPromise = null;
     if (!marketplaceLoadPromise) marketplaceLoadPromise = service.load();
     try {
       const marketplace = await marketplaceLoadPromise;
@@ -1157,6 +1173,7 @@
         const openHours = truck.hours.filter(row => !row.is_closed);
         const todayHours = truck.hours.find(row => row.day_of_week === new Date().getDay());
         const fallbackLocation = resolveSampleCustomerLocation(currentAccount?.preferredLocation);
+        const liveLocation = truck.live_location;
         TRUCKS.push({
           id: truck.id,
           name: truck.name,
@@ -1166,8 +1183,11 @@
           wait: `${truck.estimated_prep_minutes || 20} min`,
           icon: '🚚',
           logo: truck.logo_url || '',
-          latitude: Number(truck.latitude) || fallbackLocation.latitude + (index + 1) * 0.002,
-          longitude: Number(truck.longitude) || fallbackLocation.longitude + (index + 1) * 0.002,
+          latitude: Number(liveLocation?.latitude) || Number(truck.latitude) || fallbackLocation.latitude + (index + 1) * 0.002,
+          longitude: Number(liveLocation?.longitude) || Number(truck.longitude) || fallbackLocation.longitude + (index + 1) * 0.002,
+          liveLocation: Boolean(liveLocation),
+          locationAccuracyMeters: liveLocation?.accuracy_meters == null ? null : Number(liveLocation.accuracy_meters),
+          locationUpdatedAt: liveLocation?.recorded_at || null,
           // The vendor's live Online toggle is an explicit override of the
           // saved weekly schedule. Keep an online truck discoverable even if
           // today's recurring hours are marked closed.
@@ -1422,13 +1442,28 @@
     return truck?.acceptingOrders !== false && !(currentAccount?.isGuest && truck?.supabase);
   }
 
+  function liveLocationAgeLabel(truck) {
+    if (!truck?.liveLocation || !truck.locationUpdatedAt) return '';
+    const ageSeconds = Math.max(0, Math.round((Date.now() - Date.parse(truck.locationUpdatedAt)) / 1000));
+    if (ageSeconds < 60) return 'Live now';
+    return `Updated ${Math.max(1, Math.round(ageSeconds / 60))} min ago`;
+  }
+
+  function nearbyMapPin(truck, index, origin, radius) {
+    const latitudeMiles = (Number(truck.latitude) - Number(origin.latitude)) * 69;
+    const longitudeMiles = (Number(truck.longitude) - Number(origin.longitude)) * 69 * Math.cos(Number(origin.latitude) * Math.PI / 180);
+    const left = Math.max(8, Math.min(92, 50 + longitudeMiles / radius * 40));
+    const top = Math.max(8, Math.min(92, 50 - latitudeMiles / radius * 40));
+    return `<span class="nearby-map-pin ${truck.liveLocation ? 'live' : ''}" style="left:${left.toFixed(1)}%;top:${top.toFixed(1)}%" title="${escapeHtml(truck.name)} · ${escapeHtml(liveLocationAgeLabel(truck) || truck.distanceLabel)}" aria-label="${escapeHtml(truck.name)} map marker">${index + 1}</span>`;
+  }
+
   function nearbyTruckCard(truck) {
     const canOrder = customerCanOrderTruck(truck);
     const orderLabel = currentAccount?.isGuest && truck.supabase ? 'Sign In to Order' : truck.acceptingOrders === false ? 'Currently Closed' : 'Order Now';
     return `<article class="nearby-truck-card" data-open-truck-profile="${truck.id}">
       <div class="nearby-truck-logo" aria-hidden="true">${truck.icon || '🚚'}</div>
       <div class="nearby-truck-main">
-        <div class="nearby-truck-heading"><div><p>${escapeHtml(truck.cuisine)}</p><h2>${escapeHtml(truck.name)}</h2></div><span class="nearby-distance">${escapeHtml(truck.distanceLabel)}</span></div>
+        <div class="nearby-truck-heading"><div><p>${escapeHtml(truck.cuisine)}</p><h2>${escapeHtml(truck.name)}</h2>${truck.liveLocation ? `<span class="nearby-live-location">● ${escapeHtml(liveLocationAgeLabel(truck))}</span>` : ''}</div><span class="nearby-distance">${escapeHtml(truck.distanceLabel)}</span></div>
         <div class="nearby-truck-details">
           <span><small>Drive time</small><strong>🚗 ${escapeHtml(truck.driveTime)}</strong></span>
           <span><small>Hours today</small><strong>${escapeHtml(truck.operatingStatus)}</strong></span>
@@ -1448,7 +1483,8 @@
     const location = resolveSampleCustomerLocation(currentAccount.preferredLocation);
     const trucks = TruckDataService.searchNearby({ location, radiusMiles: radius });
     const radiusOptions = NEARBY_RADIUS_OPTIONS.map(option => `<option value="${option}" ${option === radius ? 'selected' : ''}>${option}</option>`).join('');
-    const pins = trucks.slice(0, 5).map((truck, index) => `<span class="nearby-map-pin pin-${index + 1}" title="${escapeHtml(truck.name)}">${index + 1}</span>`).join('');
+    const pins = trucks.slice(0, 5).map((truck, index) => nearbyMapPin(truck, index, location, radius)).join('');
+    const liveTruckCount = trucks.filter(truck => truck.liveLocation).length;
     return `<div class="nearby-search-page">
       ${pageHeader('Explore Nearby', 'Find Food Trucks Near Your Location', `Using ${escapeHtml(preferredLocationLabel())}`, '<button class="secondary-button" data-home-page="overview" type="button">← Back to Home</button>')}
       <section class="nearby-search-controls" aria-label="Nearby truck search controls">
@@ -1457,14 +1493,14 @@
       </section>
 
       <div class="nearby-search-layout">
-        <aside id="nearbyMapContainer" class="nearby-map-shell" data-map-provider="google-maps" data-map-ready="false" aria-label="Future map area">
-          <div class="nearby-map-heading"><strong>Map Preview</strong><span>Live map coming in a future phase</span></div>
+        <aside id="nearbyMapContainer" class="nearby-map-shell" data-map-provider="foodtreknow-live" data-map-ready="true" aria-label="Live truck map">
+          <div class="nearby-map-heading"><strong>Live Truck Map</strong><span>Updates automatically while vendors share</span></div>
           <div class="nearby-map-canvas">
             <div class="nearby-map-road road-one"></div><div class="nearby-map-road road-two"></div><div class="nearby-map-road road-three"></div>
             ${pins}
             <div class="nearby-map-center" title="Your saved location"><span>📍</span><strong>You</strong></div>
           </div>
-          <div class="nearby-map-footer"><span>${trucks.length} truck${trucks.length === 1 ? '' : 's'} shown</span><span>${radius}-mile radius</span></div>
+          <div class="nearby-map-footer"><span>${trucks.length} truck${trucks.length === 1 ? '' : 's'} shown · ${liveTruckCount} live</span><span>${radius}-mile radius</span></div>
         </aside>
 
         <section class="nearby-results" aria-live="polite">
@@ -2269,14 +2305,14 @@
     openModal(`<p class="eyebrow">Preferred Area</p><h2 id="customerModalTitle">Change Location</h2><p class="muted">Choose how FoodTrekNow should find trucks and events near you.</p>
       <form id="customerLocationForm">
         <div class="location-choice-grid" role="group" aria-label="Location method">
-          <button class="location-choice ${!saved.method || saved.method === 'current' ? 'active' : ''}" data-location-method="current" type="button"><span>⌖</span><strong>Use Current Location</strong><small>Location access placeholder</small></button>
+          <button class="location-choice ${!saved.method || saved.method === 'current' ? 'active' : ''}" data-location-method="current" type="button"><span>⌖</span><strong>Use Current Location</strong><small>Uses this device's GPS with permission</small></button>
           <button class="location-choice ${saved.method === 'city' ? 'active' : ''}" data-location-method="city" type="button"><span>🏙️</span><strong>Search by City</strong><small>Enter a city name</small></button>
           <button class="location-choice ${saved.method === 'zip' ? 'active' : ''}" data-location-method="zip" type="button"><span>#</span><strong>Search by ZIP Code</strong><small>Enter a postal code</small></button>
         </div>
         <input id="customerLocationMethod" type="hidden" value="${escapeHtml(saved.method || 'current')}">
         <div id="locationCityField" class="${saved.method === 'city' ? '' : 'hidden-view'}"><label for="customerLocationCity">City</label><input id="customerLocationCity" class="customer-input" value="${escapeHtml(saved.city || '')}" placeholder="Raleigh, NC"></div>
         <div id="locationZipField" class="${saved.method === 'zip' ? '' : 'hidden-view'}"><label for="customerLocationZip">ZIP Code</label><input id="customerLocationZip" class="customer-input" inputmode="numeric" maxlength="10" value="${escapeHtml(saved.zip || '')}" placeholder="27601"></div>
-        <p id="customerLocationMessage" class="customer-success-message">${saved.method === 'current' ? 'Current location selected. GPS connection is prepared for a future phase.' : ''}</p>
+        <p id="customerLocationMessage" class="customer-success-message">${saved.method === 'current' && Number.isFinite(Number(saved.latitude)) ? 'Current GPS location is saved on this device.' : saved.method === 'current' ? 'Tap Save to request location permission.' : ''}</p>
         <div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" type="submit">Save Preferred Location</button></div>
       </form>`);
   }
@@ -2585,7 +2621,11 @@
     const nearbyDirections = event.target.closest('[data-nearby-directions]');
     if (nearbyDirections) {
       const truck = TRUCKS.find(item => item.id === nearbyDirections.dataset.nearbyDirections);
-      if (truck) customerToast(`Directions to ${truck.name} will be available with Google Maps.`);
+      if (truck && Number.isFinite(Number(truck.latitude)) && Number.isFinite(Number(truck.longitude))) {
+        const destination = `${Number(truck.latitude)},${Number(truck.longitude)}`;
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`, '_blank', 'noopener');
+        customerToast(`Opening directions to ${truck.name}.`);
+      } else if (truck) customerToast(`${truck.name} has not shared a map location yet.`);
       return;
     }
     const pageBack = event.target.closest('[data-customer-page-back]');
@@ -3035,7 +3075,7 @@
       modalContent.querySelectorAll('.location-choice').forEach(button => button.classList.toggle('active', button.dataset.locationMethod === method));
       document.getElementById('locationCityField').classList.toggle('hidden-view', method !== 'city');
       document.getElementById('locationZipField').classList.toggle('hidden-view', method !== 'zip');
-      document.getElementById('customerLocationMessage').textContent = method === 'current' ? 'Current location selected. GPS connection is prepared for a future phase.' : '';
+      document.getElementById('customerLocationMessage').textContent = method === 'current' ? 'Tap Save to request location permission.' : '';
     }
     const reorder = event.target.closest('[data-reorder]');
     if (reorder) reorderMeal(reorder.dataset.reorder);
@@ -3098,7 +3138,7 @@
       const order = currentAccount.orders.find(item => item.supabaseOrderId === event.target.dataset.orderMessageId);
       const input = document.getElementById('customerOrderMessage');
       const error = event.target.querySelector('[data-message-error]');
-      const submit = event.target.querySelector('button[type="submit"]');
+      const submit = event.target.querySelector?.('button[type="submit"]');
       if (!order || !input.value.trim()) return;
       submit.disabled = true;
       error.textContent = '';
@@ -3163,6 +3203,7 @@
       const city = document.getElementById('customerLocationCity').value.trim();
       const zip = document.getElementById('customerLocationZip').value.trim();
       const message = document.getElementById('customerLocationMessage');
+      const submit = event.target.querySelector?.('button[type="submit"]');
       if (method === 'city' && !city) {
         message.textContent = 'Enter a city to save this location.';
         return;
@@ -3171,15 +3212,31 @@
         message.textContent = 'Enter a valid 5-digit ZIP code.';
         return;
       }
-      currentAccount.preferredLocation = method === 'city'
-        ? { method, city }
-        : method === 'zip'
-          ? { method, zip }
-          : { method: 'current', label: 'Current Location' };
+      if (method === 'current') {
+        message.textContent = 'Requesting your current location…';
+        if (submit) submit.disabled = true;
+        try {
+          const position = await window.FoodTrekNowLocation.requestCurrentPosition();
+          currentAccount.preferredLocation = {
+            method: 'current',
+            label: 'Current Location',
+            latitude: position.latitude,
+            longitude: position.longitude,
+            accuracy: position.accuracy,
+            capturedAt: position.capturedAt
+          };
+        } catch (error) {
+          message.textContent = error.message || 'FoodTrekNow could not access your current location.';
+          if (submit) submit.disabled = false;
+          return;
+        }
+      } else {
+        currentAccount.preferredLocation = method === 'city' ? { method, city } : { method, zip };
+      }
       persistCurrentAccount();
       closeModal();
       renderCustomerPage(currentPage === 'nearby' ? 'nearby' : 'overview');
-      customerToast('Preferred location saved.');
+      customerToast(method === 'current' ? 'Current location saved.' : 'Preferred location saved.');
     }
     if (event.target.id === 'customerPaymentForm') {
       const number = document.getElementById('paymentNumber').value.replace(/\D/g, '');

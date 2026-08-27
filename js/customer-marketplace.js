@@ -15,13 +15,25 @@
       client.from('menu_items').select('*').in('truck_id', truckIds).eq('is_active', true).order('sort_order')
     ]);
     if (hoursError || categoryError || itemError) throw hoursError || categoryError || itemError;
+    let locations = [];
+    const { data: liveLocations, error: locationError } = await client.from('truck_live_locations').select('*').in('truck_id', truckIds).eq('is_sharing', true);
+    if (!locationError) locations = liveLocations || [];
+    else if (!String(locationError.message || '').toLowerCase().includes('truck_live_locations')) throw locationError;
     const categoryNames = new Map((categories || []).map(category => [category.id, category.name]));
     return trucks.map(truck => ({
       ...truck,
       hours: (hours || []).filter(row => row.truck_id === truck.id),
+      live_location: (locations || []).find(row => row.truck_id === truck.id) || null,
       menu: (items || []).filter(item => item.truck_id === truck.id).map(item => ({ ...item, category_name: categoryNames.get(item.category_id) || 'Menu' }))
     }));
   }
 
-  window.FoodTrekNowCustomerMarketplace = Object.freeze({ available: Boolean(client), load });
+  function subscribeLocations(callback) {
+    if (!client?.channel || typeof callback !== 'function') return null;
+    return client.channel('customer-live-truck-locations')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'truck_live_locations' }, callback)
+      .subscribe();
+  }
+
+  window.FoodTrekNowCustomerMarketplace = Object.freeze({ available: Boolean(client), load, subscribeLocations });
 })();

@@ -234,7 +234,7 @@
       <header class="topbar">
         <div><p id="pageEyebrow" class="eyebrow">Vendor Dashboard</p><h1 id="pageTitle">Capital City Eats</h1></div>
         <div class="topbar-actions">
-          <button id="soundToggleButton" class="secondary-button" type="button">🔔 Sound On</button><button id="simulateOrderButton" class="secondary-button">+ Simulate New Order</button>
+          <button id="vendorLocationQuickButton" class="secondary-button" type="button">📍 Share Location</button><button id="soundToggleButton" class="secondary-button" type="button">🔔 Sound On</button><button id="simulateOrderButton" class="secondary-button">+ Simulate New Order</button>
           <div class="status-control"><span id="statusDot" class="status-dot online"></span><span id="statusText">Online</span><label class="switch"><input id="onlineToggle" type="checkbox" checked /><span class="slider"></span></label></div>
         </div>
       </header>
@@ -401,6 +401,16 @@
               </div>
             </section>
 
+            <section class="panel settings-panel vendor-location-panel" aria-labelledby="vendorLocationHeading">
+              <div class="settings-panel-heading"><span class="settings-icon location-icon" aria-hidden="true">📍</span><div><h3 id="vendorLocationHeading">Live Truck Location</h3><p>Share the truck's GPS position with nearby customers while FoodTrekNow is open.</p></div></div>
+              <div class="vendor-location-status" aria-live="polite">
+                <span id="vendorLocationBadge" class="vendor-location-badge idle">Off</span>
+                <div><strong id="vendorLocationTitle">Live truck location is off</strong><p id="vendorLocationMessage">Start sharing when the truck is parked or traveling to today's service location.</p></div>
+              </div>
+              <div class="vendor-location-actions"><button id="startVendorLocationButton" class="primary-button" type="button">Start Sharing Location</button><button id="stopVendorLocationButton" class="secondary-button" type="button" disabled>Stop Sharing</button></div>
+              <p class="vendor-location-privacy">FoodTrekNow asks for location only after you tap Start. Customers see the truck's current business location—not the vendor's personal profile—and updates stop when you tap Stop, go offline, close the app, or the last update becomes stale.</p>
+            </section>
+
             <section class="panel settings-panel settings-hours-panel">
               <div class="settings-panel-heading"><span class="settings-icon" aria-hidden="true">◷</span><div><h3>Business Hours</h3><p>Set the weekly hours shown to customers.</p></div></div>
               <div id="vendorHoursGrid" class="settings-hours-grid">
@@ -500,6 +510,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-config.js?v=customer-auth-1"></script>
 <script src="js/supabase-client.js?v=customer-auth-1"></script>
+<script src="js/live-location.js?v=live-location-1"></script>
 <script src="js/supabase-auth.js?v=customer-auth-1"></script>
 <script src="js/vendor-onboarding.js?v=vendor-onboarding-1"></script>
 <script src="js/vendor-auth.js?v=vendor-auth-1"></script>
@@ -510,6 +521,7 @@
 <script src="js/app.js?v=vendor-trial-1"></script>
 <script src="js/vendor-reports.js"></script>
 <script src="js/vendor-settings.js?v=vendor-data-2"></script>
+<script src="js/vendor-location.js?v=live-location-1"></script>
 <script src="js/vendor-subscription.js?v=vendor-trial-1"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>

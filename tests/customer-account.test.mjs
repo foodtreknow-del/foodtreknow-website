@@ -351,8 +351,8 @@ test('nearby truck search uses the saved location, filters today, sorts distance
 
   const nearbyMarkup = element('customerAccountContent').innerHTML;
   assert.match(nearbyMarkup, /Using ZIP 27601/);
-  assert.match(nearbyMarkup, /data-map-provider="google-maps"/);
-  assert.match(nearbyMarkup, /data-map-ready="false"/);
+  assert.match(nearbyMarkup, /data-map-provider="foodtreknow-live"/);
+  assert.match(nearbyMarkup, /data-map-ready="true"/);
   assert.match(nearbyMarkup, /Within 5 miles/);
   [5, 10, 15, 20, 25, 30, 35, 40, 45, 50].forEach(radius => assert.match(nearbyMarkup, new RegExp(`<option value="${radius}"`)));
   assert.ok(nearbyMarkup.indexOf('Capital City Eats') < nearbyMarkup.indexOf('Rolling Ember BBQ'), 'nearest truck should be listed first');
