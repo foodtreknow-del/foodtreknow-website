@@ -848,21 +848,21 @@
   };
 
   function resolveSampleCustomerLocation(savedLocation) {
-    const location = savedLocation || { method: 'current', label: 'Current Location' };
+    const location = savedLocation || { method: 'current', label: 'Location not set' };
     if (location.method === 'current' && Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude))) {
-      return { latitude: Number(location.latitude), longitude: Number(location.longitude), label: location.label || 'Current Location' };
+      return { latitude: Number(location.latitude), longitude: Number(location.longitude), label: location.label || 'Current Location', hasLocation: true };
     }
     if (location.method === 'city') {
       const city = String(location.city || '').toLowerCase();
       const center = city.includes('durham') ? SAMPLE_LOCATION_CENTERS.durham : city.includes('cary') ? SAMPLE_LOCATION_CENTERS.cary : SAMPLE_LOCATION_CENTERS.raleigh;
-      return { ...center, label: location.city || 'Saved City' };
+      return { ...center, label: location.city || 'Saved City', hasLocation: true };
     }
     if (location.method === 'zip') {
       const zip = String(location.zip || '');
       const center = zip.startsWith('277') ? SAMPLE_LOCATION_CENTERS.durham : zip.startsWith('27513') ? SAMPLE_LOCATION_CENTERS.cary : SAMPLE_LOCATION_CENTERS.raleigh;
-      return { ...center, label: `ZIP ${zip}` };
+      return { ...center, label: `ZIP ${zip}`, hasLocation: true };
     }
-    return { ...SAMPLE_LOCATION_CENTERS.raleigh, label: location.label || 'Current Location' };
+    return { ...SAMPLE_LOCATION_CENTERS.raleigh, label: 'Location not set', hasLocation: false };
   }
 
   function distanceInMiles(origin, destination) {
@@ -892,6 +892,7 @@
 
   class LocalTruckDataAdapter {
     searchNearby({ location, radiusMiles, date = new Date() }) {
+      const canMeasureDistance = location?.hasLocation !== false;
       return TRUCKS
         .filter(truck => truck.operatingDays.includes(date.getDay()))
         .map(truck => {
@@ -899,14 +900,17 @@
           return {
             ...truck,
             distance,
-            distanceLabel: `${distance.toFixed(1)} mi`,
-            driveTime: `${Math.max(4, Math.round(distance * 2.2))} min drive`,
+            distanceLabel: canMeasureDistance ? `${distance.toFixed(1)} mi` : 'Enable location',
+            driveTime: canMeasureDistance ? `${Math.max(4, Math.round(distance * 2.2))} min drive` : 'Location needed',
             operatingStatus: operatingStatus(truck, date),
             pickupLabel: `About ${truck.pickupMinutes} min`
           };
         })
-        .filter(truck => truck.distance <= radiusMiles)
-        .sort((first, second) => first.distance - second.distance);
+        .filter(truck => !canMeasureDistance || truck.distance <= radiusMiles)
+        .sort((first, second) => {
+          if (!canMeasureDistance && first.liveLocation !== second.liveLocation) return first.liveLocation ? -1 : 1;
+          return first.distance - second.distance;
+        });
     }
   }
 
@@ -1427,7 +1431,7 @@
 
   function preferredLocationLabel() {
     const location = currentAccount.preferredLocation;
-    if (!location) return 'Current Location';
+    if (!location) return 'Location not set';
     if (location.method === 'city') return location.city;
     if (location.method === 'zip') return `ZIP ${location.zip}`;
     return location.label || 'Current Location';
@@ -1481,15 +1485,16 @@
   function renderNearbyTrucks() {
     const radius = selectedNearbyRadius();
     const location = resolveSampleCustomerLocation(currentAccount.preferredLocation);
+    const hasLocation = location.hasLocation !== false;
     const trucks = TruckDataService.searchNearby({ location, radiusMiles: radius });
     const radiusOptions = NEARBY_RADIUS_OPTIONS.map(option => `<option value="${option}" ${option === radius ? 'selected' : ''}>${option}</option>`).join('');
     const pins = trucks.slice(0, 5).map((truck, index) => nearbyMapPin(truck, index, location, radius)).join('');
     const liveTruckCount = trucks.filter(truck => truck.liveLocation).length;
     return `<div class="nearby-search-page">
-      ${pageHeader('Explore Nearby', 'Find Food Trucks Near Your Location', `Using ${escapeHtml(preferredLocationLabel())}`, '<button class="secondary-button" data-home-page="overview" type="button">← Back to Home</button>')}
+      ${pageHeader('Explore Nearby', 'Find Food Trucks Near Your Location', hasLocation ? `Using ${escapeHtml(preferredLocationLabel())}` : 'Showing active trucks — enable location for distances', '<button class="secondary-button" data-home-page="overview" type="button">← Back to Home</button>')}
       <section class="nearby-search-controls" aria-label="Nearby truck search controls">
         <div><span class="nearby-location-icon" aria-hidden="true">📍</span><span><small>Searching near</small><strong>${escapeHtml(location.label)}</strong></span><button data-customer-action="change-location" type="button">Change Location</button></div>
-        <label for="nearbyRadiusSelect"><span>Showing Trucks Within:</span><span class="nearby-radius-input"><select id="nearbyRadiusSelect" data-nearby-radius aria-label="Search radius in miles">${radiusOptions}</select><strong>Miles</strong></span></label>
+        <label for="nearbyRadiusSelect"><span>${hasLocation ? 'Showing Trucks Within:' : 'Distance filter:'}</span><span class="nearby-radius-input"><select id="nearbyRadiusSelect" data-nearby-radius aria-label="Search radius in miles" ${hasLocation ? '' : 'disabled'}>${radiusOptions}</select><strong>${hasLocation ? 'Miles' : 'Enable location'}</strong></span></label>
       </section>
 
       <div class="nearby-search-layout">
@@ -1498,14 +1503,14 @@
           <div class="nearby-map-canvas">
             <div class="nearby-map-road road-one"></div><div class="nearby-map-road road-two"></div><div class="nearby-map-road road-three"></div>
             ${pins}
-            <div class="nearby-map-center" title="Your saved location"><span>📍</span><strong>You</strong></div>
+            <div class="nearby-map-center" title="${hasLocation ? 'Your saved location' : 'Set your location'}"><span>📍</span><strong>${hasLocation ? 'You' : 'Set location'}</strong></div>
           </div>
-          <div class="nearby-map-footer"><span>${trucks.length} truck${trucks.length === 1 ? '' : 's'} shown · ${liveTruckCount} live</span><span>${radius}-mile radius</span></div>
+          <div class="nearby-map-footer"><span>${trucks.length} truck${trucks.length === 1 ? '' : 's'} shown · ${liveTruckCount} live</span><span>${hasLocation ? `${radius}-mile radius` : 'All active trucks'}</span></div>
         </aside>
 
         <section class="nearby-results" aria-live="polite">
-          <div class="nearby-results-heading"><div><p class="eyebrow">Nearest First</p><h2>${trucks.length} truck${trucks.length === 1 ? '' : 's'} operating today</h2></div><span>Within ${radius} miles</span></div>
-          <div class="nearby-truck-list">${trucks.length ? trucks.map(nearbyTruckCard).join('') : `<div class="customer-card nearby-empty-state"><span>🚚</span><h2>No operating trucks within ${radius} miles</h2><p>Increase your search radius to see more food trucks.</p></div>`}</div>
+          <div class="nearby-results-heading"><div><p class="eyebrow">${hasLocation ? 'Nearest First' : 'Active Trucks'}</p><h2>${trucks.length} truck${trucks.length === 1 ? '' : 's'} operating today</h2></div><span>${hasLocation ? `Within ${radius} miles` : 'Enable location to sort by distance'}</span></div>
+          <div class="nearby-truck-list">${trucks.length ? trucks.map(nearbyTruckCard).join('') : `<div class="customer-card nearby-empty-state"><span>🚚</span><h2>${hasLocation ? `No operating trucks within ${radius} miles` : 'No active trucks are available right now'}</h2><p>${hasLocation ? 'Increase your search radius to see more food trucks.' : 'Check back soon or enable location to search another area.'}</p></div>`}</div>
         </section>
       </div>
     </div>`;

@@ -357,7 +357,7 @@ test('nearby truck search uses the saved location, filters today, sorts distance
   [5, 10, 15, 20, 25, 30, 35, 40, 45, 50].forEach(radius => assert.match(nearbyMarkup, new RegExp(`<option value="${radius}"`)));
   assert.ok(nearbyMarkup.indexOf('Capital City Eats') < nearbyMarkup.indexOf('Rolling Ember BBQ'), 'nearest truck should be listed first');
   assert.match(source, /\.filter\(truck => truck\.operatingDays\.includes\(date\.getDay\(\)\)\)/);
-  assert.match(source, /\.sort\(\(first, second\) => first\.distance - second\.distance\)/);
+  assert.match(source, /return first\.distance - second\.distance;/);
   assert.ok(window.FoodTrekNowTruckData);
   assert.equal(typeof window.FoodTrekNowTruckData.setAdapter, 'function');
   const sundayResults = window.FoodTrekNowTruckData.searchNearby({
@@ -377,6 +377,33 @@ test('nearby truck search uses the saved location, filters today, sorts distance
 
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ nearbyOrder: 'capital-city-eats' }) });
   assert.equal(JSON.parse(localStorage.getItem('ftnSelectedTruckV1')).truckId, 'capital-city-eats');
+});
+
+test('active trucks remain discoverable when customer GPS is unavailable', async () => {
+  const date = new Date(2026, 7, 28, 12, 0);
+  const withoutGps = window.FoodTrekNowTruckData.searchNearby({
+    location: { latitude: 35.7796, longitude: -78.6382, hasLocation: false },
+    radiusMiles: 1,
+    date
+  });
+  const withGps = window.FoodTrekNowTruckData.searchNearby({
+    location: { latitude: 35.7796, longitude: -78.6382, hasLocation: true },
+    radiusMiles: 1,
+    date
+  });
+
+  assert.ok(withoutGps.length > withGps.length, 'missing GPS must not apply a fake radius filter');
+  assert.ok(withoutGps.every(truck => truck.distanceLabel === 'Enable location'));
+  assert.ok(withoutGps.every(truck => truck.driveTime === 'Location needed'));
+
+  localStorage.removeItem('ftnGuestCustomerV1');
+  await emit(element('guestCheckoutButton'), 'click');
+  const markup = element('customerAccountContent').innerHTML;
+  assert.match(markup, /Showing active trucks — enable location for distances/);
+  assert.match(markup, /Location not set/);
+  assert.match(markup, /All active trucks/);
+  assert.match(markup, /data-nearby-radius[^>]*disabled/);
+  assert.doesNotMatch(markup, /No operating trucks within/);
 });
 
 test('twenty sample trucks open distinct cuisine-specific menus', async () => {
