@@ -1413,6 +1413,7 @@
     document.getElementById('customerSignOutButton').textContent = currentAccount.isGuest ? 'Exit Guest Checkout' : 'Sign Out';
     document.getElementById('vendorApplicationNav').classList.toggle('hidden-view', Boolean(currentAccount.isGuest) || currentAccount.role === 'admin');
     document.getElementById('adminVendorReviewNav').classList.toggle('hidden-view', currentAccount.role !== 'admin');
+    document.getElementById('hostOpportunitiesNav').classList.toggle('hidden-view', Boolean(currentAccount.isGuest));
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === currentPage));
     updateCartBadge();
     updateCustomerNotificationBadge();
@@ -2050,6 +2051,7 @@
       orders: renderOrders,
       payments: renderPayments,
       notifications: renderNotifications,
+      hostOpportunities: () => window.FoodTrekNowOpportunityMarketplace?.hostShellMarkup() || '<div class="customer-card"><h2>Host Opportunities</h2><p>The secure host marketplace is temporarily unavailable.</p></div>',
       settings: renderSettings,
       vendorApplication: renderVendorApplication,
       vendorReviews: renderVendorReviews
@@ -2057,6 +2059,7 @@
     accountContent.innerHTML = (renderers[page] || renderers.overview)();
     if (page === 'vendorApplication') loadVendorApplication();
     if (page === 'vendorReviews' && currentAccount.role === 'admin') loadVendorReviews();
+    if (page === 'hostOpportunities') window.FoodTrekNowOpportunityMarketplace?.mountHost();
     updateCartBadge();
     updateCustomerNotificationBadge();
     document.querySelector('.customer-sidebar')?.classList.remove('open');

@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="css/vendor.css?v=official-logo-3" />
 <link rel="stylesheet" href="css/vendor-reports.css" />
 <link rel="stylesheet" href="css/vendor-settings.css?v=vendor-trial-1" />
+<link rel="stylesheet" href="css/opportunity-marketplace.css?v=marketplace-phase1-1" />
 <link rel="stylesheet" href="css/customer-account.css?v=communications-2" />
 <link rel="stylesheet" href="css/customer-ordering.css" />
 <link rel="stylesheet" href="css/beta-banner.css" />
@@ -184,6 +185,7 @@
         <button class="customer-nav-link" data-customer-page="orders" type="button"><span>▤</span> Order History</button>
         <button class="customer-nav-link" data-customer-page="payments" type="button"><span>▣</span> Payment Methods</button>
         <button class="customer-nav-link customer-notification-nav-link" data-customer-page="notifications" type="button"><span>●</span> Notifications <b class="customer-notification-count hidden-view" data-customer-notification-count>0</b></button>
+        <button id="hostOpportunitiesNav" class="customer-nav-link hidden-view" data-customer-page="hostOpportunities" type="button"><span>📍</span> Host Opportunities</button>
         <button class="customer-nav-link" data-customer-page="settings" type="button"><span>⚙</span> Settings</button>
         <button id="vendorApplicationNav" class="customer-nav-link hidden-view" data-customer-page="vendorApplication" type="button"><span>🚚</span> Become a Vendor</button>
         <button id="adminVendorReviewNav" class="customer-nav-link hidden-view" data-customer-page="vendorReviews" type="button"><span>✓</span> Vendor Approvals</button>
@@ -223,6 +225,7 @@
         <button class="nav-link active" data-page="dashboard">Dashboard</button>
         <button class="nav-link" data-page="orders">Orders</button>
         <button class="nav-link" data-page="menu">Menu</button>
+        <button class="nav-link" data-page="opportunities">Find Locations</button>
         <button class="nav-link" data-page="reports">Reports</button>
         <button class="nav-link" data-page="settings">Settings</button>
       </nav>
@@ -302,6 +305,9 @@
           </div>
           <div id="menuItemsGrid" class="menu-items-grid"></div>
         </div>
+      </section>
+      <section id="opportunitiesPage" class="app-page hidden-view">
+        <div id="vendorOpportunityMarketplace" aria-live="polite"></div>
       </section>
       <section id="reportsPage" class="app-page hidden-view">
         <div class="vendor-section-heading">
@@ -516,16 +522,17 @@
 <script src="js/vendor-auth.js?v=vendor-auth-1"></script>
 <script src="js/vendor-data.js?v=vendor-data-2"></script>
 <script src="js/customer-marketplace.js?v=customer-marketplace-1"></script>
+<script src="js/opportunity-marketplace.js?v=marketplace-phase1-1"></script>
 <script src="js/live-orders.js?v=communications-1"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=vendor-trial-1"></script>
+<script src="js/app.js?v=marketplace-phase1-1"></script>
 <script src="js/vendor-reports.js"></script>
 <script src="js/vendor-settings.js?v=vendor-data-2"></script>
 <script src="js/vendor-location.js?v=live-location-1"></script>
 <script src="js/vendor-subscription.js?v=vendor-trial-1"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>
-<script src="js/customer-account.js?v=gps-optional-discovery-1"></script>
+<script src="js/customer-account.js?v=marketplace-phase1-1"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>
