@@ -462,7 +462,7 @@ begin
   select owner_id into host_owner from public.location_hosts where id = selected_opportunity.host_id;
   insert into public.marketplace_notifications (profile_id, opportunity_id, application_id, kind, event_key, title, body)
   values (host_owner, p_opportunity_id, created.id, case when p_action = 'book' then 'booking' else 'application' end,
-    'marketplace-application:' || created.id, case when p_action = 'book' then 'A food truck booked your opportunity' else 'New food truck application',
+    'marketplace-application:' || created.id, case when p_action = 'book' then 'A food truck booked your opportunity' else 'New food truck application' end,
     case when p_action = 'book' then 'An instant booking was confirmed for ' else 'A vendor requested a spot at ' end || selected_opportunity.title)
   on conflict (profile_id, event_key) do nothing;
 

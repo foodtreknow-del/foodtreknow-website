@@ -35,6 +35,7 @@ test('all marketplace state changes use authenticated security-definer RPCs', as
   assert.match(migration, /if auth\.uid\(\) is null then raise exception 'Sign in to create a host account'/);
   assert.match(migration, /Only the vendor and host can message/);
   assert.match(migration, /Reviews are available after the opportunity ends/);
+  assert.match(migration, /case when p_action = 'book' then 'A food truck booked your opportunity' else 'New food truck application' end/);
 });
 
 test('vendor and host navigation load the modular responsive marketplace', async () => {
