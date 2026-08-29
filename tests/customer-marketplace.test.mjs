@@ -15,6 +15,10 @@ function harness() {
     menu_items: [{ id: 'item-live', truck_id: 'truck-live', category_id: 'cat-live', name: 'Fish Plate', description: 'Fresh fish', price: '14.50', photo_url: 'fish.jpg', is_featured: true, is_sold_out: false, is_active: true, sort_order: 1 }]
   };
   const client = {
+    rpc(name) {
+      assert.equal(name, 'list_customer_events');
+      return Promise.resolve({ data: [{ id: 'event-live', title: 'Bowie Food Truck Night', starts_at: '2026-09-01T21:00:00Z', ends_at: '2026-09-02T01:00:00Z', expected_customers: 300, host_name: 'Bowie Community Center', location: { name: 'Town Center', city: 'Bowie', state: 'MD' }, trucks: [{ id: 'truck-live', name: 'BCS Food Truck' }] }], error: null });
+    },
     from(table) {
       return {
         select() { return this; }, eq() { return this; }, in() { return this; }, order() { return this; },
@@ -36,8 +40,15 @@ test('approved active trucks load with their hours, categories, and real menu it
   assert.equal(marketplace[0].menu[0].photo_url, 'fish.jpg');
 });
 
+test('confirmed host events load with their attending food trucks', async () => {
+  const events = await harness().loadEvents();
+  assert.equal(events[0].title, 'Bowie Food Truck Night');
+  assert.equal(events[0].location.city, 'Bowie');
+  assert.equal(events[0].trucks[0].name, 'BCS Food Truck');
+});
+
 test('customer marketplace loads before customer UI code', () => {
-  const marketplacePosition = html.indexOf('js/customer-marketplace.js?v=customer-marketplace-1');
+  const marketplacePosition = html.indexOf('js/customer-marketplace.js?v=customer-events-1');
   const customerPosition = html.indexOf('js/customer-account.js?v=');
   assert.ok(marketplacePosition >= 0 && marketplacePosition < customerPosition);
 });
@@ -49,6 +60,10 @@ test('customer UI merges Supabase trucks without removing sample functionality',
   assert.match(customerSource, /customerCanOrderTruck/);
   assert.match(customerSource, /Sign In to Order/);
   assert.match(customerSource, /item\.image \? `<img/);
+  assert.match(customerSource, /customerEventFromMarketplace/);
+  assert.match(customerSource, /connectedEvents\.find\(event => event\.truckIds\.includes\(truck\.id\)/);
+  assert.match(customerSource, /new Date\(event\.startsAt\).*<= currentTime/s);
+  assert.match(customerSource, /data-event-truck/);
 });
 
 test('a vendor live Online toggle overrides a closed recurring schedule', () => {

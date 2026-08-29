@@ -47,7 +47,9 @@
     { id: 'breakfast-bus', name: 'The Breakfast Bus', cuisine: 'Breakfast · Brunch', status: 'Open now', wait: '10–16 min', icon: '🍳', latitude: 36.18, longitude: -78.55, operatingDays: [0, 1, 2, 3, 4, 5, 6], opensAt: '7:00 AM', closesAt: '2:00 PM', pickupMinutes: 10, currentEvent: '' }
   ];
   let remoteTruckIds = new Set();
+  let remoteEventIds = new Set();
   let marketplaceLoadPromise = null;
+  let customerEventLoadPromise = null;
   const NEARBY_RADIUS_OPTIONS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
   const EVENTS = [
     { id: 'first-friday', truckId: 'capital-city-eats', date: 'AUG 01', name: 'First Friday Food Truck Rodeo', location: 'City Market Plaza', time: '5:00–9:00 PM', detail: '12 trucks · Live music' },
@@ -1205,16 +1207,77 @@
     return `${hour % 12 || 12}:${minute} ${hour >= 12 ? 'PM' : 'AM'}`;
   }
 
+  function formatCustomerEventDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'TBD 00';
+    return `${date.toLocaleDateString([], { month: 'short' }).toUpperCase()} ${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  function formatCustomerEventTime(startValue, endValue) {
+    const start = new Date(startValue);
+    const end = new Date(endValue);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 'Time to be announced';
+    return `${start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}–${end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+  }
+
+  function customerEventLocation(event) {
+    const location = event.location || {};
+    const cityState = [location.city, location.state].filter(Boolean).join(', ');
+    return location.name || cityState || 'Location to be announced';
+  }
+
+  function customerEventAddress(event) {
+    const location = event.location || {};
+    return [location.address_line1, location.address_line2, location.city, location.state, location.postal_code].filter(Boolean).join(', ');
+  }
+
+  function customerEventFromMarketplace(event) {
+    const trucks = Array.isArray(event.trucks) ? event.trucks : [];
+    const truckIds = trucks.map(truck => truck.id).filter(Boolean);
+    const expected = Number(event.expected_customers) || 0;
+    return {
+      id: event.id,
+      truckId: truckIds[0] || '',
+      truckIds,
+      trucks,
+      date: formatCustomerEventDate(event.starts_at),
+      name: event.title || 'Food Truck Event',
+      location: customerEventLocation(event),
+      address: customerEventAddress(event),
+      latitude: event.location?.latitude == null ? null : Number(event.location.latitude),
+      longitude: event.location?.longitude == null ? null : Number(event.location.longitude),
+      time: formatCustomerEventTime(event.starts_at, event.ends_at),
+      detail: `${trucks.length} confirmed truck${trucks.length === 1 ? '' : 's'}${expected ? ` · ${expected.toLocaleString()} expected` : ''}`,
+      description: event.description || '',
+      hostName: event.host_name || '',
+      startsAt: event.starts_at,
+      endsAt: event.ends_at,
+      live: true
+    };
+  }
+
   async function refreshCustomerMarketplace(force = false) {
     const service = window.FoodTrekNowCustomerMarketplace;
     if (!service?.available) return;
-    if (force) marketplaceLoadPromise = null;
+    if (force) {
+      marketplaceLoadPromise = null;
+      customerEventLoadPromise = null;
+    }
     if (!marketplaceLoadPromise) marketplaceLoadPromise = service.load();
+    if (!customerEventLoadPromise) customerEventLoadPromise = service.loadEvents
+      ? service.loadEvents().catch(() => [])
+      : Promise.resolve([]);
     try {
-      const marketplace = await marketplaceLoadPromise;
+      const [marketplace, marketplaceEvents] = await Promise.all([marketplaceLoadPromise, customerEventLoadPromise]);
       const sampleTrucks = TRUCKS.filter(truck => !remoteTruckIds.has(truck.id));
       TRUCKS.splice(0, TRUCKS.length, ...sampleTrucks);
+      const sampleEvents = EVENTS.filter(event => !remoteEventIds.has(event.id));
+      EVENTS.splice(0, EVENTS.length, ...sampleEvents);
+      const connectedEvents = marketplaceEvents.map(customerEventFromMarketplace);
+      remoteEventIds = new Set(connectedEvents.map(event => event.id));
+      EVENTS.unshift(...connectedEvents);
       remoteTruckIds = new Set(marketplace.map(truck => truck.id));
+      const currentTime = Date.now();
       marketplace.forEach((truck, index) => {
         const openHours = truck.hours.filter(row => !row.is_closed);
         const todayHours = truck.hours.find(row => row.day_of_week === new Date().getDay());
@@ -1243,7 +1306,9 @@
           opensAt: displayMarketplaceTime(todayHours?.opens_at, '11:00 AM'),
           closesAt: displayMarketplaceTime(todayHours?.closes_at, '8:00 PM'),
           pickupMinutes: Number(truck.estimated_prep_minutes) || 20,
-          currentEvent: truck.location_name || '',
+          currentEvent: connectedEvents.find(event => event.truckIds.includes(truck.id)
+            && new Date(event.startsAt).getTime() <= currentTime
+            && new Date(event.endsAt).getTime() >= currentTime)?.name || truck.location_name || '',
           acceptingOrders: Boolean(truck.accepting_orders),
           pickupInstructions: truck.pickup_instructions || '',
           minimumOrder: Number(truck.minimum_order) || 0,
@@ -1274,6 +1339,7 @@
       if (currentAccount && !accountView.classList.contains('hidden-view')) renderCustomerPage(currentPage);
     } catch (error) {
       marketplaceLoadPromise = null;
+      customerEventLoadPromise = null;
       customerToast(`Live trucks could not be loaded: ${error.message}`);
     }
   }
@@ -2330,6 +2396,16 @@
     modalContent.innerHTML = '';
   }
 
+  function customerEventModal(eventItem) {
+    const attendingTrucks = (eventItem.truckIds || [eventItem.truckId])
+      .map(truckId => TRUCKS.find(truck => truck.id === truckId))
+      .filter(Boolean);
+    const truckMarkup = attendingTrucks.length
+      ? attendingTrucks.map(truck => `<article class="customer-event-truck"><span>${truck.logo ? `<img src="${escapeHtml(truck.logo)}" alt="">` : truck.icon || '🚚'}</span><div><strong>${escapeHtml(truck.name)}</strong><small>${escapeHtml(truck.cuisine || 'Food Truck')} · ${escapeHtml(truck.wait || 'View menu')}</small></div><button class="primary-button" data-event-truck="${truck.id}" type="button">View Menu</button></article>`).join('')
+      : '<p class="muted">Attending truck details will be available soon.</p>';
+    openModal(`<div class="customer-event-modal"><p class="eyebrow">Confirmed Host Event</p><h2 id="customerModalTitle">${escapeHtml(eventItem.name)}</h2><div class="customer-event-summary"><div class="event-date"><span>${escapeHtml(eventItem.date.split(' ')[0] || 'TBD')}</span><strong>${escapeHtml(eventItem.date.split(' ')[1] || '')}</strong></div><div><strong>${escapeHtml(eventItem.location)}</strong><p>${escapeHtml(eventItem.time)} · ${escapeHtml(eventItem.detail)}</p>${eventItem.hostName ? `<small>Hosted by ${escapeHtml(eventItem.hostName)}</small>` : ''}</div></div>${eventItem.description ? `<p class="customer-event-description">${escapeHtml(eventItem.description)}</p>` : ''}<div class="customer-event-actions">${eventItem.address ? `<button class="secondary-button" data-event-directions="${eventItem.id}" type="button">Directions</button>` : ''}</div><h3>Food trucks attending</h3><div class="customer-event-trucks">${truckMarkup}</div></div>`);
+  }
+
   function addressModal(address = null) {
     openModal(`<p class="eyebrow">Saved Location</p><h2 id="customerModalTitle">${address ? 'Edit' : 'Add'} Address</h2>
       <form id="customerAddressForm"><input id="addressId" type="hidden" value="${address?.id || ''}">
@@ -2829,10 +2905,7 @@
     const homeEvent = event.target.closest('[data-home-event]');
     if (homeEvent) {
       const eventItem = EVENTS.find(item => item.id === homeEvent.dataset.homeEvent);
-      if (eventItem) {
-        selectedTruckId = eventItem.truckId;
-        renderCustomerPage('truckMenu');
-      }
+      if (eventItem) customerEventModal(eventItem);
       return;
     }
     const orderFavorite = event.target.closest('[data-toggle-order-favorite]');
@@ -3155,6 +3228,25 @@
 
   modalContent.addEventListener('click', async event => {
     if (event.target.closest('[data-close-customer-modal]')) closeModal();
+    const eventTruck = event.target.closest('[data-event-truck]');
+    if (eventTruck) {
+      selectedTruckId = eventTruck.dataset.eventTruck;
+      localStorage.setItem('ftnSelectedTruckV1', JSON.stringify({ truckId: selectedTruckId, selectedAt: Date.now() }));
+      closeModal();
+      renderCustomerPage('truckMenu');
+      return;
+    }
+    const eventDirections = event.target.closest('[data-event-directions]');
+    if (eventDirections) {
+      const eventItem = EVENTS.find(item => item.id === eventDirections.dataset.eventDirections);
+      if (eventItem) {
+        const destination = Number.isFinite(eventItem.latitude) && Number.isFinite(eventItem.longitude)
+          ? `${eventItem.latitude},${eventItem.longitude}`
+          : eventItem.address;
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`, '_blank', 'noopener');
+      }
+      return;
+    }
     const locationChoice = event.target.closest('[data-location-method]');
     if (locationChoice) {
       const method = locationChoice.dataset.locationMethod;

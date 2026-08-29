@@ -28,6 +28,19 @@
     }));
   }
 
+  async function loadEvents() {
+    if (!client?.rpc) return [];
+    const { data, error } = await client.rpc('list_customer_events');
+    if (error) {
+      const message = String(error.message || '').toLowerCase();
+      // Keep the existing customer experience usable until the new migration
+      // has been applied to a deployment.
+      if (message.includes('list_customer_events') || message.includes('schema cache')) return [];
+      throw error;
+    }
+    return Array.isArray(data) ? data : [];
+  }
+
   function subscribeLocations(callback) {
     if (!client?.channel || typeof callback !== 'function') return null;
     return client.channel('customer-live-truck-locations')
@@ -35,5 +48,5 @@
       .subscribe();
   }
 
-  window.FoodTrekNowCustomerMarketplace = Object.freeze({ available: Boolean(client), load, subscribeLocations });
+  window.FoodTrekNowCustomerMarketplace = Object.freeze({ available: Boolean(client), load, loadEvents, subscribeLocations });
 })();
