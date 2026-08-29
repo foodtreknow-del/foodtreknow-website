@@ -99,6 +99,7 @@ test('vendor and customer modules initialize together without a startup error', 
   assert.ok(window.FoodTrekNowCustomerAuth);
   assert.ok(elements.get('loginForm').listeners.has('submit'));
   assert.ok(elements.get('openCustomerPortalButton').listeners.has('click'));
+  assert.ok(elements.get('openHostPortalButton').listeners.has('click'));
   assert.match(html, /js\/customer-account\.js\?v=[a-z0-9-]+/);
 });
 
@@ -143,25 +144,28 @@ test('customer account UI includes every required area and has unique static IDs
   assert.match(source, /cancelOrder\(account, orderId\)/);
 });
 
-test('homepage prioritizes customer ordering before the vendor login action', () => {
+test('homepage presents separate customer, host, and vendor entry points', () => {
   const customerActionIndex = html.indexOf("I'm Hungry Login");
+  const hostActionIndex = html.indexOf('Host / Event Organizer Login');
   const vendorActionIndex = html.indexOf('Vendor Log In');
   assert.ok(customerActionIndex >= 0);
-  assert.ok(vendorActionIndex > customerActionIndex);
+  assert.ok(hostActionIndex > customerActionIndex);
+  assert.ok(vendorActionIndex > hostActionIndex);
   assert.match(html, /customer-entry customer-entry-primary/);
   assert.match(html, /class="vendor-login-button full"/);
   assert.match(html, /id="backToVendorButton"[^>]*>← Back<\/button>\s*<p class="customer-back-tagline">Find it\. Order it\. Pick it Up\.<\/p>/);
   assert.match(accountStyles, /\.customer-back-tagline\{[^}]*font-size:36px/);
   assert.match(accountStyles, /\.customer-entry-button\{[^}]*background:var\(--brand\)/);
   assert.match(accountStyles, /\.vendor-login-button\{[^}]*background:#17241d/);
+  assert.match(accountStyles, /\.host-entry-button\{[^}]*background:#173d2a/);
 });
 
 test('official FoodTrekNow logo replaces every FTN badge and customer sign-in says I am hungry', () => {
   assert.doesNotMatch(html, />\s*FTN\s*</);
-  assert.equal((html.match(/class="foodtrek-logo/g) || []).length, 5);
-  assert.equal((html.match(/src="assets\/foodtreknow-logo\.png"/g) || []).length, 5);
+  assert.equal((html.match(/class="foodtrek-logo/g) || []).length, 6);
+  assert.equal((html.match(/src="assets\/foodtreknow-logo\.png"/g) || []).length, 6);
   assert.deepEqual([...officialLogo.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
-  assert.match(html, /<h1>I'm Hungry<\/h1>/);
+  assert.match(html, /<h1[^>]*>I'm Hungry<\/h1>/);
   const customerActionIndex = html.indexOf("I'm Hungry Login");
   const vendorFormIndex = html.indexOf('id="loginForm"');
   assert.doesNotMatch(html.slice(customerActionIndex, vendorFormIndex), /Vendor Portal/);
@@ -231,6 +235,21 @@ test('customers can sign in by email or mobile and invalid credentials are rejec
   const byMobile = await window.FoodTrekNowCustomerAuth.signIn('5555550198', 'safe-password');
   assert.equal(byEmail.id, byMobile.id);
   await assert.rejects(() => window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'wrong-password'), /incorrect/);
+});
+
+test('an existing FoodTrekNow login opens the dedicated host portal and can switch back to customer', async () => {
+  const account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'safe-password');
+  localStorage.setItem('ftnCustomerSessionV1', JSON.stringify({ accountId: account.id }));
+  await emit(element('openHostPortalButton'), 'click');
+  assert.equal(element('hostPortalView').classList.contains('hidden-view'), false);
+  assert.equal(element('customerAccountView').classList.contains('hidden-view'), true);
+  assert.equal(element('hostPortalAccountName').textContent, 'Avery Jordan');
+  assert.equal(localStorage.getItem('ftnPortalDestinationV1'), 'host');
+
+  await emit(element('switchToCustomerPortalButton'), 'click');
+  assert.equal(element('customerAccountView').classList.contains('hidden-view'), false);
+  assert.equal(element('hostPortalView').classList.contains('hidden-view'), true);
+  assert.equal(localStorage.getItem('ftnPortalDestinationV1'), 'customer');
 });
 
 test('duplicate email or mobile accounts are rejected', async () => {

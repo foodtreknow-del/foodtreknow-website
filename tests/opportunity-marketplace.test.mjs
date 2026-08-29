@@ -38,19 +38,24 @@ test('all marketplace state changes use authenticated security-definer RPCs', as
   assert.match(migration, /case when p_action = 'book' then 'A food truck booked your opportunity' else 'New food truck application' end/);
 });
 
-test('vendor and host navigation load the modular responsive marketplace', async () => {
+test('vendor and dedicated host portals load the modular responsive marketplace', async () => {
   const [html, app, customer, marketplace, styles, worker] = await Promise.all([
     read('index.html'), read('js/app.js'), read('js/customer-account.js'),
     read('js/opportunity-marketplace.js'), read('css/opportunity-marketplace.css'), read('service-worker.js')
   ]);
   assert.match(html, /data-page="opportunities">Find Locations/);
   assert.match(html, /id="vendorOpportunityMarketplace"/);
-  assert.match(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=marketplace-phase1-1/);
+  assert.match(html, /id="openHostPortalButton"/);
+  assert.match(html, /id="hostPortalView"/);
+  assert.match(html, /id="hostOpportunityMarketplace"/);
+  assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-portal-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
   assert.match(customer, /FoodTrekNowOpportunityMarketplace\?\.mountHost/);
+  assert.match(customer, /ftnPortalDestinationV1/);
+  assert.match(customer, /function openHostPortal/);
   for (const label of ['Open Spots Today', 'Weekly Route', 'Request Spot', 'Book Now', 'Use My Location', 'Publish Opportunity', 'Approve', 'Waitlist', 'Decline', 'Send Message']) {
     assert.match(marketplace, new RegExp(label));
   }

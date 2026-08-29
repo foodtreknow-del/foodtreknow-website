@@ -1012,6 +1012,7 @@
   const dashboardView = document.getElementById('dashboardView');
   const authView = document.getElementById('customerAuthView');
   const accountView = document.getElementById('customerAccountView');
+  const hostPortalView = document.getElementById('hostPortalView');
   const accountContent = document.getElementById('customerAccountContent');
   const accountModal = document.getElementById('customerAccountModal');
   const modalContent = document.getElementById('customerAccountModalContent');
@@ -1025,6 +1026,23 @@
   let customerCommunicationsSubscribed = false;
   let customerMarketplaceSubscribed = false;
   let customerMarketplaceRefreshTimer = null;
+  const PORTAL_DESTINATION_KEY = 'ftnPortalDestinationV1';
+  let authDestination = localStorage.getItem(PORTAL_DESTINATION_KEY) === 'host' ? 'host' : 'customer';
+
+  function setPortalDestination(destination) {
+    authDestination = destination === 'host' ? 'host' : 'customer';
+    localStorage.setItem(PORTAL_DESTINATION_KEY, authDestination);
+  }
+
+  function updateAccountAuthCopy() {
+    const host = authDestination === 'host';
+    document.getElementById('accountSignInEyebrow').textContent = host ? 'Host Portal' : 'Welcome Back';
+    document.getElementById('accountSignInTitle').textContent = host ? 'Host / Event Organizer Sign In' : 'Sign In';
+    document.getElementById('accountSignInDescription').textContent = host ? 'Manage your locations, events, and food truck opportunities.' : 'Access your orders, favorites, addresses, and settings.';
+    document.getElementById('accountCreateEyebrow').textContent = host ? 'Host Portal' : 'Join FoodTrekNow';
+    document.getElementById('accountCreateTitle').textContent = host ? 'Create a Host Account' : 'Create Account';
+    document.getElementById('accountCreateDescription').textContent = host ? 'Create one secure FoodTrekNow login, then add your organization and opportunities.' : 'Save your favorites, reorder meals, and make checkout faster.';
+  }
 
   function readSession() {
     try {
@@ -1051,14 +1069,17 @@
     dashboardView.classList.add('hidden-view');
     authView.classList.add('hidden-view');
     accountView.classList.add('hidden-view');
+    hostPortalView.classList.add('hidden-view');
   }
 
-  function showCustomerAuth(panel = 'welcome') {
+  function showCustomerAuth(panel = 'welcome', destination = authDestination) {
+    setPortalDestination(destination);
     clearInterval(customerMarketplaceRefreshTimer);
     customerMarketplaceRefreshTimer = null;
     hidePrimaryViews();
     authView.classList.remove('hidden-view');
     document.body.classList.remove('login-page');
+    updateAccountAuthCopy();
     ['customerWelcomePanel', 'customerSignInPanel', 'customerCreatePanel', 'customerForgotPanel', 'customerGuestPanel'].forEach(id => document.getElementById(id).classList.add('hidden-view'));
     const panels = { welcome: 'customerWelcomePanel', signin: 'customerSignInPanel', create: 'customerCreatePanel', forgot: 'customerForgotPanel', guest: 'customerGuestPanel' };
     document.getElementById(panels[panel] || panels.welcome).classList.remove('hidden-view');
@@ -1080,6 +1101,7 @@
   }
 
   function openCustomerAccount(account, page = 'overview') {
+    setPortalDestination('customer');
     currentAccount = CustomerOrderingService.ensureState(account);
     let savedTruck = null;
     try { savedTruck = JSON.parse(localStorage.getItem('ftnSelectedTruckV1') || 'null'); } catch {}
@@ -1105,6 +1127,25 @@
     hydrateVendorCredits();
     handleStripeCheckoutReturn();
     window.scrollTo(0, 0);
+  }
+
+  function openHostPortal(account) {
+    setPortalDestination('host');
+    currentAccount = CustomerOrderingService.ensureState(account);
+    clearInterval(customerMarketplaceRefreshTimer);
+    customerMarketplaceRefreshTimer = null;
+    hidePrimaryViews();
+    hostPortalView.classList.remove('hidden-view');
+    document.body.classList.remove('login-page');
+    const name = currentAccount.preferredName || currentAccount.firstName || 'Host';
+    document.getElementById('hostPortalAccountName').textContent = `${name} ${currentAccount.lastName || ''}`.trim();
+    window.FoodTrekNowOpportunityMarketplace?.mountHost();
+    window.scrollTo(0, 0);
+  }
+
+  function openSelectedPortal(account) {
+    if (authDestination === 'host') openHostPortal(account);
+    else openCustomerAccount(account);
   }
 
   let checkoutReturnInProgress = false;
@@ -1413,7 +1454,6 @@
     document.getElementById('customerSignOutButton').textContent = currentAccount.isGuest ? 'Exit Guest Checkout' : 'Sign Out';
     document.getElementById('vendorApplicationNav').classList.toggle('hidden-view', Boolean(currentAccount.isGuest) || currentAccount.role === 'admin');
     document.getElementById('adminVendorReviewNav').classList.toggle('hidden-view', currentAccount.role !== 'admin');
-    document.getElementById('hostOpportunitiesNav').classList.toggle('hidden-view', Boolean(currentAccount.isGuest));
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === currentPage));
     updateCartBadge();
     updateCustomerNotificationBadge();
@@ -2051,7 +2091,6 @@
       orders: renderOrders,
       payments: renderPayments,
       notifications: renderNotifications,
-      hostOpportunities: () => window.FoodTrekNowOpportunityMarketplace?.hostShellMarkup() || '<div class="customer-card"><h2>Host Opportunities</h2><p>The secure host marketplace is temporarily unavailable.</p></div>',
       settings: renderSettings,
       vendorApplication: renderVendorApplication,
       vendorReviews: renderVendorReviews
@@ -2059,7 +2098,6 @@
     accountContent.innerHTML = (renderers[page] || renderers.overview)();
     if (page === 'vendorApplication') loadVendorApplication();
     if (page === 'vendorReviews' && currentAccount.role === 'admin') loadVendorReviews();
-    if (page === 'hostOpportunities') window.FoodTrekNowOpportunityMarketplace?.mountHost();
     updateCartBadge();
     updateCustomerNotificationBadge();
     document.querySelector('.customer-sidebar')?.classList.remove('open');
@@ -2379,10 +2417,11 @@
   }
 
   document.getElementById('openCustomerPortalButton').addEventListener('click', async () => {
+    setPortalDestination('customer');
     if (CustomerAuthService.usesSupabase()) {
       try {
         const account = currentAccount || await CustomerAuthService.getCurrentAccount();
-        if (account) openCustomerAccount(account);
+        if (account) openSelectedPortal(account);
         else showCustomerAuth();
       } catch (error) {
         showCustomerAuth('signin');
@@ -2395,11 +2434,29 @@
     if (account) openCustomerAccount(account);
     else showCustomerAuth();
   });
+  document.getElementById('openHostPortalButton').addEventListener('click', async () => {
+    setPortalDestination('host');
+    if (CustomerAuthService.usesSupabase()) {
+      try {
+        const account = currentAccount || await CustomerAuthService.getCurrentAccount();
+        if (account) openHostPortal(account);
+        else showCustomerAuth('signin', 'host');
+      } catch (error) {
+        showCustomerAuth('signin', 'host');
+        document.getElementById('customerSignInMessage').textContent = error.message;
+      }
+      return;
+    }
+    const session = readSession();
+    const account = session ? repository.findById(session.accountId) : null;
+    if (account) openHostPortal(account);
+    else showCustomerAuth('signin', 'host');
+  });
   document.getElementById('backToVendorButton').addEventListener('click', showVendorLogin);
   document.getElementById('showCustomerSignInButton').addEventListener('click', () => showCustomerAuth('signin'));
   document.getElementById('showCreateAccountButton').addEventListener('click', () => showCustomerAuth('create'));
   document.getElementById('guestCheckoutButton').addEventListener('click', () => startGuestCheckout('nearby'));
-  document.querySelectorAll('[data-auth-back]').forEach(button => button.addEventListener('click', () => showCustomerAuth()));
+  document.querySelectorAll('[data-auth-back]').forEach(button => button.addEventListener('click', () => authDestination === 'host' ? showVendorLogin() : showCustomerAuth()));
   document.querySelectorAll('[data-show-signin]').forEach(button => button.addEventListener('click', () => showCustomerAuth('signin')));
   document.querySelectorAll('[data-show-create]').forEach(button => button.addEventListener('click', () => showCustomerAuth('create')));
   document.getElementById('showForgotPasswordButton').addEventListener('click', () => showCustomerAuth('forgot'));
@@ -2442,7 +2499,7 @@
         document.getElementById('customerSignInMessage').textContent = 'Account created. Check your email and select the verification link before signing in.';
       } else {
         saveSession(account.id, true);
-        openCustomerAccount(account);
+        openSelectedPortal(account);
         customerToast('Account created. Welcome to FoodTrekNow!');
       }
     } catch (error) {
@@ -2458,7 +2515,7 @@
       saveSession(account.id, document.getElementById('customerRememberMe').checked);
       event.target.reset();
       message.textContent = '';
-      openCustomerAccount(account);
+      openSelectedPortal(account);
       customerToast('Signed in successfully.');
     } catch (error) {
       message.textContent = error.message;
@@ -2494,7 +2551,28 @@
     currentAccount = null;
     customerNotifications = [];
     customerCommunicationsSubscribed = false;
-    showCustomerAuth(wasGuest ? 'welcome' : 'signin');
+    showCustomerAuth(wasGuest ? 'welcome' : 'signin', 'customer');
+  });
+  document.getElementById('hostPortalSignOutButton').addEventListener('click', async () => {
+    try {
+      await CustomerAuthService.signOut();
+    } catch (error) {
+      customerToast(error.message);
+      return;
+    }
+    clearSession();
+    currentAccount = null;
+    customerNotifications = [];
+    customerCommunicationsSubscribed = false;
+    showCustomerAuth('signin', 'host');
+  });
+  document.getElementById('switchToCustomerPortalButton').addEventListener('click', () => {
+    if (currentAccount) openCustomerAccount(currentAccount);
+  });
+  document.getElementById('hostPortalMobileMenuButton').addEventListener('click', event => {
+    const sidebar = document.querySelector('.host-portal-sidebar');
+    const open = sidebar.classList.toggle('open');
+    event.currentTarget.setAttribute('aria-expanded', String(open));
   });
   document.getElementById('customerMenuButton').addEventListener('click', event => {
     const sidebar = document.querySelector('.customer-sidebar');
@@ -3299,7 +3377,7 @@
         await CustomerAuthService.updateRecoveredPassword(nextPassword);
         closeModal();
         const account = await CustomerAuthService.getCurrentAccount();
-        if (account) openCustomerAccount(account);
+        if (account) openSelectedPortal(account);
         customerToast('Your password has been reset.');
       } catch (error) {
         message.textContent = error.message;
@@ -3341,7 +3419,7 @@
         const account = await CustomerAuthService.getCurrentAccount();
         if (account) {
           saveSession(account.id, true);
-          openCustomerAccount(account);
+          openSelectedPortal(account);
         } else {
           clearSession();
         }
@@ -3355,7 +3433,7 @@
     const session = readSession();
     if (!session) return;
     const account = repository.findById(session.accountId);
-    if (account) openCustomerAccount(account);
+    if (account) openSelectedPortal(account);
     else clearSession();
   }
 

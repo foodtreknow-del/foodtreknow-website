@@ -5,7 +5,7 @@
 - **Application:** responsive HTML/CSS/JavaScript application packaged for web, Android, and iOS with Capacitor.
 - **Authentication:** Supabase Auth with one `profiles` identity per person. No duplicate host or organizer login system is introduced.
 - **Vendor ownership:** approved vendors continue to use `vendor_profiles`, `trucks`, and the existing vendor authentication boundary.
-- **Customer/host access:** a signed-in profile can create one host profile from the existing customer account shell.
+- **Host access:** hosts and event organizers use a dedicated main login choice and host portal. Authentication remains unified so an existing FoodTrekNow user can securely switch between customer and host experiences without duplicate credentials.
 - **Database:** PostgreSQL/Supabase migrations, foreign keys, Row Level Security, protected `security definer` RPCs, and Realtime.
 - **Messaging and notifications:** the existing order-specific communication architecture remains unchanged; marketplace communication uses parallel opportunity-specific tables and the same participant-only security pattern.
 - **Location:** the existing foreground browser/native GPS permission workflow is reused. Vendor live location is never copied into a personal profile.
