@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" type="image/png" href="assets/foodtreknow-logo.png" />
 <link rel="apple-touch-icon" href="assets/foodtreknow-logo.png" />
-<link rel="stylesheet" href="css/vendor.css?v=official-logo-3" />
+<link rel="stylesheet" href="css/vendor.css?v=logo-home-1" />
 <link rel="stylesheet" href="css/vendor-reports.css?v=print-fix-1" />
 <link rel="stylesheet" href="css/vendor-settings.css?v=vendor-trial-1" />
 <link rel="stylesheet" href="css/opportunity-marketplace.css?v=host-portal-1" />
@@ -50,7 +50,7 @@
 
 <div id="loginView">
   <main class="login-shell">
-    <section class="brand-panel"><h1 class="brand-logo-heading"><img class="foodtrek-logo foodtrek-logo-hero" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></h1><p>Local food. Ready when you are.</p></section>
+    <section class="brand-panel"><h1 class="brand-logo-heading"><button class="foodtrek-home-button" data-foodtrek-home="public" type="button" aria-label="FoodTrekNow home"><img class="foodtrek-logo foodtrek-logo-hero" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></button></h1><p>Local food. Ready when you are.</p></section>
     <section class="login-card">
       <div id="portalChoicePanel" class="portal-choice-panel">
         <p class="eyebrow">Choose your portal</p>
@@ -99,7 +99,7 @@
         <button id="backToVendorButton" class="customer-back-button" type="button" aria-label="Back to the FoodTrekNow login page">← Back</button>
         <p class="customer-back-tagline">Find it. Order it. Pick it Up.</p>
       </div>
-      <div class="customer-wordmark"><img class="foodtrek-logo foodtrek-logo-header" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></div>
+      <div class="customer-wordmark"><button class="foodtrek-home-button" data-foodtrek-home="public" type="button" aria-label="FoodTrekNow home"><img class="foodtrek-logo foodtrek-logo-header" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></button></div>
     </header>
 
     <section id="customerWelcomePanel" class="customer-welcome-panel">
@@ -192,7 +192,7 @@
 <div id="customerAccountView" class="hidden-view">
   <div class="customer-app-shell">
     <aside class="customer-sidebar">
-      <div class="customer-sidebar-brand"><div><img class="foodtrek-logo foodtrek-logo-sidebar" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /><small>Customer Account</small></div></div>
+      <div class="customer-sidebar-brand"><div><button class="foodtrek-home-button" data-foodtrek-home="customer" type="button" aria-label="Customer home"><img class="foodtrek-logo foodtrek-logo-sidebar" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></button><small>Customer Account</small></div></div>
       <div id="customerMiniProfile" class="customer-mini-profile"></div>
       <nav id="customerAccountNav" aria-label="Customer account">
         <button class="customer-nav-link active" data-customer-page="overview" type="button"><span>⌂</span> Home</button>
@@ -212,7 +212,7 @@
     </aside>
     <main class="customer-main">
       <header class="customer-mobile-header">
-        <div class="customer-wordmark"><img class="foodtrek-logo foodtrek-logo-header" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></div>
+        <div class="customer-wordmark"><button class="foodtrek-home-button" data-foodtrek-home="customer" type="button" aria-label="Customer home"><img class="foodtrek-logo foodtrek-logo-header" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></button></div>
         <div class="customer-mobile-actions"><button id="customerMobileCartButton" class="customer-mobile-cart-button" type="button" aria-label="View cart"><span>🛒</span><b class="customer-nav-cart-count hidden-view" data-customer-cart-count>0</b></button><button id="customerMenuButton" class="customer-menu-button" type="button" aria-expanded="false" aria-controls="customerAccountNav">Menu</button></div>
       </header>
       <div id="customerVerificationBanner" class="verification-banner hidden-view">
@@ -237,7 +237,7 @@
 <div id="hostPortalView" class="hidden-view">
   <div class="host-portal-shell">
     <aside class="host-portal-sidebar">
-      <div class="host-portal-brand"><img class="foodtrek-logo foodtrek-logo-sidebar" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /><div><strong>Host Portal</strong><small>Locations &amp; Events</small></div></div>
+      <div class="host-portal-brand"><button class="foodtrek-home-button" data-foodtrek-home="host" type="button" aria-label="Host opportunities home"><img class="foodtrek-logo foodtrek-logo-sidebar" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></button><div><strong>Host Portal</strong><small>Locations &amp; Events</small></div></div>
       <div class="host-portal-guidance"><span>📍</span><p>Post openings, review food truck requests, and manage confirmed visits.</p></div>
       <div class="host-portal-account"><strong id="hostPortalAccountName">FoodTrekNow Host</strong><small>Secure host account</small></div>
       <button id="switchToCustomerPortalButton" class="secondary-button full" type="button">Switch to Customer Portal</button>
@@ -254,7 +254,7 @@
 <div id="dashboardView" class="hidden-view">
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="sidebar-brand"><div><img class="foodtrek-logo foodtrek-logo-sidebar" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /><span>Vendor Portal</span></div></div>
+      <div class="sidebar-brand"><div><button class="foodtrek-home-button" data-foodtrek-home="vendor" type="button" aria-label="Vendor dashboard home"><img class="foodtrek-logo foodtrek-logo-sidebar" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></button><span>Vendor Portal</span></div></div>
       <nav>
         <button class="nav-link active" data-page="dashboard">Dashboard</button>
         <button class="nav-link" data-page="orders">Orders</button>
@@ -559,14 +559,14 @@
 <script src="js/opportunity-marketplace.js?v=host-portal-1"></script>
 <script src="js/live-orders.js?v=communications-1"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=vendor-login-1"></script>
+<script src="js/app.js?v=logo-home-1"></script>
 <script src="js/vendor-reports.js?v=print-fix-1"></script>
 <script src="js/vendor-settings.js?v=vendor-data-2"></script>
 <script src="js/vendor-location.js?v=live-location-1"></script>
 <script src="js/vendor-subscription.js?v=vendor-trial-1"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>
-<script src="js/customer-account.js?v=customer-events-1"></script>
+<script src="js/customer-account.js?v=logo-home-1"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>

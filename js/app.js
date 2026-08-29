@@ -29,6 +29,11 @@ function showDashboard(context=null,mode='demo'){activeVendorContext=context;log
 function showPortalChoices(){portalChoicePanel.classList.remove('hidden-view');vendorSignInPanel.classList.add('hidden-view');message.textContent='';}
 function showVendorSignIn(){portalChoicePanel.classList.add('hidden-view');vendorSignInPanel.classList.remove('hidden-view');message.textContent='';document.getElementById('email').focus?.();}
 window.FoodTrekNowShowPortalChoices=showPortalChoices;
+document.querySelectorAll('[data-foodtrek-home="vendor"]').forEach(button=>button.addEventListener('click',()=>{
+ const dashboardButton=document.querySelector('.nav-link[data-page="dashboard"]');
+ if(dashboardButton)dashboardButton.click();
+ window.scrollTo?.(0,0);
+}));
 function showLogin(){window.FoodTrekNowVendorLocation?.stop?.();activeVendorContext=null;vendorCommunicationSubscribed=false;vendorSubscriptionAccess=true;dashboardView.classList.add('hidden-view');loginView.classList.remove('hidden-view');document.body.classList.add('login-page');localStorage.removeItem('ftnVendorLoggedIn');applyVendorSubscriptionAccess({access_allowed:true});showPortalChoices();}
 openVendorPortalButton.addEventListener('click',showVendorSignIn);
 backToPortalChoicesButton.addEventListener('click',showPortalChoices);

@@ -2530,6 +2530,17 @@
     else showCustomerAuth('signin', 'host');
   });
   document.getElementById('backToVendorButton').addEventListener('click', showVendorLogin);
+  document.querySelectorAll('[data-foodtrek-home="public"]').forEach(button => button.addEventListener('click', showVendorLogin));
+  document.querySelectorAll('[data-foodtrek-home="customer"]').forEach(button => button.addEventListener('click', () => {
+    document.querySelector('.customer-sidebar')?.classList.remove('open');
+    renderCustomerPage('overview');
+    window.scrollTo(0, 0);
+  }));
+  document.querySelectorAll('[data-foodtrek-home="host"]').forEach(button => button.addEventListener('click', () => {
+    document.querySelector('.host-portal-sidebar')?.classList.remove('open');
+    window.FoodTrekNowOpportunityMarketplace?.mountHost();
+    window.scrollTo(0, 0);
+  }));
   document.getElementById('showCustomerSignInButton').addEventListener('click', () => showCustomerAuth('signin'));
   document.getElementById('showCreateAccountButton').addEventListener('click', () => showCustomerAuth('create'));
   document.getElementById('guestCheckoutButton').addEventListener('click', () => startGuestCheckout('nearby'));

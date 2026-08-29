@@ -10,6 +10,7 @@ const betaBannerSource = fs.readFileSync(new URL('../js/beta-banner.js', import.
 const betaBannerStyles = fs.readFileSync(new URL('../css/beta-banner.css', import.meta.url), 'utf8');
 const accountStyles = fs.readFileSync(new URL('../css/customer-account.css', import.meta.url), 'utf8');
 const orderingStyles = fs.readFileSync(new URL('../css/customer-ordering.css', import.meta.url), 'utf8');
+const vendorStyles = fs.readFileSync(new URL('../css/vendor.css', import.meta.url), 'utf8');
 const officialLogo = fs.readFileSync(new URL('../assets/foodtreknow-logo.png', import.meta.url));
 
 class StorageMock {
@@ -160,6 +161,20 @@ test('homepage presents separate customer, host, and vendor entry points', () =>
   assert.match(accountStyles, /\.vendor-login-button\{[^}]*background:#17241d/);
   assert.match(accountStyles, /\.host-entry-button\{[^}]*background:#173d2a/);
   assert.match(accountStyles, /\.vendor-entry-button\{[^}]*background:#243b55/);
+});
+
+test('FoodTrekNow logos act as accessible home buttons in every portal', () => {
+  const homeButtons = [...html.matchAll(/data-foodtrek-home="(public|customer|host|vendor)"/g)].map(match => match[1]);
+  assert.equal(homeButtons.length, 6);
+  assert.equal(homeButtons.filter(value => value === 'public').length, 2);
+  assert.equal(homeButtons.filter(value => value === 'customer').length, 2);
+  assert.ok(homeButtons.includes('host'));
+  assert.ok(homeButtons.includes('vendor'));
+  assert.match(source, /\[data-foodtrek-home="customer"\]/);
+  assert.match(source, /renderCustomerPage\('overview'\)/);
+  assert.match(source, /\[data-foodtrek-home="host"\]/);
+  assert.match(vendorSource, /\[data-foodtrek-home="vendor"\]/);
+  assert.match(vendorStyles, /\.foodtrek-home-button:focus-visible/);
 });
 
 test('vendor login opens as a dedicated screen and blank submission gives clear guidance', async () => {
