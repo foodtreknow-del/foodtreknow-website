@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="css/vendor-reports.css?v=print-fix-1" />
 <link rel="stylesheet" href="css/vendor-settings.css?v=vendor-trial-1" />
 <link rel="stylesheet" href="css/opportunity-marketplace.css?v=host-portal-1" />
-<link rel="stylesheet" href="css/customer-account.css?v=host-portal-1" />
+<link rel="stylesheet" href="css/customer-account.css?v=vendor-login-1" />
 <link rel="stylesheet" href="css/customer-ordering.css" />
 <link rel="stylesheet" href="css/beta-banner.css" />
 <style>.hidden-view{display:none!important}</style>
@@ -52,28 +52,42 @@
   <main class="login-shell">
     <section class="brand-panel"><h1 class="brand-logo-heading"><img class="foodtrek-logo foodtrek-logo-hero" src="assets/foodtreknow-logo.png" alt="FoodTrekNow" /></h1><p>Local food. Ready when you are.</p></section>
     <section class="login-card">
-      <div class="customer-entry customer-entry-primary">
-        <span>Looking for something delicious?</span>
-        <button id="openCustomerPortalButton" class="customer-entry-button" type="button">I'm Hungry Login <span aria-hidden="true">→</span></button>
+      <div id="portalChoicePanel" class="portal-choice-panel">
+        <p class="eyebrow">Choose your portal</p>
+        <h2>Welcome to FoodTrekNow</h2>
+        <p class="muted portal-choice-copy">Select how you use FoodTrekNow.</p>
+        <div class="customer-entry customer-entry-primary">
+          <span>Looking for something delicious?</span>
+          <button id="openCustomerPortalButton" class="customer-entry-button" type="button">I'm Hungry Login <span aria-hidden="true">→</span></button>
+        </div>
+        <div class="host-entry">
+          <span>Have a location or event that needs food trucks?</span>
+          <button id="openHostPortalButton" class="host-entry-button" type="button">Host / Event Organizer Login <span aria-hidden="true">→</span></button>
+        </div>
+        <div class="vendor-entry">
+          <span>Manage your truck, orders, menu, and sales.</span>
+          <button id="openVendorPortalButton" class="vendor-entry-button" type="button">Vendor Login <span aria-hidden="true">→</span></button>
+        </div>
+        <nav class="entry-legal-links" aria-label="FoodTrekNow legal information"><a href="terms.html">Terms of Service</a><a href="privacy.html">Privacy Policy</a><a href="privacy.html#your-choices">Privacy Choices</a></nav>
       </div>
-      <div class="host-entry">
-        <span>Have a location or event that needs food trucks?</span>
-        <button id="openHostPortalButton" class="host-entry-button" type="button">Host / Event Organizer Login <span aria-hidden="true">→</span></button>
+
+      <div id="vendorSignInPanel" class="vendor-signin-panel hidden-view">
+        <button id="backToPortalChoicesButton" class="customer-panel-back" type="button">← Back</button>
+        <p class="eyebrow">Vendor Portal</p>
+        <h2>Vendor Sign In</h2>
+        <p class="muted">Access your orders, menu, sales reports, settings, and live truck controls.</p>
+        <form id="loginForm" novalidate>
+          <label for="email">Email Address</label><input id="email" type="email" autocomplete="username" placeholder="vendor@example.com" required />
+          <label for="password">Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+          <div class="form-row"><label class="check-row"><input id="remember" type="checkbox" /> Remember me</label><button id="vendorForgotPasswordButton" class="text-button" type="button">Forgot Password?</button></div>
+          <p id="loginMessage" class="form-message" aria-live="polite"></p>
+          <button class="vendor-login-button full" type="submit">Sign In</button>
+        </form>
+        <div class="divider"><span>Demo access</span></div>
+        <button id="demoLoginButton" class="secondary-button full" type="button">Fill Demo Login</button>
+        <div class="demo-note"><strong>Demo login</strong><br />Email: vendor@foodtreknow.com<br />Password: demo123</div>
+        <nav class="entry-legal-links" aria-label="Vendor legal information"><a href="terms.html">Terms of Service</a><a href="privacy.html">Privacy Policy</a><a href="privacy.html#your-choices">Privacy Choices</a></nav>
       </div>
-      <p class="muted vendor-access-copy">Food truck partners can sign in below to manage their truck, orders, menu, and sales.</p>
-      <form id="loginForm" novalidate>
-        <label for="email">Email</label><input id="email" type="email" placeholder="vendor@foodtreknow.com" required />
-        <label for="password">Password</label><input id="password" type="password" placeholder="Enter password" required />
-        <div class="form-row"><label class="check-row"><input id="remember" type="checkbox" /> Remember me</label><button class="text-button" type="button">Forgot password?</button></div>
-        <p id="loginMessage" class="form-message" aria-live="polite"></p>
-      </form>
-      <div class="divider"><span>or</span></div>
-      <button class="secondary-button full" type="button">Continue with Google</button>
-      <button class="secondary-button full" type="button">Continue with Apple</button>
-      <button id="demoLoginButton" class="secondary-button full" type="button">Fill Demo Login</button>
-      <div class="demo-note"><strong>Demo login</strong><br />Email: vendor@foodtreknow.com<br />Password: demo123</div>
-      <button class="vendor-login-button full" type="submit" form="loginForm">Vendor Log In</button>
-      <nav class="entry-legal-links" aria-label="FoodTrekNow legal information"><a href="terms.html">Terms of Service</a><a href="privacy.html">Privacy Policy</a><a href="privacy.html#your-choices">Privacy Choices</a></nav>
     </section>
   </main>
 </div>
@@ -539,20 +553,20 @@
 <script src="js/live-location.js?v=live-location-1"></script>
 <script src="js/supabase-auth.js?v=customer-auth-1"></script>
 <script src="js/vendor-onboarding.js?v=vendor-onboarding-1"></script>
-<script src="js/vendor-auth.js?v=vendor-auth-1"></script>
+<script src="js/vendor-auth.js?v=vendor-login-1"></script>
 <script src="js/vendor-data.js?v=vendor-data-2"></script>
 <script src="js/customer-marketplace.js?v=customer-marketplace-1"></script>
 <script src="js/opportunity-marketplace.js?v=host-portal-1"></script>
 <script src="js/live-orders.js?v=communications-1"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=marketplace-phase1-1"></script>
+<script src="js/app.js?v=vendor-login-1"></script>
 <script src="js/vendor-reports.js?v=print-fix-1"></script>
 <script src="js/vendor-settings.js?v=vendor-data-2"></script>
 <script src="js/vendor-location.js?v=live-location-1"></script>
 <script src="js/vendor-subscription.js?v=vendor-trial-1"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>
-<script src="js/customer-account.js?v=host-portal-1"></script>
+<script src="js/customer-account.js?v=vendor-login-1"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>

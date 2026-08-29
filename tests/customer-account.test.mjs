@@ -100,6 +100,7 @@ test('vendor and customer modules initialize together without a startup error', 
   assert.ok(elements.get('loginForm').listeners.has('submit'));
   assert.ok(elements.get('openCustomerPortalButton').listeners.has('click'));
   assert.ok(elements.get('openHostPortalButton').listeners.has('click'));
+  assert.ok(elements.get('openVendorPortalButton').listeners.has('click'));
   assert.match(html, /js\/customer-account\.js\?v=[a-z0-9-]+/);
 });
 
@@ -147,7 +148,7 @@ test('customer account UI includes every required area and has unique static IDs
 test('homepage presents separate customer, host, and vendor entry points', () => {
   const customerActionIndex = html.indexOf("I'm Hungry Login");
   const hostActionIndex = html.indexOf('Host / Event Organizer Login');
-  const vendorActionIndex = html.indexOf('Vendor Log In');
+  const vendorActionIndex = html.indexOf('Vendor Login');
   assert.ok(customerActionIndex >= 0);
   assert.ok(hostActionIndex > customerActionIndex);
   assert.ok(vendorActionIndex > hostActionIndex);
@@ -158,6 +159,23 @@ test('homepage presents separate customer, host, and vendor entry points', () =>
   assert.match(accountStyles, /\.customer-entry-button\{[^}]*background:var\(--brand\)/);
   assert.match(accountStyles, /\.vendor-login-button\{[^}]*background:#17241d/);
   assert.match(accountStyles, /\.host-entry-button\{[^}]*background:#173d2a/);
+  assert.match(accountStyles, /\.vendor-entry-button\{[^}]*background:#243b55/);
+});
+
+test('vendor login opens as a dedicated screen and blank submission gives clear guidance', async () => {
+  element('vendorSignInPanel').classList.add('hidden-view');
+  await emit(element('openVendorPortalButton'), 'click');
+  assert.equal(element('portalChoicePanel').classList.contains('hidden-view'), true);
+  assert.equal(element('vendorSignInPanel').classList.contains('hidden-view'), false);
+
+  element('email').value = '';
+  element('password').value = '';
+  await emit(element('loginForm'), 'submit', { preventDefault() {} });
+  assert.equal(element('loginMessage').textContent, 'Enter your vendor email address and password.');
+
+  await emit(element('backToPortalChoicesButton'), 'click');
+  assert.equal(element('portalChoicePanel').classList.contains('hidden-view'), false);
+  assert.equal(element('vendorSignInPanel').classList.contains('hidden-view'), true);
 });
 
 test('official FoodTrekNow logo replaces every FTN badge and customer sign-in says I am hungry', () => {
@@ -166,9 +184,7 @@ test('official FoodTrekNow logo replaces every FTN badge and customer sign-in sa
   assert.equal((html.match(/src="assets\/foodtreknow-logo\.png"/g) || []).length, 6);
   assert.deepEqual([...officialLogo.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
   assert.match(html, /<h1[^>]*>I'm Hungry<\/h1>/);
-  const customerActionIndex = html.indexOf("I'm Hungry Login");
-  const vendorFormIndex = html.indexOf('id="loginForm"');
-  assert.doesNotMatch(html.slice(customerActionIndex, vendorFormIndex), /Vendor Portal/);
+  assert.match(html, /id="accountSignInTitle">I'm Hungry<\/h1>/);
 });
 
 test('beta banner is the first homepage content and includes responsive persisted interactions', () => {

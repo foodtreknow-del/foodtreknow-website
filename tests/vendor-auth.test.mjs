@@ -28,6 +28,7 @@ function harness(role = 'vendor') {
     auth: {
       async signInWithPassword(payload) { calls.push(['signIn', payload]); return { data: { user }, error: null }; },
       async getSession() { return { data: { session: { user } }, error: null }; },
+      async resetPasswordForEmail(email, options) { calls.push(['resetPassword', email, options]); return { error: null }; },
       async signOut() { calls.push(['signOut']); return { error: null }; }
     },
     from(table) {
@@ -37,7 +38,7 @@ function harness(role = 'vendor') {
       };
     }
   };
-  const context = vm.createContext({ window: { FoodTrekNowSupabaseClient: client }, localStorage: new StorageMock(), console });
+  const context = vm.createContext({ window: { FoodTrekNowSupabaseClient: client, location: { origin: 'https://www.foodtreknow.com', pathname: '/' } }, localStorage: new StorageMock(), console });
   vm.runInContext(source, context, { filename: 'vendor-auth.js' });
   return { api: context.window.FoodTrekNowVendorAuth, context, calls };
 }
@@ -68,11 +69,19 @@ test('vendor browser persistence is namespaced by approved truck id', async () =
   assert.match(reportsSource, /orderStorageKey\(\)/);
 });
 
+test('vendor password recovery validates the email and uses the secure Supabase flow', async () => {
+  const { api, calls } = harness();
+  await assert.rejects(() => api.requestPasswordReset(''), /vendor email address/i);
+  await api.requestPasswordReset('VENDOR@example.com');
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.at(-1))), ['resetPassword', 'vendor@example.com', { redirectTo: 'https://www.foodtreknow.com/' }]);
+});
+
 test('secure vendor auth loads before the existing dashboard application', () => {
-  const authPosition = html.indexOf('js/vendor-auth.js?v=vendor-auth-1');
+  const authPosition = html.indexOf('js/vendor-auth.js?v=vendor-login-1');
   const appPosition = html.indexOf('js/app.js');
   assert.ok(authPosition >= 0 && authPosition < appPosition);
   assert.match(appSource, /FoodTrekNowVendorAuth\.signIn/);
   assert.match(appSource, /FoodTrekNowVendorAuth\.restore/);
   assert.match(appSource, /FoodTrekNowVendorAuth\.signOut/);
+  assert.match(appSource, /FoodTrekNowVendorAuth\.requestPasswordReset/);
 });

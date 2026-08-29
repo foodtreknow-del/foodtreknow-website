@@ -62,6 +62,14 @@
       const { error } = await client.auth.signOut();
       if (error) throw friendly(error);
     },
+    async requestPasswordReset(email) {
+      const normalizedEmail = clean(email).toLowerCase();
+      if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) throw new Error('Enter your vendor email address first.');
+      if (!client) throw new Error('The secure vendor account service is unavailable.');
+      const redirectTo = `${window.location.origin}${window.location.pathname}`;
+      const { error } = await client.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
+      if (error) throw friendly(error);
+    },
     clearTruck() { localStorage.removeItem(ACTIVE_TRUCK_KEY); }
   });
 })();

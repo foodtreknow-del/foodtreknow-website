@@ -1091,6 +1091,7 @@
     hidePrimaryViews();
     loginView.classList.remove('hidden-view');
     document.body.classList.add('login-page');
+    window.FoodTrekNowShowPortalChoices?.();
   }
 
   function startGuestCheckout(page = 'nearby') {
