@@ -170,16 +170,22 @@
     if (typeof notify === 'function') notify('Sales report exported');
   }
 
+  function printSalesReport() {
+    document.body.classList.add('printing-vendor-report');
+    try { window.print(); }
+    finally { document.body.classList.remove('printing-vendor-report'); }
+  }
+
   const rangeSelect = document.getElementById('reportRange');
   rangeSelect?.addEventListener('change', event => renderSalesReport(event.target.value));
   document.getElementById('refreshSalesReportButton')?.addEventListener('click', () => renderSalesReport(rangeSelect?.value || activeRange));
   document.getElementById('exportSalesReportButton')?.addEventListener('click', exportSalesReport);
-  document.getElementById('printSalesReportButton')?.addEventListener('click', () => window.print());
+  document.getElementById('printSalesReportButton')?.addEventListener('click', printSalesReport);
   document.querySelector('[data-page="reports"]')?.addEventListener('click', () => renderSalesReport(rangeSelect?.value || activeRange));
   if (window.addEventListener) {
     window.addEventListener('ftn:vendor-orders-updated', () => { if (!document.getElementById('reportsPage')?.classList.contains('hidden-view')) renderSalesReport(activeRange); });
     window.addEventListener('storage', event => { if (event.key === orderStorageKey() && !document.getElementById('reportsPage')?.classList.contains('hidden-view')) renderSalesReport(activeRange); });
   }
 
-  window.FoodTrekNowVendorReports = { calculateSalesReport, filterOrdersByRange, buildSalesCsv, renderSalesReport, getRangeStart };
+  window.FoodTrekNowVendorReports = { calculateSalesReport, filterOrdersByRange, buildSalesCsv, renderSalesReport, getRangeStart, printSalesReport };
 })();

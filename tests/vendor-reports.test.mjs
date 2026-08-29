@@ -34,6 +34,12 @@ test('sales report UI replaces the placeholder and includes responsive controls'
   assert.match(html, /js\/vendor-reports\.js/);
   assert.match(styles, /@media\(max-width:600px\)/);
   assert.match(styles, /@media print/);
+  assert.match(styles, /body\.printing-vendor-report/);
+  assert.doesNotMatch(styles, /@media print\{body>\*:not\(#dashboardView\)/);
+  assert.match(source, /classList\.add\('printing-vendor-report'\)/);
+  assert.match(source, /classList\.remove\('printing-vendor-report'\)/);
+  assert.match(html, /vendor-reports\.css\?v=print-fix-1/);
+  assert.match(html, /vendor-reports\.js\?v=print-fix-1/);
 });
 
 test('report calculations handle ranges, refunds, averages, items, status, and payments', () => {
