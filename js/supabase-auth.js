@@ -6,7 +6,7 @@
 
   function friendlyError(error, fallback) {
     const message = clean(error?.message).toLowerCase();
-    if (message.includes('invalid login credentials')) return new Error('Email or password is incorrect.');
+    if (message.includes('invalid login credentials')) return new Error('Email or password is incorrect. Use Forgot Password or Sign In with Secure Email Link.');
     if (message.includes('email not confirmed')) return new Error('Please verify your email before signing in.');
     if (message.includes('user already registered')) return new Error('An account already exists with that email address.');
     if (message.includes('password should be')) return new Error('Password must be at least 8 characters.');
@@ -109,6 +109,25 @@
       if (error) throw friendlyError(error, 'Reset instructions could not be sent.');
     }
 
+    async requestMagicLink(identifier) {
+      const email = clean(identifier).toLowerCase();
+      if (!isEmail(email)) throw new Error('Enter the email address for your FoodTrekNow account.');
+      const options = {
+        shouldCreateUser: false,
+        ...(this.redirectUrl ? { emailRedirectTo: this.redirectUrl } : {})
+      };
+      const { error } = await this.client.auth.signInWithOtp({ email, options });
+      if (error) throw friendlyError(error, 'A secure sign-in link could not be sent.');
+    }
+
+    async resendConfirmation(identifier) {
+      const email = clean(identifier).toLowerCase();
+      if (!isEmail(email)) throw new Error('Enter the email address you used to create your FoodTrekNow account.');
+      const options = this.redirectUrl ? { emailRedirectTo: this.redirectUrl } : undefined;
+      const { error } = await this.client.auth.resend({ type: 'signup', email, options });
+      if (error) throw friendlyError(error, 'The confirmation email could not be resent.');
+    }
+
     async updateProfile(accountId, updates) {
       const existing = this.repository.findById(accountId);
       const nextEmail = clean(updates.email).toLowerCase();
@@ -150,8 +169,13 @@
     }
 
     async updateRecoveredPassword(nextPassword) {
-      const { error } = await this.client.auth.updateUser({ password: nextPassword });
+      const { data, error } = await this.client.auth.updateUser({ password: nextPassword });
       if (error) throw friendlyError(error, 'Your password could not be reset.');
+      const email = data?.user?.email;
+      if (!email) throw new Error('Your password was updated, but the account could not be verified. Request a secure sign-in link to continue.');
+      const { data: verified, error: verifyError } = await this.client.auth.signInWithPassword({ email, password: nextPassword });
+      if (verifyError) throw friendlyError(verifyError, 'Your new password could not be verified. Request a secure sign-in link to continue.');
+      return this.loadAccount(verified.user);
     }
 
     async deleteAccount(accountId) {

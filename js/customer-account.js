@@ -722,6 +722,14 @@
       throw new Error('Password reset email requires the Supabase connection.');
     }
 
+    async requestMagicLink() {
+      throw new Error('Secure email-link sign-in requires the Supabase connection.');
+    }
+
+    async resendConfirmation() {
+      throw new Error('Confirmation email delivery requires the Supabase connection.');
+    }
+
     async signOut() {}
   }
 
@@ -766,6 +774,8 @@
     changePassword() { return this.unavailable(); }
     deleteAccount() { return this.unavailable(); }
     requestPasswordReset() { return this.unavailable(); }
+    requestMagicLink() { return this.unavailable(); }
+    resendConfirmation() { return this.unavailable(); }
     getCurrentAccount() { return Promise.resolve(null); }
     signOut() { return Promise.resolve(); }
   }
@@ -798,6 +808,8 @@
     signIn(identifier, password) { return this.adapter.signIn(identifier, password); },
     getCurrentAccount() { return this.adapter.getCurrentAccount(); },
     requestPasswordReset(identifier) { return this.adapter.requestPasswordReset(identifier); },
+    requestMagicLink(identifier) { return this.adapter.requestMagicLink(identifier); },
+    resendConfirmation(identifier) { return this.adapter.resendConfirmation(identifier); },
     updateProfile(accountId, updates) { return this.adapter.updateProfile(accountId, updates); },
     changePassword(accountId, currentPassword, nextPassword) { return this.adapter.changePassword(accountId, currentPassword, nextPassword); },
     updateRecoveredPassword(nextPassword) { return this.adapter.updateRecoveredPassword?.(nextPassword); },
@@ -2584,6 +2596,7 @@
       if (account.requiresEmailVerification) {
         clearSession();
         showCustomerAuth('signin');
+        document.getElementById('customerSignInIdentifier').value = input.email.toLowerCase();
         document.getElementById('customerSignInMessage').textContent = 'Account created. Check your email and select the verification link before signing in.';
       } else {
         saveSession(account.id, true);
@@ -2619,6 +2632,30 @@
     try {
       await CustomerAuthService.requestPasswordReset(identifier);
       message.textContent = 'If that email belongs to an account, a secure reset link has been sent.';
+    } catch (error) {
+      message.textContent = error.message;
+    }
+  });
+
+  document.getElementById('sendMagicLinkButton').addEventListener('click', async () => {
+    const identifier = document.getElementById('customerSignInIdentifier').value.trim();
+    const message = document.getElementById('customerSignInMessage');
+    message.textContent = '';
+    try {
+      await CustomerAuthService.requestMagicLink(identifier);
+      message.textContent = 'Secure sign-in link sent. Open the email on this device to continue.';
+    } catch (error) {
+      message.textContent = error.message;
+    }
+  });
+
+  document.getElementById('resendConfirmationButton').addEventListener('click', async () => {
+    const identifier = document.getElementById('customerSignInIdentifier').value.trim();
+    const message = document.getElementById('customerSignInMessage');
+    message.textContent = '';
+    try {
+      await CustomerAuthService.resendConfirmation(identifier);
+      message.textContent = 'If this account still needs verification, a new confirmation email has been sent.';
     } catch (error) {
       message.textContent = error.message;
     }
@@ -3478,11 +3515,10 @@
         return;
       }
       try {
-        await CustomerAuthService.updateRecoveredPassword(nextPassword);
+        currentAccount = await CustomerAuthService.updateRecoveredPassword(nextPassword);
         closeModal();
-        const account = await CustomerAuthService.getCurrentAccount();
-        if (account) openSelectedPortal(account);
-        customerToast('Your password has been reset.');
+        if (currentAccount) openSelectedPortal(currentAccount);
+        customerToast('Your password has been reset and verified.');
       } catch (error) {
         message.textContent = error.message;
       }

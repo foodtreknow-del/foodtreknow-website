@@ -33,6 +33,8 @@ function createHarness() {
     auth: {
       async signUp(payload) { calls.push(['signUp', payload]); return { data: { user, session: null }, error: null }; },
       async signInWithPassword(payload) { calls.push(['signIn', payload]); return { data: { user }, error: null }; },
+      async signInWithOtp(payload) { calls.push(['magicLink', payload]); return { data: {}, error: null }; },
+      async resend(payload) { calls.push(['resendConfirmation', payload]); return { data: {}, error: null }; },
       async getSession() { return { data: { session: { user } }, error: null }; },
       async getUser() { return { data: { user }, error: null }; },
       async resetPasswordForEmail(email, options) { calls.push(['reset', email, options]); return { error: null }; },
@@ -127,6 +129,41 @@ test('customer sign-in, reset, password update, sign-out, and deletion use Supab
   assert.ok(calls.some(call => call[0] === 'updateUser' && call[1].password === 'new-safe-password'));
   assert.ok(calls.some(call => call[0] === 'rpc' && call[1] === 'delete_my_account'));
   assert.equal(accounts.has(account.id), false);
+});
+
+test('secure email-link sign-in and confirmation resend normalize email and preserve the return URL', async () => {
+  const { adapter, calls } = createHarness();
+  await adapter.requestMagicLink('  AVERY@Example.com ');
+  await adapter.resendConfirmation(' AVERY@Example.com ');
+
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.find(call => call[0] === 'magicLink')[1])), {
+    email: 'avery@example.com',
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: 'https://foodtreknow.example/'
+    }
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.find(call => call[0] === 'resendConfirmation')[1])), {
+    type: 'signup',
+    email: 'avery@example.com',
+    options: { emailRedirectTo: 'https://foodtreknow.example/' }
+  });
+});
+
+test('password recovery verifies the new password before returning the restored account', async () => {
+  const { adapter, calls } = createHarness();
+  const account = await adapter.updateRecoveredPassword('new-safe-password');
+  assert.equal(account.email, 'avery@example.com');
+  assert.ok(calls.some(call => call[0] === 'updateUser' && call[1].password === 'new-safe-password'));
+  assert.ok(calls.some(call => call[0] === 'signIn' && call[1].email === 'avery@example.com' && call[1].password === 'new-safe-password'));
+});
+
+test('host sign-in UI exposes recovery, secure email-link, and confirmation resend paths', () => {
+  assert.match(html, /id="showForgotPasswordButton"/);
+  assert.match(html, /id="sendMagicLinkButton"[^>]*>Sign In with Secure Email Link</);
+  assert.match(html, /id="resendConfirmationButton"[^>]*>Resend confirmation email</);
+  assert.match(customerAccountSource, /CustomerAuthService\.requestMagicLink\(identifier\)/);
+  assert.match(customerAccountSource, /CustomerAuthService\.resendConfirmation\(identifier\)/);
 });
 
 test('unverified mobile-password shortcuts are rejected', async () => {

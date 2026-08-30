@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="css/vendor-reports.css?v=print-fix-1" />
 <link rel="stylesheet" href="css/vendor-settings.css?v=vendor-trial-1" />
 <link rel="stylesheet" href="css/opportunity-marketplace.css?v=host-portal-1" />
-<link rel="stylesheet" href="css/customer-account.css?v=vendor-login-1" />
+<link rel="stylesheet" href="css/customer-account.css?v=host-auth-1" />
 <link rel="stylesheet" href="css/customer-ordering.css" />
 <link rel="stylesheet" href="css/beta-banner.css" />
 <style>.hidden-view{display:none!important}</style>
@@ -141,7 +141,9 @@
         </div>
         <p id="customerSignInMessage" class="form-message" aria-live="polite"></p>
         <button class="primary-button full customer-large-button" type="submit">Sign In</button>
+        <button id="sendMagicLinkButton" class="secondary-button full customer-large-button auth-email-link-button" type="button">Sign In with Secure Email Link</button>
       </form>
+      <p class="customer-auth-assistance">Waiting for account verification? <button id="resendConfirmationButton" class="customer-text-link compact" type="button">Resend confirmation email</button></p>
       <p class="customer-auth-switch">New to FoodTrekNow? <button data-show-create type="button">Create an account</button></p>
     </section>
 
@@ -551,7 +553,7 @@
 <script src="js/supabase-config.js?v=customer-auth-1"></script>
 <script src="js/supabase-client.js?v=customer-auth-1"></script>
 <script src="js/live-location.js?v=live-location-1"></script>
-<script src="js/supabase-auth.js?v=customer-auth-1"></script>
+<script src="js/supabase-auth.js?v=host-auth-1"></script>
 <script src="js/vendor-onboarding.js?v=vendor-onboarding-1"></script>
 <script src="js/vendor-auth.js?v=vendor-login-1"></script>
 <script src="js/vendor-data.js?v=vendor-data-2"></script>
@@ -566,7 +568,7 @@
 <script src="js/vendor-subscription.js?v=vendor-trial-1"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>
-<script src="js/customer-account.js?v=logo-home-1"></script>
+<script src="js/customer-account.js?v=host-auth-1"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>
