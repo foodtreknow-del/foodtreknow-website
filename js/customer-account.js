@@ -3577,8 +3577,18 @@
     else clearSession();
   }
 
+  let passwordRecoveryHandled = false;
+  function handlePasswordRecovery() {
+    if (passwordRecoveryHandled) return;
+    passwordRecoveryHandled = true;
+    window.FoodTrekNowSupabaseRecoveryPending = false;
+    clearSession();
+    setTimeout(passwordRecoveryModal, 0);
+  }
+
   CustomerAuthService.onAuthStateChange((event) => {
-    if (event === 'PASSWORD_RECOVERY') setTimeout(passwordRecoveryModal, 0);
+    if (event === 'PASSWORD_RECOVERY') handlePasswordRecovery();
   });
-  restoreCustomerSession();
+  if (window.FoodTrekNowSupabaseRecoveryPending) handlePasswordRecovery();
+  else restoreCustomerSession();
 })();

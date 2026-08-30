@@ -4,6 +4,7 @@
   const config = window.FoodTrekNowSupabaseConfig;
   window.FoodTrekNowSupabaseClient = null;
   window.FoodTrekNowSupabaseStatus = 'disabled';
+  window.FoodTrekNowSupabaseRecoveryPending = false;
 
   if (!config?.enabled) return;
   if (!config.url || !config.publishableKey || !window.supabase?.createClient) {
@@ -24,5 +25,12 @@
       }
     }
   );
+  // Capture password-recovery events immediately. The Supabase client can
+  // process a recovery URL before the larger customer/host UI finishes
+  // loading, so the UI consumes this flag instead of treating recovery as a
+  // normal restored sign-in session.
+  window.FoodTrekNowSupabaseClient.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') window.FoodTrekNowSupabaseRecoveryPending = true;
+  });
   window.FoodTrekNowSupabaseStatus = 'ready';
 })();

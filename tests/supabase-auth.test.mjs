@@ -97,6 +97,36 @@ test('production customer authentication fails closed when secure configuration 
   assert.doesNotMatch(customerAccountSource, /if \(!window\.FoodTrekNowSupabaseConfig\?\.enabled\) return new LocalCustomerAuthAdapter/);
 });
 
+test('password recovery is captured before the customer and host UI can restore a normal session', () => {
+  let authCallback;
+  const fakeClient = {
+    auth: {
+      onAuthStateChange(callback) {
+        authCallback = callback;
+        return { data: { subscription: { unsubscribe() {} } } };
+      }
+    }
+  };
+  const context = vm.createContext({
+    console,
+    window: {
+      FoodTrekNowSupabaseConfig: {
+        enabled: true,
+        url: 'https://example.supabase.co',
+        publishableKey: 'sb_publishable_test'
+      },
+      supabase: { createClient() { return fakeClient; } }
+    }
+  });
+
+  vm.runInContext(clientSource, context, { filename: 'supabase-client.js' });
+  assert.equal(context.window.FoodTrekNowSupabaseRecoveryPending, false);
+  authCallback('PASSWORD_RECOVERY');
+  assert.equal(context.window.FoodTrekNowSupabaseRecoveryPending, true);
+  assert.match(customerAccountSource, /if \(window\.FoodTrekNowSupabaseRecoveryPending\) handlePasswordRecovery\(\);\s*else restoreCustomerSession\(\);/);
+  assert.match(customerAccountSource, /setTimeout\(passwordRecoveryModal, 0\)/);
+});
+
 test('customer sign-up sends safe profile metadata and requires email verification', async () => {
   const { adapter, calls, accounts } = createHarness();
   const account = await adapter.signUp({
