@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-portal-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-location-fix-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -64,6 +64,8 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(worker, /js\/opportunity-marketplace\.js/);
   assert.match(marketplace, /Round-trip mileage/);
   assert.match(marketplace, /Estimated travel cost/);
+  assert.match(marketplace, /trucks\(name, cuisine\)/);
+  assert.doesNotMatch(marketplace, /trucks\([^)]*business_phone/);
 });
 
 test('profitability scoring explains estimates without guaranteeing revenue', async () => {

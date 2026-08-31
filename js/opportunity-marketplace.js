@@ -196,7 +196,7 @@
       return;
     }
     const [applications, bookings, reviews] = await Promise.all([
-      query(client.from('opportunity_applications').select('*, trucks(name, cuisine, business_phone)').in('opportunity_id', ids).order('applied_at', { ascending: false })),
+      query(client.from('opportunity_applications').select('*, trucks(name, cuisine)').in('opportunity_id', ids).order('applied_at', { ascending: false })),
       query(client.from('opportunity_bookings').select('*, trucks(name, cuisine), opportunities(title, starts_at, ends_at)').in('opportunity_id', ids).order('confirmed_at', { ascending: false })),
       query(client.from('opportunity_reviews').select('*').in('opportunity_id', ids).order('created_at', { ascending: false }))
     ]);
