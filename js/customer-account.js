@@ -2462,6 +2462,11 @@
   }
 
   function passwordRecoveryModal() {
+    // The account modal is normally nested in the customer portal. Recovery
+    // links are shared by customer and Host accounts, so move it to the page
+    // root before opening it; otherwise a Host recovery form is hidden behind
+    // the active Host portal.
+    if (accountModal.parentElement !== document.body) document.body.appendChild(accountModal);
     openModal(`<p class="eyebrow">Secure Account Recovery</p><h2 id="customerModalTitle">Choose a new password</h2><p class="muted">Your recovery link was accepted. Enter a new password for your FoodTrekNow account.</p><form id="customerRecoveryPasswordForm"><label for="recoveryCustomerPassword">New Password</label><input id="recoveryCustomerPassword" class="customer-input" type="password" minlength="8" required autocomplete="new-password"><label for="confirmRecoveryCustomerPassword">Confirm New Password</label><input id="confirmRecoveryCustomerPassword" class="customer-input" type="password" minlength="8" required autocomplete="new-password"><p id="recoveryPasswordMessage" class="form-message"></p><div class="customer-form-actions"><button class="primary-button full" type="submit">Save New Password</button></div></form>`);
   }
 
@@ -3583,6 +3588,8 @@
     passwordRecoveryHandled = true;
     window.FoodTrekNowSupabaseRecoveryPending = false;
     clearSession();
+    hidePrimaryViews();
+    document.body.classList.remove('login-page');
     setTimeout(passwordRecoveryModal, 0);
   }
 

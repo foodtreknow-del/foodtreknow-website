@@ -125,6 +125,36 @@ test('password recovery is captured before the customer and host UI can restore 
   assert.equal(context.window.FoodTrekNowSupabaseRecoveryPending, true);
   assert.match(customerAccountSource, /if \(window\.FoodTrekNowSupabaseRecoveryPending\) handlePasswordRecovery\(\);\s*else restoreCustomerSession\(\);/);
   assert.match(customerAccountSource, /setTimeout\(passwordRecoveryModal, 0\)/);
+  assert.match(customerAccountSource, /accountModal\.parentElement !== document\.body/);
+  assert.match(customerAccountSource, /document\.body\.appendChild\(accountModal\)/);
+  assert.match(customerAccountSource, /hidePrimaryViews\(\);[\s\S]*setTimeout\(passwordRecoveryModal, 0\)/);
+});
+
+test('a recovery URL is recognized before Supabase consumes its auth parameters', () => {
+  const fakeClient = {
+    auth: {
+      onAuthStateChange() {
+        return { data: { subscription: { unsubscribe() {} } } };
+      }
+    }
+  };
+  const context = vm.createContext({
+    console,
+    window: {
+      location: { search: '', hash: '#access_token=test&type=recovery' },
+      FoodTrekNowSupabaseConfig: {
+        enabled: true,
+        url: 'https://example.supabase.co',
+        publishableKey: 'sb_publishable_test'
+      },
+      supabase: { createClient() { return fakeClient; } }
+    }
+  });
+
+  vm.runInContext(clientSource, context, { filename: 'supabase-client.js' });
+  assert.equal(context.window.FoodTrekNowSupabaseRecoveryPending, true);
+  assert.match(html, /js\/supabase-client\.js\?v=password-recovery-2/);
+  assert.match(html, /js\/customer-account\.js\?v=password-recovery-2/);
 });
 
 test('customer sign-up sends safe profile metadata and requires email verification', async () => {

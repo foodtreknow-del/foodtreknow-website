@@ -4,7 +4,14 @@
   const config = window.FoodTrekNowSupabaseConfig;
   window.FoodTrekNowSupabaseClient = null;
   window.FoodTrekNowSupabaseStatus = 'disabled';
-  window.FoodTrekNowSupabaseRecoveryPending = false;
+  // Capture the recovery marker before createClient processes and removes the
+  // auth tokens from the address bar. This covers recovery links that finish
+  // before the larger customer/host interface registers its auth listener.
+  const authUrl = `${window.location?.search || ''}${window.location?.hash || ''}`;
+  const recoveryInUrl = /(?:^|[?&#])type=recovery(?:[&#]|$)/i.test(authUrl);
+  window.FoodTrekNowSupabaseRecoveryPending = Boolean(
+    window.FoodTrekNowSupabaseRecoveryPending || recoveryInUrl
+  );
 
   if (!config?.enabled) return;
   if (!config.url || !config.publishableKey || !window.supabase?.createClient) {
