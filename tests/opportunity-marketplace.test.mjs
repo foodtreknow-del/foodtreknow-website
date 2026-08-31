@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-location-fix-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=secure-contact-exchange-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -66,6 +66,24 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(marketplace, /Estimated travel cost/);
   assert.match(marketplace, /trucks\(name, cuisine\)/);
   assert.doesNotMatch(marketplace, /trucks\([^)]*business_phone/);
+});
+
+test('confirmed Hosts and food trucks can securely exchange current contact details', async () => {
+  const [migration, marketplace] = await Promise.all([
+    read('supabase/migrations/202608300001_marketplace_contact_exchange.sql'),
+    read('js/opportunity-marketplace.js')
+  ]);
+  assert.match(migration, /create or replace function public\.get_marketplace_booking_contacts/);
+  assert.match(migration, /b\.status = 'confirmed'/);
+  assert.match(migration, /h\.owner_id = auth\.uid\(\)/);
+  assert.match(migration, /v\.owner_id = auth\.uid\(\)/);
+  assert.match(migration, /revoke all on function public\.get_marketplace_booking_contacts\(uuid\) from public, anon/);
+  assert.match(migration, /grant execute on function public\.get_marketplace_booking_contacts\(uuid\) to authenticated/);
+  assert.match(marketplace, /Host Contact Information/);
+  assert.match(marketplace, /Save Contact Information/);
+  assert.match(marketplace, /data-booking-contact/);
+  assert.match(marketplace, /get_marketplace_booking_contacts/);
+  assert.match(marketplace, /These details are private to the Host and food truck assigned to this confirmed booking/);
 });
 
 test('profitability scoring explains estimates without guaranteeing revenue', async () => {

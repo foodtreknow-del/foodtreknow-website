@@ -274,7 +274,7 @@
 
   function bookingsMarkup() {
     if (!state.vendor.bookings.length) return empty('📅', 'No confirmed bookings', 'Approved and instant bookings will appear here.');
-    return `<div class="marketplace-record-list">${state.vendor.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.vendor.reviews.some(review => review.booking_id === item.id); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span><h3>${escapeHtml(item.opportunities?.title || 'Booking')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p><small>${escapeHtml(item.opportunities?.setup_instructions || 'Setup instructions will appear here.')}</small></div><div class="stacked-actions"><a class="secondary-button marketplace-link-button" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.opportunities?.host_locations?.address_line1, item.opportunities?.host_locations?.city, item.opportunities?.host_locations?.state, item.opportunities?.host_locations?.postal_code].filter(Boolean).join(', '))}">Navigate</a>${item.opportunities?.opportunity_type === 'recurring' ? `<button class="primary-button" data-route-booking="${item.id}" type="button">Add to Weekly Route</button>` : ''}${ended && !reviewed ? `<button class="secondary-button" data-review-booking="${item.id}" type="button">Leave Review</button>` : ''}</div></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.vendor.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.vendor.reviews.some(review => review.booking_id === item.id); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span><h3>${escapeHtml(item.opportunities?.title || 'Booking')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p><small>${escapeHtml(item.opportunities?.setup_instructions || 'Setup instructions will appear here.')}</small></div><div class="stacked-actions">${item.status === 'confirmed' ? `<button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button>` : ''}<a class="secondary-button marketplace-link-button" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.opportunities?.host_locations?.address_line1, item.opportunities?.host_locations?.city, item.opportunities?.host_locations?.state, item.opportunities?.host_locations?.postal_code].filter(Boolean).join(', '))}">Navigate</a>${item.opportunities?.opportunity_type === 'recurring' ? `<button class="primary-button" data-route-booking="${item.id}" type="button">Add to Weekly Route</button>` : ''}${ended && !reviewed ? `<button class="secondary-button" data-review-booking="${item.id}" type="button">Leave Review</button>` : ''}</div></article>`; }).join('')}</div>`;
   }
 
   function routeMarkup() {
@@ -331,12 +331,14 @@
   }
 
   function hostTabs() {
-    const tabs = [['dashboard', 'Dashboard'], ['locations', 'Locations'], ['post', 'Post Opportunity'], ['applications', 'Applications'], ['bookings', 'Bookings'], ['messages', 'Messages'], ['reviews', 'Reviews']];
+    const tabs = [['dashboard', 'Dashboard'], ['locations', 'Locations'], ['post', 'Post Opportunity'], ['applications', 'Applications'], ['bookings', 'Bookings'], ['messages', 'Messages'], ['reviews', 'Reviews'], ['contact', 'Contact']];
     return `<div class="marketplace-tabs host-tabs" role="tablist">${tabs.map(([key, label]) => `<button class="${state.host.tab === key ? 'active' : ''}" data-host-marketplace-tab="${key}" type="button">${label}</button>`).join('')}</div>`;
   }
 
-  function hostProfileForm() {
-    return `<section class="host-onboarding"><p class="eyebrow">Location Host</p><h2>Create your host account</h2><p>Businesses, property managers, and organizers can request food trucks without creating a separate login.</p><form id="hostProfileForm" class="marketplace-form"><label>Your name<input name="hostName" required maxlength="120"></label><label>Business or property name<input name="businessName" required maxlength="160"></label><label>Host type<select name="hostKind" required><option value="business">Business</option><option value="property_manager">Property manager</option><option value="event_organizer">Event organizer</option><option value="community">Community/HOA</option><option value="other">Other</option></select></label><label>Contact email<input name="email" type="email" required></label><label>Contact phone<input name="phone" type="tel" required></label><button class="primary-button" type="submit">Create Host Account</button><p class="form-message" data-marketplace-form-message></p></form></section>`;
+  function hostProfileForm(profile = null) {
+    const selected = value => profile?.host_kind === value ? ' selected' : '';
+    const editing = Boolean(profile);
+    return `<section class="host-onboarding"><p class="eyebrow">Location Host</p><h2>${editing ? 'Host Contact Information' : 'Create your host account'}</h2><p>${editing ? 'Keep these details current. They are shared only with food trucks after a booking is confirmed.' : 'Businesses, property managers, and organizers can request food trucks without creating a separate login.'}</p><form id="hostProfileForm" class="marketplace-form"><label>Your name<input name="hostName" required maxlength="120" value="${escapeHtml(profile?.host_name || '')}"></label><label>Business or property name<input name="businessName" required maxlength="160" value="${escapeHtml(profile?.business_name || '')}"></label><label>Host type<select name="hostKind" required><option value="business"${selected('business')}>Business</option><option value="property_manager"${selected('property_manager')}>Property manager</option><option value="event_organizer"${selected('event_organizer')}>Event organizer</option><option value="community"${selected('community')}>Community/HOA</option><option value="other"${selected('other')}>Other</option></select></label><label>Contact email<input name="email" type="email" required autocomplete="email" value="${escapeHtml(profile?.contact_email || '')}"></label><label>Contact phone<input name="phone" type="tel" required autocomplete="tel" value="${escapeHtml(profile?.contact_phone || '')}"></label><button class="primary-button" type="submit">${editing ? 'Save Contact Information' : 'Create Host Account'}</button><p class="form-message" data-marketplace-form-message></p></form></section>`;
   }
 
   function locationForm() {
@@ -365,7 +367,7 @@
 
   function hostBookingsMarkup() {
     if (!state.host.bookings.length) return empty('📅', 'No approved food truck visits', 'Approved and instant bookings will appear here.');
-    return `<div class="marketplace-record-list">${state.host.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.host.reviews.some(review => review.booking_id === item.id && review.reviewer_role === 'host'); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span><h3>${escapeHtml(item.trucks?.name || 'Food Truck')}</h3><p>${escapeHtml(item.opportunities?.title || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p></div><div class="stacked-actions"><button class="secondary-button" data-marketplace-message="${item.application_id}" type="button">Message Vendor</button>${ended && !reviewed ? `<button class="primary-button" data-review-booking="${item.id}" type="button">Rate Vendor</button>` : ''}</div></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.host.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.host.reviews.some(review => review.booking_id === item.id && review.reviewer_role === 'host'); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span><h3>${escapeHtml(item.trucks?.name || 'Food Truck')}</h3><p>${escapeHtml(item.opportunities?.title || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p></div><div class="stacked-actions">${item.status === 'confirmed' ? `<button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button>` : ''}${item.application_id ? `<button class="secondary-button" data-marketplace-message="${item.application_id}" type="button">Message Vendor</button>` : ''}${ended && !reviewed ? `<button class="primary-button" data-review-booking="${item.id}" type="button">Rate Vendor</button>` : ''}</div></article>`; }).join('')}</div>`;
   }
 
   function hostMessagesMarkup() {
@@ -385,6 +387,7 @@
     if (state.host.tab === 'bookings') return hostBookingsMarkup();
     if (state.host.tab === 'messages') return hostMessagesMarkup();
     if (state.host.tab === 'reviews') return hostReviewsMarkup();
+    if (state.host.tab === 'contact') return hostProfileForm(state.host.profile);
     return hostDashboard();
   }
 
@@ -426,6 +429,11 @@
     const application = [...state.vendor.applications, ...state.host.applications].find(item => item.id === applicationId);
     const messages = [...state.vendor.messages, ...state.host.messages].filter(item => item.application_id === applicationId).filter((item, index, list) => list.findIndex(candidate => candidate.id === item.id) === index);
     return `<p class="eyebrow">Opportunity Conversation</p><h2 id="customerModalTitle">${escapeHtml(application?.opportunities?.title || application?.trucks?.name || 'Messages')}</h2><div class="message-thread marketplace-message-thread">${messages.length ? messages.map(item => `<article class="message-bubble ${item.sender_id === state.host.profile?.owner_id || item.sender_id === state.vendor.context?.user?.id ? 'mine' : 'theirs'}"><strong>${escapeHtml(item.sender_role)}</strong><p>${escapeHtml(item.body)}</p><small>${escapeHtml(dateTime(item.created_at))}</small></article>`).join('') : '<p>No messages yet.</p>'}</div><form id="opportunityMessageForm" data-application-id="${applicationId}"><label>Message<textarea name="body" required maxlength="1000" rows="3"></textarea></label><button class="primary-button" type="submit">Send Message</button><p class="form-message" data-marketplace-form-message></p></form>`;
+  }
+
+  function contactModal(contact) {
+    const contactLink = (kind, value, label) => value ? `<a class="secondary-button marketplace-link-button" href="${kind}:${encodeURIComponent(value)}">${label}</a>` : '<span class="contact-unavailable">Not provided</span>';
+    return `<p class="eyebrow">Confirmed Booking</p><h2 id="customerModalTitle">Contact Details</h2><p>These details are private to the Host and food truck assigned to this confirmed booking.</p><div class="opportunity-detail-grid"><span><small>Host</small><strong>${escapeHtml(contact.host_business_name || contact.host_name || 'Host')}</strong><p>${escapeHtml(contact.host_name || '')}</p><p>${escapeHtml(contact.host_email || 'Email not provided')}</p><p>${escapeHtml(contact.host_phone || 'Phone not provided')}</p><div class="stacked-actions">${contactLink('mailto', contact.host_email, 'Email Host')}${contactLink('tel', contact.host_phone, 'Call Host')}</div></span><span><small>Food Truck</small><strong>${escapeHtml(contact.truck_name || 'Food Truck')}</strong><p>${escapeHtml(contact.truck_email || 'Email not provided')}</p><p>${escapeHtml(contact.truck_phone || 'Phone not provided')}</p><div class="stacked-actions">${contactLink('mailto', contact.truck_email, 'Email Food Truck')}${contactLink('tel', contact.truck_phone, 'Call Food Truck')}</div></span></div>`;
   }
 
   function reviewModal(bookingId) {
@@ -481,6 +489,18 @@
     if (decision) { await act(decision, async () => { await rpc('decide_opportunity_application', { p_application_id: decision.dataset.applicationId, p_decision: decision.dataset.hostDecision, p_host_response: '' }); await loadHostData(); renderHostRoot(); }, `Application ${decision.dataset.hostDecision}.`); return; }
     const message = event.target.closest('[data-marketplace-message]');
     if (message) { state.selectedApplication = message.dataset.marketplaceMessage; openMarketplaceModal(messageModal(state.selectedApplication)); return; }
+    const contact = event.target.closest('[data-booking-contact]');
+    if (contact) {
+      contact.disabled = true;
+      try {
+        const result = await rpc('get_marketplace_booking_contacts', { p_booking_id: contact.dataset.bookingContact });
+        const details = asArray(result)[0];
+        if (!details) throw new Error('Contact details are not available for this booking.');
+        openMarketplaceModal(contactModal(details));
+      } catch (error) { toast(error.message, true); }
+      finally { contact.disabled = false; }
+      return;
+    }
     const review = event.target.closest('[data-review-booking]');
     if (review) { openMarketplaceModal(reviewModal(review.dataset.reviewBooking)); return; }
     const route = event.target.closest('[data-route-booking]');
@@ -514,7 +534,8 @@
     }
     if (event.target.id === 'hostProfileForm') {
       event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const data = new FormData(event.target);
-      await act(button, async () => { await rpc('upsert_location_host', { p_host_kind: data.get('hostKind'), p_host_name: data.get('hostName'), p_business_name: data.get('businessName'), p_contact_email: data.get('email'), p_contact_phone: data.get('phone') }); await loadHostData(); renderHostRoot(); }, 'Host account created.'); return;
+      const editing = Boolean(state.host.profile);
+      await act(button, async () => { await rpc('upsert_location_host', { p_host_kind: data.get('hostKind'), p_host_name: data.get('hostName'), p_business_name: data.get('businessName'), p_contact_email: data.get('email'), p_contact_phone: data.get('phone') }); await loadHostData(); if (editing) state.host.tab = 'contact'; renderHostRoot(); }, editing ? 'Host contact information saved.' : 'Host account created.'); return;
     }
     if (event.target.id === 'hostLocationForm') {
       event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const form = event.target; const data = new FormData(form);
