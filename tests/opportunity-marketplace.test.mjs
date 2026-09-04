@@ -49,14 +49,14 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=secure-contact-exchange-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=event-conversations-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
   assert.match(customer, /FoodTrekNowOpportunityMarketplace\?\.mountHost/);
   assert.match(customer, /ftnPortalDestinationV1/);
   assert.match(customer, /function openHostPortal/);
-  for (const label of ['Open Spots Today', 'Weekly Route', 'Request Spot', 'Book Now', 'Use My Location', 'Publish Opportunity', 'Approve', 'Waitlist', 'Decline', 'Send Message']) {
+  for (const label of ['Open Spots Today', 'Weekly Route', 'Request Spot', 'Book Now', 'Use My Location', 'Publish Opportunity', 'Approve', 'Waitlist', 'Decline', 'Send Reply']) {
     assert.match(marketplace, new RegExp(label));
   }
   assert.match(styles, /@media\(max-width:480px\)/);
@@ -66,6 +66,13 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(marketplace, /Estimated travel cost/);
   assert.match(marketplace, /trucks\(name, cuisine\)/);
   assert.doesNotMatch(marketplace, /trucks\([^)]*business_phone/);
+  assert.match(marketplace, /\['messages', 'Messages'\]/);
+  assert.match(marketplace, /function vendorMessagesMarkup\(\)/);
+  assert.match(marketplace, /Reply to this event conversation/);
+  assert.match(marketplace, /Messages in this thread apply only to this event/);
+  assert.match(marketplace, /table: 'opportunity_messages'/);
+  assert.match(marketplace, /modal\.parentElement !== document\.body/);
+  assert.match(marketplace, /document\.body\.appendChild\(modal\)/);
 });
 
 test('confirmed Hosts and food trucks can securely exchange current contact details', async () => {

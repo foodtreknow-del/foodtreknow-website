@@ -11,6 +11,7 @@
   const state = {
     vendor: { context: null, opportunities: [], applications: [], bookings: [], favorites: [], routes: [], messages: [], reviews: [], notifications: [], tab: 'discover', view: 'list', location: null, filters: {} },
     host: { profile: null, locations: [], opportunities: [], applications: [], bookings: [], messages: [], reviews: [], notifications: [], tab: 'dashboard' },
+    activeRole: null,
     selectedOpportunity: null,
     selectedApplication: null
   };
@@ -196,7 +197,7 @@
       return;
     }
     const [applications, bookings, reviews] = await Promise.all([
-      query(client.from('opportunity_applications').select('*, trucks(name, cuisine)').in('opportunity_id', ids).order('applied_at', { ascending: false })),
+      query(client.from('opportunity_applications').select('*, trucks(name, cuisine), opportunities(title, starts_at, ends_at, host_locations(name, city, state))').in('opportunity_id', ids).order('applied_at', { ascending: false })),
       query(client.from('opportunity_bookings').select('*, trucks(name, cuisine), opportunities(title, starts_at, ends_at)').in('opportunity_id', ids).order('confirmed_at', { ascending: false })),
       query(client.from('opportunity_reviews').select('*').in('opportunity_id', ids).order('created_at', { ascending: false }))
     ]);
@@ -263,13 +264,31 @@
   }
 
   function vendorTabs() {
-    const tabs = [['discover', 'Find Locations'], ['today', 'Open Spots Today'], ['applications', 'Applications'], ['bookings', 'Bookings'], ['route', 'Weekly Route'], ['notifications', 'Alerts']];
+    const tabs = [['discover', 'Find Locations'], ['today', 'Open Spots Today'], ['applications', 'Applications'], ['messages', 'Messages'], ['bookings', 'Bookings'], ['route', 'Weekly Route'], ['notifications', 'Alerts']];
     return `<div class="marketplace-tabs" role="tablist">${tabs.map(([key, label]) => `<button class="${state.vendor.tab === key ? 'active' : ''}" data-vendor-marketplace-tab="${key}" type="button">${label}</button>`).join('')}</div>`;
   }
 
   function applicationsMarkup() {
     if (!state.vendor.applications.length) return empty('📨', 'No applications yet', 'Request a spot and your application status will appear here.');
-    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${item.host_response ? `<small>Host response: ${escapeHtml(item.host_response)}</small>` : ''}</div><button class="secondary-button" data-marketplace-message="${item.id}" type="button">Messages</button></article>`).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${item.host_response ? `<small>Host response: ${escapeHtml(item.host_response)}</small>` : ''}</div><button class="secondary-button" data-marketplace-message="${item.id}" type="button">Open Conversation</button></article>`).join('')}</div>`;
+  }
+
+  function conversationItems(application, messages) {
+    const initial = clean(application?.vendor_message) ? [{
+      id: `application-${application.id}`,
+      application_id: application.id,
+      sender_role: 'vendor',
+      body: application.vendor_message,
+      created_at: application.applied_at
+    }] : [];
+    return [...initial, ...messages]
+      .filter((item, index, items) => items.findIndex(candidate => candidate.id === item.id) === index)
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  }
+
+  function vendorMessagesMarkup() {
+    if (!state.vendor.applications.length) return empty('💬', 'No event conversations', 'Apply for an opportunity to start a conversation with its Host.');
+    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => { const thread = conversationItems(item, state.vendor.messages.filter(message => message.application_id === item.id)); const last = thread.at(-1); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || 'Host location')}</p><small>${last ? escapeHtml(last.body) : 'No messages yet. Ask the Host a question about this event.'}</small></div><button class="primary-button" data-marketplace-message="${item.id}" type="button">${thread.length ? 'Reply' : 'Start Conversation'}</button></article>`; }).join('')}</div>`;
   }
 
   function bookingsMarkup() {
@@ -304,6 +323,7 @@
 
   function vendorContent() {
     if (state.vendor.tab === 'applications') return applicationsMarkup();
+    if (state.vendor.tab === 'messages') return vendorMessagesMarkup();
     if (state.vendor.tab === 'bookings') return bookingsMarkup();
     if (state.vendor.tab === 'route') return routeMarkup();
     if (state.vendor.tab === 'notifications') return notificationsMarkup(state.vendor.notifications);
@@ -321,6 +341,7 @@
   async function renderVendor() {
     const root = document.getElementById('vendorOpportunityMarketplace');
     if (!root) return;
+    state.activeRole = 'vendor';
     root.innerHTML = '<div class="marketplace-loading">Finding profitable opportunities…</div>';
     try { await loadVendorData(); renderVendorRoot(); }
     catch (error) { root.innerHTML = `<div class="marketplace-error"><strong>Marketplace unavailable</strong><p>${escapeHtml(error.message)}</p><button class="secondary-button" data-marketplace-retry-vendor type="button">Try Again</button></div>`; }
@@ -362,7 +383,7 @@
 
   function hostApplicationsMarkup() {
     if (!state.host.applications.length) return empty('📨', 'No applications yet', 'Vendor applications will appear after you publish an approval-required opportunity.');
-    return `<div class="marketplace-record-list">${state.host.applications.map(item => `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.trucks?.name || 'Food Truck')}</h3><p>${escapeHtml(item.trucks?.cuisine || 'Cuisine not listed')}</p><small>${escapeHtml(item.vendor_message || 'No vendor message.')}</small></div><div class="stacked-actions">${['pending', 'waitlisted'].includes(item.status) ? `<button class="primary-button" data-host-decision="approved" data-application-id="${item.id}" type="button">Approve</button><button class="secondary-button" data-host-decision="waitlisted" data-application-id="${item.id}" type="button">Waitlist</button><button class="danger-button" data-host-decision="declined" data-application-id="${item.id}" type="button">Decline</button>` : ''}<button class="secondary-button" data-marketplace-message="${item.id}" type="button">Messages</button></div></article>`).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.host.applications.map(item => `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.trucks?.name || 'Food Truck')}</h3><p>${escapeHtml(item.opportunities?.title || 'Opportunity')} · ${escapeHtml(item.trucks?.cuisine || 'Cuisine not listed')}</p><small>${escapeHtml(item.vendor_message || 'No opening message. You can still start this event conversation.')}</small></div><div class="stacked-actions">${['pending', 'waitlisted'].includes(item.status) ? `<button class="primary-button" data-host-decision="approved" data-application-id="${item.id}" type="button">Approve</button><button class="secondary-button" data-host-decision="waitlisted" data-application-id="${item.id}" type="button">Waitlist</button><button class="danger-button" data-host-decision="declined" data-application-id="${item.id}" type="button">Decline</button>` : ''}<button class="secondary-button" data-marketplace-message="${item.id}" type="button">Reply</button></div></article>`).join('')}</div>`;
   }
 
   function hostBookingsMarkup() {
@@ -372,7 +393,7 @@
 
   function hostMessagesMarkup() {
     if (!state.host.applications.length) return empty('💬', 'No opportunity conversations', 'Messaging opens after a vendor applies or books.');
-    return `<div class="marketplace-record-list">${state.host.applications.map(item => { const messages = state.host.messages.filter(message => message.application_id === item.id); const last = messages.at(-1); return `<article><div><h3>${escapeHtml(item.trucks?.name || 'Food Truck')}</h3><p>${last ? escapeHtml(last.body) : 'No messages yet'}</p><small>${messages.length} message${messages.length === 1 ? '' : 's'}</small></div><button class="secondary-button" data-marketplace-message="${item.id}" type="button">Open Conversation</button></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.host.applications.map(item => { const thread = conversationItems(item, state.host.messages.filter(message => message.application_id === item.id)); const last = thread.at(-1); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3><p>${escapeHtml(item.trucks?.name || 'Food Truck')}</p><small>${last ? escapeHtml(last.body) : 'No messages yet. Start this event conversation.'}</small></div><button class="primary-button" data-marketplace-message="${item.id}" type="button">${thread.length ? 'Reply' : 'Start Conversation'}</button></article>`; }).join('')}</div>`;
   }
 
   function hostReviewsMarkup() {
@@ -401,6 +422,7 @@
   async function mountHost() {
     const root = document.getElementById('hostOpportunityMarketplace');
     if (!root) return;
+    state.activeRole = 'host';
     try { await loadHostData(); renderHostRoot(); }
     catch (error) { root.innerHTML = `<div class="marketplace-error"><strong>Host marketplace unavailable</strong><p>${escapeHtml(error.message)}</p><button class="secondary-button" data-marketplace-retry-host type="button">Try Again</button></div>`; }
   }
@@ -414,7 +436,12 @@
   function openMarketplaceModal(html) {
     const modal = document.getElementById('customerAccountModal');
     const content = document.getElementById('customerAccountModalContent');
-    if (modal && content) { content.innerHTML = html; modal.classList.remove('hidden'); return; }
+    if (modal && content) {
+      if (modal.parentElement !== document.body) document.body.appendChild(modal);
+      content.innerHTML = html;
+      modal.classList.remove('hidden');
+      return;
+    }
     let marketplaceModal = document.getElementById('marketplaceModal');
     if (!marketplaceModal) {
       marketplaceModal = document.createElement('div'); marketplaceModal.id = 'marketplaceModal'; marketplaceModal.className = 'modal';
@@ -427,8 +454,12 @@
 
   function messageModal(applicationId) {
     const application = [...state.vendor.applications, ...state.host.applications].find(item => item.id === applicationId);
-    const messages = [...state.vendor.messages, ...state.host.messages].filter(item => item.application_id === applicationId).filter((item, index, list) => list.findIndex(candidate => candidate.id === item.id) === index);
-    return `<p class="eyebrow">Opportunity Conversation</p><h2 id="customerModalTitle">${escapeHtml(application?.opportunities?.title || application?.trucks?.name || 'Messages')}</h2><div class="message-thread marketplace-message-thread">${messages.length ? messages.map(item => `<article class="message-bubble ${item.sender_id === state.host.profile?.owner_id || item.sender_id === state.vendor.context?.user?.id ? 'mine' : 'theirs'}"><strong>${escapeHtml(item.sender_role)}</strong><p>${escapeHtml(item.body)}</p><small>${escapeHtml(dateTime(item.created_at))}</small></article>`).join('') : '<p>No messages yet.</p>'}</div><form id="opportunityMessageForm" data-application-id="${applicationId}"><label>Message<textarea name="body" required maxlength="1000" rows="3"></textarea></label><button class="primary-button" type="submit">Send Message</button><p class="form-message" data-marketplace-form-message></p></form>`;
+    const savedMessages = [...state.vendor.messages, ...state.host.messages].filter(item => item.application_id === applicationId);
+    const messages = conversationItems(application, savedMessages);
+    const counterpart = state.activeRole === 'host'
+      ? application?.trucks?.name || 'Food Truck'
+      : application?.opportunities?.host_locations?.name || 'Event Host';
+    return `<p class="eyebrow">Event Conversation</p><h2 id="customerModalTitle">${escapeHtml(application?.opportunities?.title || 'Opportunity')}</h2><p>Conversation with ${escapeHtml(counterpart)}. Messages in this thread apply only to this event.</p><div class="message-thread marketplace-message-thread">${messages.length ? messages.map(item => `<article class="message-bubble ${item.sender_role === state.activeRole ? 'mine' : 'theirs'}"><strong>${escapeHtml(item.sender_role === 'host' ? 'Host' : 'Food Truck')}</strong><p>${escapeHtml(item.body)}</p><small>${escapeHtml(dateTime(item.created_at))}</small></article>`).join('') : '<p>No messages yet. Start the conversation below.</p>'}</div><form id="opportunityMessageForm" data-application-id="${applicationId}"><label>Reply to this event conversation<textarea name="body" required maxlength="1000" rows="3" placeholder="Type your reply here…"></textarea></label><button class="primary-button" type="submit">Send Reply</button><p class="form-message" data-marketplace-form-message></p></form>`;
   }
 
   function contactModal(contact) {
@@ -547,7 +578,7 @@
     }
     if (event.target.id === 'opportunityMessageForm') {
       event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const data = new FormData(event.target);
-      await act(button, async () => { await rpc('send_opportunity_message', { p_application_id: event.target.dataset.applicationId, p_body: data.get('body') }); event.target.reset(); if (state.vendor.context) await loadVendorData(); if (state.host.profile) await loadHostData(); openMarketplaceModal(messageModal(event.target.dataset.applicationId)); }, 'Message sent.'); return;
+      await act(button, async () => { await rpc('send_opportunity_message', { p_application_id: event.target.dataset.applicationId, p_body: data.get('body') }); event.target.reset(); if (state.activeRole === 'vendor') await loadVendorData(); else await loadHostData(); openMarketplaceModal(messageModal(event.target.dataset.applicationId)); }, 'Reply sent.'); return;
     }
     if (event.target.id === 'opportunityReviewForm') {
       event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const data = new FormData(event.target);
@@ -559,13 +590,22 @@
     if (!client?.channel) return;
     client.channel('foodtreknow-opportunity-marketplace')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'opportunities' }, () => {
-        if (document.getElementById('vendorOpportunityMarketplace')) renderVendor();
-        if (document.getElementById('hostOpportunityMarketplace')) mountHost();
+        if (state.activeRole === 'vendor') renderVendor();
+        if (state.activeRole === 'host') mountHost();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'opportunity_applications' }, () => {
-        if (document.getElementById('vendorOpportunityMarketplace')) renderVendor();
-        if (document.getElementById('hostOpportunityMarketplace')) mountHost();
-      }).subscribe();
+        if (state.activeRole === 'vendor') renderVendor();
+        if (state.activeRole === 'host') mountHost();
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'opportunity_messages' }, async payload => {
+        if (state.activeRole === 'vendor') await loadVendorData();
+        if (state.activeRole === 'host') await loadHostData();
+        const openForm = document.getElementById('opportunityMessageForm');
+        if (openForm?.dataset.applicationId === payload.new.application_id) openMarketplaceModal(messageModal(payload.new.application_id));
+        else if (state.activeRole === 'vendor') renderVendorRoot();
+        else if (state.activeRole === 'host') renderHostRoot();
+      })
+      .subscribe();
   }
 
   window.FoodTrekNowOpportunityMarketplace = Object.freeze({
