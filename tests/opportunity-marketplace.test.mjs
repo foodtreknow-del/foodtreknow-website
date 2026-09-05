@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=event-fees-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=truck-profile-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -64,7 +64,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(worker, /js\/opportunity-marketplace\.js/);
   assert.match(marketplace, /Round-trip mileage/);
   assert.match(marketplace, /Estimated travel cost/);
-  assert.match(marketplace, /trucks\(name, cuisine\)/);
+  assert.match(marketplace, /trucks\(id, name, cuisine\)/);
   assert.doesNotMatch(marketplace, /trucks\([^)]*business_phone/);
   assert.match(marketplace, /\['messages', 'Messages'\]/);
   assert.match(marketplace, /function vendorMessagesMarkup\(\)/);
@@ -81,6 +81,38 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(marketplace, /Reply to Host/);
   assert.match(marketplace, /You may still message the Host with questions about this decision/);
   assert.match(marketplace, /Open Applications or Messages to continue the conversation/);
+});
+
+test('Hosts can inspect applicant customer-facing truck menus and ratings without private account data', async () => {
+  const [migration, marketplace, styles, html, worker] = await Promise.all([
+    read('supabase/migrations/202609040002_host_applicant_truck_profiles.sql'),
+    read('js/opportunity-marketplace.js'),
+    read('css/opportunity-marketplace.css'),
+    read('index.html'),
+    read('service-worker.js')
+  ]);
+  assert.match(migration, /create or replace function public\.get_marketplace_truck_profile\(p_truck_id uuid\)/);
+  assert.match(migration, /security definer/);
+  assert.match(migration, /a\.truck_id = p_truck_id and h\.owner_id = requester/);
+  assert.match(migration, /b\.truck_id = p_truck_id and h\.owner_id = requester/);
+  assert.match(migration, /mi\.is_active = true/);
+  assert.match(migration, /r\.reviewer_role = 'host'/);
+  assert.match(migration, /and not r\.is_reported/);
+  assert.match(migration, /revoke all on function public\.get_marketplace_truck_profile\(uuid\) from public, anon/);
+  assert.match(migration, /grant execute on function public\.get_marketplace_truck_profile\(uuid\) to authenticated/);
+  assert.doesNotMatch(migration, /contact_email|contact_mobile|owner_id',|bank|stripe/i);
+  assert.match(marketplace, /data-host-truck-profile/);
+  assert.match(marketplace, /get_marketplace_truck_profile/);
+  assert.match(marketplace, /Customer-facing food truck profile/);
+  assert.match(marketplace, /Public customer menu/);
+  assert.match(marketplace, /SOLD OUT/);
+  assert.match(marketplace, /Recent Host reviews/);
+  assert.match(marketplace, /Private owner, banking, and account information is never shown/);
+  assert.match(styles, /marketplace-truck-profile-link/);
+  assert.match(styles, /host-truck-menu-grid/);
+  assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
+  assert.match(html, /opportunity-marketplace\.css\?v=truck-profile-1/);
+  assert.match(worker, /foodtreknow-shell-v23/);
 });
 
 test('confirmed Hosts and food trucks can securely exchange current contact details', async () => {

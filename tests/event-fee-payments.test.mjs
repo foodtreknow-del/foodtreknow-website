@@ -76,7 +76,7 @@ test('vendor and Host UIs show payment, receipts, status, and full refunds', asy
   assert.match(webhook, /foodtreknow_event_fee/);
   assert.match(webhook, /finalize_event_fee_payment/);
   assert.match(webhook, /complete_event_fee_refund/);
-  assert.match(html, /opportunity-marketplace\.js\?v=event-fees-1/);
+  assert.match(html, /opportunity-marketplace\.js\?v=truck-profile-1/);
 });
 
 test('event-fee payment sources contain no Stripe secrets or card data', async () => {
