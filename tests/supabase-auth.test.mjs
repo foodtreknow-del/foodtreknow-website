@@ -154,7 +154,7 @@ test('a recovery URL is recognized before Supabase consumes its auth parameters'
   vm.runInContext(clientSource, context, { filename: 'supabase-client.js' });
   assert.equal(context.window.FoodTrekNowSupabaseRecoveryPending, true);
   assert.match(html, /js\/supabase-client\.js\?v=password-recovery-2/);
-  assert.match(html, /js\/customer-account\.js\?v=password-recovery-2/);
+  assert.match(html, /js\/customer-account\.js\?v=customer-storefront-1/);
 });
 
 test('customer sign-up sends safe profile metadata and requires email verification', async () => {

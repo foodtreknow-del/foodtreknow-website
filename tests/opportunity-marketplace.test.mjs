@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-dashboard-tabs-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=customer-storefront-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v24/);
+  assert.match(worker, /foodtreknow-shell-v25/);
 });
 
 test('Host dashboard summary cards open their live result sections', async () => {
@@ -129,6 +129,27 @@ test('Host dashboard summary cards open their live result sections', async () =>
   assert.match(marketplace, /function hostOpportunitiesMarkup\(\)/);
   assert.match(marketplace, /state\.host\.tab === 'opportunities'/);
   assert.match(styles, /host-summary-card:hover/);
+});
+
+test('Host truck names open the existing customer storefront with a return path', async () => {
+  const [marketplace, customer, html] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('js/customer-account.js'),
+    read('index.html')
+  ]);
+  assert.match(marketplace, /View customer storefront/);
+  assert.match(marketplace, /FoodTrekNowCustomerPortal\?\.openTruckStorefrontFromHost/);
+  assert.match(marketplace, /FoodTrekNowCustomerPortal\.openTruckStorefrontFromHost/);
+  assert.match(customer, /async function openTruckStorefrontFromHost\(truckId\)/);
+  assert.match(customer, /await refreshCustomerMarketplace\(true\)/);
+  assert.match(customer, /renderCustomerPage\('truckMenu'\)/);
+  assert.match(customer, /data-return-host-portal/);
+  assert.match(customer, /Back to Host Portal/);
+  assert.match(customer, /openHostPortal\(currentAccount\)/);
+  const hostBookings = marketplace.slice(marketplace.indexOf('function hostBookingsMarkup'), marketplace.indexOf('function hostPaymentsMarkup'));
+  assert.doesNotMatch(hostBookings, /data-booking-contact/);
+  assert.match(hostBookings, /data-marketplace-message/);
+  assert.match(html, /js\/customer-account\.js\?v=customer-storefront-1/);
 });
 
 test('confirmed Hosts and food trucks can securely exchange current contact details', async () => {

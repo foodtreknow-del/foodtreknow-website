@@ -1040,6 +1040,7 @@
   let customerCommunicationsSubscribed = false;
   let customerMarketplaceSubscribed = false;
   let customerMarketplaceRefreshTimer = null;
+  let hostStorefrontPreview = false;
   const PORTAL_DESTINATION_KEY = 'ftnPortalDestinationV1';
   let authDestination = localStorage.getItem(PORTAL_DESTINATION_KEY) === 'host' ? 'host' : 'customer';
 
@@ -1146,6 +1147,7 @@
 
   function openHostPortal(account) {
     setPortalDestination('host');
+    hostStorefrontPreview = false;
     currentAccount = CustomerOrderingService.ensureState(account);
     clearInterval(customerMarketplaceRefreshTimer);
     customerMarketplaceRefreshTimer = null;
@@ -1162,6 +1164,24 @@
     if (authDestination === 'host') openHostPortal(account);
     else openCustomerAccount(account);
   }
+
+  async function openTruckStorefrontFromHost(truckId) {
+    if (!currentAccount) throw new Error('Sign in as a Host to view this food truck.');
+    await refreshCustomerMarketplace(true);
+    const truck = TRUCKS.find(item => item.id === truckId);
+    if (!truck) throw new Error('This food truck storefront is not available right now.');
+    selectedTruckId = truck.id;
+    localStorage.setItem('ftnSelectedTruckV1', JSON.stringify({ truckId: truck.id, selectedAt: Date.now() }));
+    hostStorefrontPreview = true;
+    hidePrimaryViews();
+    accountView.classList.remove('hidden-view');
+    accountView.classList.remove('guest-session');
+    document.body.classList.remove('login-page');
+    renderCustomerShell();
+    renderCustomerPage('truckMenu');
+  }
+
+  window.FoodTrekNowCustomerPortal = Object.freeze({ openTruckStorefrontFromHost });
 
   let checkoutReturnInProgress = false;
 
@@ -1800,7 +1820,7 @@
     const cartSubtotal = hasThisTruckCart ? cartTotals().subtotal : 0;
     return `<div class="ordering-page full-menu-page">
       <header class="menu-experience-header">
-        <button class="ordering-back-button" data-customer-page-back="nearby" type="button">← Nearby Trucks</button>
+        ${hostStorefrontPreview ? '<button class="ordering-back-button" data-return-host-portal type="button">← Back to Host Portal</button>' : '<button class="ordering-back-button" data-customer-page-back="nearby" type="button">← Nearby Trucks</button>'}
         <div><p class="eyebrow">${escapeHtml(truck.cuisine)}</p><h1>${escapeHtml(truck.name)} Menu</h1><p>Tap an item to add it · Keep scrolling while you build your order</p></div>
         <button class="menu-cart-button" data-ordering-action="open-cart" type="button"><span>🛒</span> Cart <b data-live-cart-count>${cartCount}</b></button>
         <div class="menu-truck-tools">
@@ -2847,6 +2867,10 @@
     const pageBack = event.target.closest('[data-customer-page-back]');
     if (pageBack) {
       renderCustomerPage(pageBack.dataset.customerPageBack);
+      return;
+    }
+    if (event.target.closest('[data-return-host-portal]')) {
+      if (currentAccount) openHostPortal(currentAccount);
       return;
     }
     const orderingAction = event.target.closest('[data-ordering-action]');

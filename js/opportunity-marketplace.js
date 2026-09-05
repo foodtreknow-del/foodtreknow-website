@@ -439,7 +439,7 @@
   function truckProfileLink(truck) {
     const name = escapeHtml(truck?.name || 'Food Truck');
     if (!truck?.id) return `<h3>${name}</h3>`;
-    return `<button class="marketplace-truck-profile-link" data-host-truck-profile="${escapeHtml(truck.id)}" type="button"><strong>${name}</strong><small>View menu, prices &amp; ratings →</small></button>`;
+    return `<button class="marketplace-truck-profile-link" data-host-truck-profile="${escapeHtml(truck.id)}" type="button"><strong>${name}</strong><small>View customer storefront →</small></button>`;
   }
 
   function hostApplicationsMarkup() {
@@ -449,7 +449,7 @@
 
   function hostBookingsMarkup() {
     if (!state.host.bookings.length) return empty('📅', 'No approved food truck visits', 'Approved and instant bookings will appear here.');
-    return `<div class="marketplace-record-list">${state.host.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.host.reviews.some(review => review.booking_id === item.id && review.reviewer_role === 'host'); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span>${truckProfileLink(item.trucks)}<p>${escapeHtml(item.opportunities?.title || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${eventPaymentSummary(item, 'host')}</div><div class="stacked-actions">${item.status === 'confirmed' ? `<button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button>` : ''}${item.application_id ? `<button class="secondary-button" data-marketplace-message="${item.application_id}" type="button">Message Vendor</button>` : ''}${ended && !reviewed ? `<button class="primary-button" data-review-booking="${item.id}" type="button">Rate Vendor</button>` : ''}</div></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.host.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.host.reviews.some(review => review.booking_id === item.id && review.reviewer_role === 'host'); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span>${truckProfileLink(item.trucks)}<p>${escapeHtml(item.opportunities?.title || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${eventPaymentSummary(item, 'host')}</div><div class="stacked-actions">${item.application_id ? `<button class="secondary-button" data-marketplace-message="${item.application_id}" type="button">Message Vendor</button>` : ''}${ended && !reviewed ? `<button class="primary-button" data-review-booking="${item.id}" type="button">Rate Vendor</button>` : ''}</div></article>`; }).join('')}</div>`;
   }
 
   function hostPaymentsMarkup() {
@@ -668,9 +668,13 @@
     const hostTruckProfile = event.target.closest('[data-host-truck-profile]');
     if (hostTruckProfile) {
       await act(hostTruckProfile, async () => {
+        if (window.FoodTrekNowCustomerPortal?.openTruckStorefrontFromHost) {
+          await window.FoodTrekNowCustomerPortal.openTruckStorefrontFromHost(hostTruckProfile.dataset.hostTruckProfile);
+          return;
+        }
         const profile = await rpc('get_marketplace_truck_profile', { p_truck_id: hostTruckProfile.dataset.hostTruckProfile });
         openMarketplaceModal(truckProfileModal(profile));
-      }, 'Food truck profile opened.');
+      }, 'Customer storefront opened.');
       return;
     }
     const opportunityCardTarget = event.target.closest('[data-opportunity-card]');
