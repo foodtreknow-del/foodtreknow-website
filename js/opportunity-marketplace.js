@@ -220,7 +220,7 @@
     const estimate = profitability(item, distance);
     const saved = state.vendor.favorites.includes(item.id);
     const photo = safeImageUrl(asArray(item.location?.photos)[0]);
-    return `<article class="opportunity-card" data-opportunity-card="${item.id}">${photo ? `<img class="opportunity-card-photo" src="${escapeHtml(photo)}" alt="${escapeHtml(item.location?.name)}">` : ''}
+    return `<article class="opportunity-card opportunity-card-clickable" data-opportunity-card="${item.id}" aria-label="View ${escapeHtml(item.title)} opportunity">${photo ? `<img class="opportunity-card-photo" src="${escapeHtml(photo)}" alt="${escapeHtml(item.location?.name)}">` : ''}
       <div class="opportunity-card-top"><div>${availabilityBadge(item)}${!Number(item.flat_vendor_fee) && !Number(item.sales_percentage) ? '<span class="marketplace-badge no-fee">No Fee</span>' : ''}${Number(item.minimum_sales_guarantee) ? '<span class="marketplace-badge guarantee">Guaranteed Minimum</span>' : ''}</div><button class="opportunity-favorite ${saved ? 'saved' : ''}" data-marketplace-favorite="${item.id}" type="button" aria-label="${saved ? 'Remove saved opportunity' : 'Save opportunity'}">${saved ? '♥' : '♡'}</button></div>
       <p class="eyebrow">${escapeHtml(item.event_type.replaceAll('_', ' '))}</p>
       <h3>${escapeHtml(item.title)}</h3>
@@ -335,7 +335,7 @@
   function renderVendorRoot() {
     const root = document.getElementById('vendorOpportunityMarketplace');
     if (!root) return;
-    root.innerHTML = `<section class="marketplace-hero"><div><p class="eyebrow">Location Opportunity Marketplace</p><h2>Where can your truck go and make money?</h2><p>Compare customers, fees, competition, distance, and estimated profit before committing.</p></div><div class="marketplace-hero-stat"><strong>${state.vendor.opportunities.length}</strong><span>available opportunities</span></div></section>${vendorTabs()}<section class="marketplace-panel">${vendorContent()}</section>`;
+    root.innerHTML = `<section class="marketplace-hero"><div><p class="eyebrow">Location Opportunity Marketplace</p><h2>Where can your truck go and make money?</h2><p>Compare customers, fees, competition, distance, and estimated profit before committing.</p></div><button class="marketplace-hero-stat" data-vendor-marketplace-tab="discover" data-marketplace-show-available type="button" aria-label="View ${state.vendor.opportunities.length} available opportunities"><strong>${state.vendor.opportunities.length}</strong><span>available opportunities</span><small>Click to view</small></button></section>${vendorTabs()}<section class="marketplace-panel">${vendorContent()}</section>`;
   }
 
   async function renderVendor() {
@@ -489,7 +489,12 @@
 
   document.addEventListener('click', async event => {
     const vendorTab = event.target.closest('[data-vendor-marketplace-tab]');
-    if (vendorTab) { state.vendor.tab = vendorTab.dataset.vendorMarketplaceTab; renderVendorRoot(); return; }
+    if (vendorTab) {
+      state.vendor.tab = vendorTab.dataset.vendorMarketplaceTab;
+      renderVendorRoot();
+      if (vendorTab.hasAttribute('data-marketplace-show-available')) document.querySelector('.marketplace-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     const hostTab = event.target.closest('[data-host-marketplace-tab]');
     if (hostTab) { state.host.tab = hostTab.dataset.hostMarketplaceTab; renderHostRoot(); return; }
     if (event.target.closest('[data-marketplace-retry-vendor]')) { renderVendor(); return; }
@@ -499,6 +504,12 @@
     if (event.target.closest('[data-marketplace-clear-filters]')) { state.vendor.filters = {}; renderVendorRoot(); return; }
     const view = event.target.closest('[data-marketplace-view]');
     if (view) { const item = state.vendor.opportunities.find(opportunity => opportunity.id === view.dataset.marketplaceView); if (item) openMarketplaceModal(opportunityModal(item)); return; }
+    const opportunityCardTarget = event.target.closest('[data-opportunity-card]');
+    if (opportunityCardTarget && !event.target.closest('button, a, input, select, textarea, label')) {
+      const item = state.vendor.opportunities.find(opportunity => opportunity.id === opportunityCardTarget.dataset.opportunityCard);
+      if (item) openMarketplaceModal(opportunityModal(item));
+      return;
+    }
     const favorite = event.target.closest('[data-marketplace-favorite]');
     if (favorite) {
       const id = favorite.dataset.marketplaceFavorite, saved = !state.vendor.favorites.includes(id);
