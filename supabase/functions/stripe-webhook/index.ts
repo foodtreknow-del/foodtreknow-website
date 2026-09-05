@@ -128,6 +128,23 @@ Deno.serve(async request => {
           subscription.metadata = { ...subscription.metadata, foodtreknow_vendor_profile_id: session.metadata.foodtreknow_vendor_profile_id };
         }
         await syncVendorSubscription(serviceClient, subscription);
+      } else if (session?.metadata?.foodtreknow_event_fee === 'true') {
+        const paymentId = session.metadata?.foodtreknow_event_fee_payment_id;
+        const { data: payment, error: paymentError } = await serviceClient.from('event_fee_payments')
+          .select('*').eq('id', paymentId).eq('stripe_checkout_session_id', session.id).single();
+        if (paymentError || !payment) throw new Error('Webhook event-fee payment was not found.');
+        if (event.account && event.account !== payment.stripe_account_id) throw new Error('Webhook Host account did not match.');
+        if (session.payment_status === 'paid') {
+          const { error: finalizeError } = await serviceClient.rpc('finalize_event_fee_payment', {
+            p_payment_id: payment.id,
+            p_checkout_session_id: session.id,
+            p_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id || '',
+            p_charge_id: '',
+            p_amount_paid_cents: Number(session.amount_total),
+            p_receipt_url: null
+          });
+          if (finalizeError) throw finalizeError;
+        }
       } else {
         const draftId = session?.metadata?.foodtreknow_draft_id;
         if (draftId && session.payment_status === 'paid') {
@@ -169,6 +186,11 @@ Deno.serve(async request => {
         }
       }
     } else if (['checkout.session.expired', 'checkout.session.async_payment_failed'].includes(event.type)) {
+      if (session?.metadata?.foodtreknow_event_fee === 'true') {
+        await serviceClient.from('event_fee_payments').update({
+          status: event.type === 'checkout.session.expired' ? 'expired' : 'failed'
+        }).eq('stripe_checkout_session_id', session.id).neq('status', 'paid');
+      }
       const { data: expiringDraft } = await serviceClient.from('payment_checkout_drafts')
         .select('id').eq('stripe_checkout_session_id', session.id).is('order_id', null).maybeSingle();
       if (expiringDraft?.id) await serviceClient.rpc('release_checkout_credit', { p_draft_id: expiringDraft.id });
@@ -179,18 +201,33 @@ Deno.serve(async request => {
       const refund = event.data?.object;
       const paymentIntentId = typeof refund?.payment_intent === 'string' ? refund.payment_intent : refund?.payment_intent?.id;
       if (paymentIntentId && ['succeeded', 'failed', 'canceled'].includes(refund.status)) {
-        const { data: order } = await serviceClient.from('orders').select('id,stripe_account_id')
-          .eq('stripe_payment_intent_id', paymentIntentId).maybeSingle();
-        if (order) {
-          if (event.account && event.account !== order.stripe_account_id) throw new Error('Refund connected account did not match.');
-          const { error: refundError } = await serviceClient.rpc('complete_order_refund', {
-            p_order_id: order.id,
+        const paymentId = refund?.metadata?.foodtreknow_event_fee_payment_id;
+        const { data: eventPayment } = await serviceClient.from('event_fee_payments').select('*')
+          .eq(paymentId ? 'id' : 'stripe_payment_intent_id', paymentId || paymentIntentId).maybeSingle();
+        if (eventPayment) {
+          if (event.account && event.account !== eventPayment.stripe_account_id) throw new Error('Refund Host account did not match.');
+          const { error: eventRefundError } = await serviceClient.rpc('complete_event_fee_refund', {
+            p_payment_id: eventPayment.id,
             p_refund_id: refund.id,
             p_refunded_cents: Number(refund.amount || 0),
             p_succeeded: refund.status === 'succeeded',
             p_failure: refund.status === 'succeeded' ? null : `Stripe refund status: ${refund.status}`
           });
-          if (refundError) throw refundError;
+          if (eventRefundError) throw eventRefundError;
+        } else {
+          const { data: order } = await serviceClient.from('orders').select('id,stripe_account_id')
+            .eq('stripe_payment_intent_id', paymentIntentId).maybeSingle();
+          if (order) {
+            if (event.account && event.account !== order.stripe_account_id) throw new Error('Refund connected account did not match.');
+            const { error: refundError } = await serviceClient.rpc('complete_order_refund', {
+              p_order_id: order.id,
+              p_refund_id: refund.id,
+              p_refunded_cents: Number(refund.amount || 0),
+              p_succeeded: refund.status === 'succeeded',
+              p_failure: refund.status === 'succeeded' ? null : `Stripe refund status: ${refund.status}`
+            });
+            if (refundError) throw refundError;
+          }
         }
       }
     }
