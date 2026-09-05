@@ -19,7 +19,7 @@
   function friendly(error) {
     const message = clean(error?.message);
     if (/relation .* does not exist|schema cache|could not find the function/i.test(message)) return new Error(MARKETPLACE_ERROR);
-    if (/duplicate key|unique constraint/i.test(message)) return new Error('This food truck already requested or booked this opportunity.');
+    if (/duplicate key|unique constraint/i.test(message)) return new Error('You already applied for this event. Open Applications or Messages to continue the conversation.');
     return new Error(message || 'The marketplace request could not be completed.');
   }
 
@@ -106,7 +106,8 @@
 
   function filteredOpportunities(todayOnly = false) {
     const filters = state.vendor.filters;
-    let items = state.vendor.opportunities.filter(item => !todayOnly || sameLocalDay(item.starts_at));
+    const appliedOpportunityIds = new Set(state.vendor.applications.map(application => application.opportunity_id));
+    let items = state.vendor.opportunities.filter(item => !appliedOpportunityIds.has(item.id) && (!todayOnly || sameLocalDay(item.starts_at)));
     if (filters.date) items = items.filter(item => new Date(item.starts_at).toISOString().slice(0, 10) === filters.date);
     if (filters.startTime) items = items.filter(item => new Date(item.starts_at).toTimeString().slice(0, 5) >= filters.startTime);
     if (filters.endTime) items = items.filter(item => new Date(item.ends_at).toTimeString().slice(0, 5) <= filters.endTime);
@@ -270,7 +271,7 @@
 
   function applicationsMarkup() {
     if (!state.vendor.applications.length) return empty('📨', 'No applications yet', 'Request a spot and your application status will appear here.');
-    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${item.host_response ? `<small>Host response: ${escapeHtml(item.host_response)}</small>` : ''}</div><button class="secondary-button" data-marketplace-message="${item.id}" type="button">Open Conversation</button></article>`).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${item.host_response ? `<small>Host response: ${escapeHtml(item.host_response)}</small>` : item.status === 'declined' ? '<small>You may still message the Host with questions about this decision.</small>' : ''}</div><button class="secondary-button" data-marketplace-message="${item.id}" type="button">Reply to Host</button></article>`).join('')}</div>`;
   }
 
   function conversationItems(application, messages) {
@@ -335,7 +336,9 @@
   function renderVendorRoot() {
     const root = document.getElementById('vendorOpportunityMarketplace');
     if (!root) return;
-    root.innerHTML = `<section class="marketplace-hero"><div><p class="eyebrow">Location Opportunity Marketplace</p><h2>Where can your truck go and make money?</h2><p>Compare customers, fees, competition, distance, and estimated profit before committing.</p></div><button class="marketplace-hero-stat" data-vendor-marketplace-tab="discover" data-marketplace-show-available type="button" aria-label="View ${state.vendor.opportunities.length} available opportunities"><strong>${state.vendor.opportunities.length}</strong><span>available opportunities</span><small>Click to view</small></button></section>${vendorTabs()}<section class="marketplace-panel">${vendorContent()}</section>`;
+    const appliedOpportunityIds = new Set(state.vendor.applications.map(application => application.opportunity_id));
+    const availableCount = state.vendor.opportunities.filter(item => !appliedOpportunityIds.has(item.id)).length;
+    root.innerHTML = `<section class="marketplace-hero"><div><p class="eyebrow">Location Opportunity Marketplace</p><h2>Where can your truck go and make money?</h2><p>Compare customers, fees, competition, distance, and estimated profit before committing.</p></div><button class="marketplace-hero-stat" data-vendor-marketplace-tab="discover" data-marketplace-show-available type="button" aria-label="View ${availableCount} available opportunities"><strong>${availableCount}</strong><span>available opportunities</span><small>Click to view</small></button></section>${vendorTabs()}<section class="marketplace-panel">${vendorContent()}</section>`;
   }
 
   async function renderVendor() {
