@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=customer-storefront-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-cancel-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v25/);
+  assert.match(worker, /foodtreknow-shell-v26/);
 });
 
 test('Host dashboard summary cards open their live result sections', async () => {
@@ -150,6 +150,28 @@ test('Host truck names open the existing customer storefront with a return path'
   assert.doesNotMatch(hostBookings, /data-booking-contact/);
   assert.match(hostBookings, /data-marketplace-message/);
   assert.match(html, /js\/customer-account\.js\?v=customer-storefront-1/);
+});
+
+test('Hosts can securely cancel an unresponsive approved food truck', async () => {
+  const [migration, marketplace] = await Promise.all([
+    read('supabase/migrations/202609050001_host_booking_cancellations.sql'),
+    read('js/opportunity-marketplace.js')
+  ]);
+  assert.match(migration, /create or replace function public\.cancel_host_opportunity_booking/);
+  assert.match(migration, /h\.owner_id = auth\.uid\(\)/);
+  assert.match(migration, /status = 'cancelled_by_host'/);
+  assert.match(migration, /delete from public\.vendor_route_stops/);
+  assert.match(migration, /status = 'published'/);
+  assert.match(migration, /Host cancelled your event booking/);
+  assert.match(migration, /Refund the event payment before cancelling/);
+  assert.match(migration, /revoke all on function public\.cancel_host_opportunity_booking\(uuid, text\) from public, anon/);
+  assert.match(migration, /grant execute on function public\.cancel_host_opportunity_booking\(uuid, text\) to authenticated/);
+  assert.match(marketplace, /data-cancel-host-booking/);
+  assert.match(marketplace, /id="cancelHostBookingForm"/);
+  assert.match(marketplace, /Reason for cancellation/);
+  assert.match(marketplace, /stripe-event-fee-refund/);
+  assert.match(marketplace, /cancel_host_opportunity_booking/);
+  assert.match(marketplace, /Food truck booking cancelled and vendor notified/);
 });
 
 test('confirmed Hosts and food trucks can securely exchange current contact details', async () => {

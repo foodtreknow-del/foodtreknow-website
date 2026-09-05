@@ -444,12 +444,12 @@
 
   function hostApplicationsMarkup() {
     if (!state.host.applications.length) return empty('📨', 'No applications yet', 'Vendor applications will appear after you publish an approval-required opportunity.');
-    return `<div class="marketplace-record-list">${state.host.applications.map(item => `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span>${truckProfileLink(item.trucks)}<p>${escapeHtml(item.opportunities?.title || 'Opportunity')} · ${escapeHtml(item.trucks?.cuisine || 'Cuisine not listed')}</p><small>${escapeHtml(item.vendor_message || 'No opening message. You can still start this event conversation.')}</small></div><div class="stacked-actions">${['pending', 'waitlisted'].includes(item.status) ? `<button class="primary-button" data-host-decision="approved" data-application-id="${item.id}" type="button">Approve</button><button class="secondary-button" data-host-decision="waitlisted" data-application-id="${item.id}" type="button">Waitlist</button><button class="danger-button" data-host-decision="declined" data-application-id="${item.id}" type="button">Decline</button>` : ''}<button class="secondary-button" data-marketplace-message="${item.id}" type="button">Reply</button></div></article>`).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.host.applications.map(item => { const booking = state.host.bookings.find(entry => entry.application_id === item.id && entry.status === 'confirmed'); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span>${truckProfileLink(item.trucks)}<p>${escapeHtml(item.opportunities?.title || 'Opportunity')} · ${escapeHtml(item.trucks?.cuisine || 'Cuisine not listed')}</p><small>${escapeHtml(item.host_response || item.vendor_message || 'No opening message. You can still start this event conversation.')}</small></div><div class="stacked-actions">${['pending', 'waitlisted'].includes(item.status) ? `<button class="primary-button" data-host-decision="approved" data-application-id="${item.id}" type="button">Approve</button><button class="secondary-button" data-host-decision="waitlisted" data-application-id="${item.id}" type="button">Waitlist</button><button class="danger-button" data-host-decision="declined" data-application-id="${item.id}" type="button">Decline Request</button>` : ''}${booking ? `<button class="danger-button" data-cancel-host-booking="${booking.id}" type="button">Cancel Food Truck</button>` : ''}<button class="secondary-button" data-marketplace-message="${item.id}" type="button">Reply</button></div></article>`; }).join('')}</div>`;
   }
 
   function hostBookingsMarkup() {
     if (!state.host.bookings.length) return empty('📅', 'No approved food truck visits', 'Approved and instant bookings will appear here.');
-    return `<div class="marketplace-record-list">${state.host.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.host.reviews.some(review => review.booking_id === item.id && review.reviewer_role === 'host'); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span>${truckProfileLink(item.trucks)}<p>${escapeHtml(item.opportunities?.title || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${eventPaymentSummary(item, 'host')}</div><div class="stacked-actions">${item.application_id ? `<button class="secondary-button" data-marketplace-message="${item.application_id}" type="button">Message Vendor</button>` : ''}${ended && !reviewed ? `<button class="primary-button" data-review-booking="${item.id}" type="button">Rate Vendor</button>` : ''}</div></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.host.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.host.reviews.some(review => review.booking_id === item.id && review.reviewer_role === 'host'); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span>${truckProfileLink(item.trucks)}<p>${escapeHtml(item.opportunities?.title || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${eventPaymentSummary(item, 'host')}</div><div class="stacked-actions">${item.status === 'confirmed' ? `<button class="danger-button" data-cancel-host-booking="${item.id}" type="button">Cancel Food Truck</button>` : ''}${item.application_id ? `<button class="secondary-button" data-marketplace-message="${item.application_id}" type="button">Message Vendor</button>` : ''}${ended && !reviewed ? `<button class="primary-button" data-review-booking="${item.id}" type="button">Rate Vendor</button>` : ''}</div></article>`; }).join('')}</div>`;
   }
 
   function hostPaymentsMarkup() {
@@ -579,6 +579,17 @@
     return `<p class="eyebrow">Post-Opportunity Review</p><h2 id="customerModalTitle">Share your experience</h2><p>Reviews help vendors and hosts make better booking decisions. Keep feedback factual and professional.</p><form id="opportunityReviewForm" data-booking-id="${bookingId}" class="marketplace-form"><label>Overall rating<select name="rating" required><option value="5">5 - Excellent</option><option value="4">4 - Very good</option><option value="3">3 - Good</option><option value="2">2 - Fair</option><option value="1">1 - Poor</option></select></label><label>Communication<select name="communication"><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option></select></label><label>Accuracy of information<select name="accuracy"><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option></select></label><label>Ease of setup / arrival<select name="setup"><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option></select></label><label>Comments<textarea name="comment" maxlength="1200" rows="4"></textarea></label><button class="primary-button" type="submit">Submit Review</button><p class="form-message" data-marketplace-form-message></p></form>`;
   }
 
+  function cancelHostBookingModal(booking) {
+    const payment = relatedOne(booking?.event_fee_payments);
+    const paid = payment?.status === 'paid';
+    const paymentNote = paid
+      ? `<p class="event-fee-guidance"><strong>${money(Number(payment.amount_due_cents) / 100)} will be refunded automatically through Stripe</strong> before the booking is cancelled.</p>`
+      : payment?.status === 'checkout_open'
+        ? '<p class="event-fee-guidance">The food truck currently has Stripe Checkout open. For payment safety, cancellation becomes available after that short session expires.</p>'
+        : '<p class="event-fee-guidance">No completed event payment needs to be refunded.</p>';
+    return `<form id="cancelHostBookingForm" data-booking-id="${escapeHtml(booking.id)}" class="marketplace-form"><p class="eyebrow">Approved Food Truck</p><h2 id="customerModalTitle">Cancel ${escapeHtml(booking.trucks?.name || 'this food truck')}?</h2><p>This removes the truck from <strong>${escapeHtml(booking.opportunities?.title || 'the opportunity')}</strong>, reopens the truck space when appropriate, and notifies the vendor.</p>${paymentNote}<label>Reason for cancellation<textarea name="reason" required minlength="3" maxlength="500" rows="4" placeholder="Example: We have not received a response after several follow-up messages."></textarea></label><div class="stacked-actions"><button class="secondary-button" data-close-customer-modal type="button">Keep Food Truck</button><button class="danger-button" type="submit" ${payment?.status === 'checkout_open' ? 'disabled title="Wait for the active Stripe Checkout session to expire"' : ''}>Cancel Food Truck${paid ? ' & Refund' : ''}</button></div><p class="form-message" data-marketplace-form-message></p></form>`;
+  }
+
   async function act(button, task, success) {
     button.disabled = true;
     try { await task(); toast(success); }
@@ -700,6 +711,12 @@
       if (!navigator.geolocation) { toast('Location is not supported on this device.', true); return; }
       navigator.geolocation.getCurrentPosition(position => { state.vendor.location = { latitude: position.coords.latitude, longitude: position.coords.longitude }; renderVendorRoot(); toast('Distances updated using your current location.'); }, error => toast(error.message || 'Location permission was not granted.', true), { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }); return;
     }
+    const cancelHostBooking = event.target.closest('[data-cancel-host-booking]');
+    if (cancelHostBooking) {
+      const booking = state.host.bookings.find(item => item.id === cancelHostBooking.dataset.cancelHostBooking);
+      if (booking) openMarketplaceModal(cancelHostBookingModal(booking));
+      return;
+    }
     const decision = event.target.closest('[data-host-decision]');
     if (decision) { await act(decision, async () => { await rpc('decide_opportunity_application', { p_application_id: decision.dataset.applicationId, p_decision: decision.dataset.hostDecision, p_host_response: '' }); await loadHostData(); renderHostRoot(); }, `Application ${decision.dataset.hostDecision}.`); return; }
     const message = event.target.closest('[data-marketplace-message]');
@@ -784,6 +801,20 @@
     if (event.target.id === 'opportunityMessageForm') {
       event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const data = new FormData(event.target);
       await act(button, async () => { await rpc('send_opportunity_message', { p_application_id: event.target.dataset.applicationId, p_body: data.get('body') }); event.target.reset(); if (state.activeRole === 'vendor') await loadVendorData(); else await loadHostData(); openMarketplaceModal(messageModal(event.target.dataset.applicationId)); }, 'Reply sent.'); return;
+    }
+    if (event.target.id === 'cancelHostBookingForm') {
+      event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const data = new FormData(event.target);
+      const booking = state.host.bookings.find(item => item.id === event.target.dataset.bookingId);
+      if (!booking) { toast('The approved booking could not be found.', true); return; }
+      await act(button, async () => {
+        const payment = relatedOne(booking.event_fee_payments);
+        if (payment?.status === 'paid') await edge('stripe-event-fee-refund', { paymentId: payment.id, confirmed: true });
+        await rpc('cancel_host_opportunity_booking', { p_booking_id: booking.id, p_reason: data.get('reason') });
+        await loadHostData();
+        document.getElementById('customerAccountModal')?.classList.add('hidden');
+        document.getElementById('marketplaceModal')?.classList.add('hidden');
+        renderHostRoot();
+      }, 'Food truck booking cancelled and vendor notified.'); return;
     }
     if (event.target.id === 'opportunityReviewForm') {
       event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const data = new FormData(event.target);
