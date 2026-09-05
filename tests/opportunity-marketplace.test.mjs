@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=truck-profile-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-dashboard-tabs-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -111,8 +111,24 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /marketplace-truck-profile-link/);
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
-  assert.match(html, /opportunity-marketplace\.css\?v=truck-profile-1/);
-  assert.match(worker, /foodtreknow-shell-v23/);
+  assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
+  assert.match(worker, /foodtreknow-shell-v24/);
+});
+
+test('Host dashboard summary cards open their live result sections', async () => {
+  const [marketplace, styles] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('css/opportunity-marketplace.css')
+  ]);
+  assert.match(marketplace, /data-host-marketplace-tab="opportunities"[^>]+aria-label="View \$\{open\} open opportunities"/);
+  assert.match(marketplace, /data-host-marketplace-tab="applications"[^>]+aria-label="View \$\{pending\} pending applications"/);
+  assert.match(marketplace, /class="host-summary-card" data-host-marketplace-tab="bookings"/);
+  assert.match(marketplace, /aria-label="View \$\{state\.host\.bookings\.filter[\s\S]+approved food trucks"/);
+  assert.match(marketplace, /Approved Food Trucks/);
+  assert.doesNotMatch(marketplace, /Approved Visits/);
+  assert.match(marketplace, /function hostOpportunitiesMarkup\(\)/);
+  assert.match(marketplace, /state\.host\.tab === 'opportunities'/);
+  assert.match(styles, /host-summary-card:hover/);
 });
 
 test('confirmed Hosts and food trucks can securely exchange current contact details', async () => {

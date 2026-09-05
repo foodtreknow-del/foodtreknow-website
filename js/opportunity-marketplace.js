@@ -401,7 +401,7 @@
   }
 
   function hostTabs() {
-    const tabs = [['dashboard', 'Dashboard'], ['locations', 'Locations'], ['post', 'Post Opportunity'], ['applications', 'Applications'], ['bookings', 'Bookings'], ['messages', 'Messages'], ['payments', 'Payments'], ['reviews', 'Reviews'], ['contact', 'Contact']];
+    const tabs = [['dashboard', 'Dashboard'], ['opportunities', 'Opportunities'], ['locations', 'Locations'], ['post', 'Post Opportunity'], ['applications', 'Applications'], ['bookings', 'Approved Food Trucks'], ['messages', 'Messages'], ['payments', 'Payments'], ['reviews', 'Reviews'], ['contact', 'Contact']];
     return `<div class="marketplace-tabs host-tabs" role="tablist">${tabs.map(([key, label]) => `<button class="${state.host.tab === key ? 'active' : ''}" data-host-marketplace-tab="${key}" type="button">${label}</button>`).join('')}</div>`;
   }
 
@@ -423,7 +423,13 @@
   function hostDashboard() {
     const open = state.host.opportunities.filter(item => item.status === 'published').length;
     const pending = state.host.applications.filter(item => item.status === 'pending').length;
-    return `<section class="host-summary-grid"><article><span>Open Opportunities</span><strong>${open}</strong></article><article><span>Pending Applications</span><strong>${pending}</strong></article><article><span>Approved Visits</span><strong>${state.host.bookings.filter(item => item.status === 'confirmed').length}</strong></article><article><span>Host Rating</span><strong>${Number(state.host.profile.average_rating || 0).toFixed(1)} ★</strong></article></section><div class="host-quick-actions"><button class="primary-button" data-host-marketplace-tab="post" type="button">+ Post Opportunity</button><button class="secondary-button" data-host-marketplace-tab="applications" type="button">Review Applications</button></div><section class="marketplace-record-list">${state.host.opportunities.length ? state.host.opportunities.slice(0, 5).map(item => `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(dateTime(item.starts_at))} · ${Number(item.expected_customers).toLocaleString()} expected customers</p></div><button class="secondary-button" data-edit-opportunity="${item.id}" type="button">Edit</button></article>`).join('') : empty('📣', 'No opportunities posted', 'Create your first one-time or recurring food truck opening.')}</section>`;
+    return `<section class="host-summary-grid"><button class="host-summary-card" data-host-marketplace-tab="opportunities" type="button" aria-label="View ${open} open opportunities"><span>Open Opportunities</span><strong>${open}</strong><small>Click to view</small></button><button class="host-summary-card" data-host-marketplace-tab="applications" type="button" aria-label="View ${pending} pending applications"><span>Pending Applications</span><strong>${pending}</strong><small>Click to view</small></button><button class="host-summary-card" data-host-marketplace-tab="bookings" type="button" aria-label="View ${state.host.bookings.filter(item => item.status === 'confirmed').length} approved food trucks"><span>Approved Food Trucks</span><strong>${state.host.bookings.filter(item => item.status === 'confirmed').length}</strong><small>Click to view</small></button><article><span>Host Rating</span><strong>${Number(state.host.profile.average_rating || 0).toFixed(1)} ★</strong></article></section><div class="host-quick-actions"><button class="primary-button" data-host-marketplace-tab="post" type="button">+ Post Opportunity</button><button class="secondary-button" data-host-marketplace-tab="applications" type="button">Review Applications</button></div><section class="marketplace-record-list">${state.host.opportunities.length ? state.host.opportunities.slice(0, 5).map(item => `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(dateTime(item.starts_at))} · ${Number(item.expected_customers).toLocaleString()} expected customers</p></div><button class="secondary-button" data-edit-opportunity="${item.id}" type="button">Edit</button></article>`).join('') : empty('📣', 'No opportunities posted', 'Create your first one-time or recurring food truck opening.')}</section>`;
+  }
+
+  function hostOpportunitiesMarkup() {
+    const opportunities = [...state.host.opportunities].sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at));
+    if (!opportunities.length) return empty('📣', 'No opportunities posted', 'Create your first one-time or recurring food truck opening.');
+    return `<div class="marketplace-results-bar"><div><p class="eyebrow">Host Opportunities</p><h2>All posted opportunities</h2><small>${opportunities.filter(item => item.status === 'published').length} currently open</small></div><button class="primary-button" data-host-marketplace-tab="post" type="button">+ Post Opportunity</button></div><div class="marketplace-record-list">${opportunities.map(item => `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(dateTime(item.starts_at))} · ${Number(item.expected_customers).toLocaleString()} expected customers</p><small>${item.status === 'published' ? 'Open to food truck requests' : `Opportunity is ${escapeHtml(item.status)}`}</small></div><button class="secondary-button" data-edit-opportunity="${item.id}" type="button">Edit</button></article>`).join('')}</div>`;
   }
 
   function hostLocationsMarkup() {
@@ -469,6 +475,7 @@
   }
 
   function hostContent() {
+    if (state.host.tab === 'opportunities') return hostOpportunitiesMarkup();
     if (state.host.tab === 'locations') return hostLocationsMarkup();
     if (state.host.tab === 'post') return `<section><p class="eyebrow">New Opening</p><h2>Post a food truck opportunity</h2><p>All fees and requirements are shown to vendors before they request or book.</p>${opportunityForm()}</section>`;
     if (state.host.tab === 'applications') return hostApplicationsMarkup();
