@@ -411,7 +411,12 @@
 
   function vendorMessagesMarkup() {
     if (!state.vendor.applications.length) return empty('💬', 'No event conversations', 'Apply for an opportunity to start a conversation with its Host.');
-    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => { const thread = conversationItems(item, state.vendor.messages.filter(message => message.application_id === item.id)); const last = thread.at(-1); const unread = unreadVendorMessages(item.id, 'messages'); return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(applicationStatusLabel(item.status))}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3>${vendorUnreadButton(item.id, 'messages', unread)}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || 'Host location')}</p><small>${last ? escapeHtml(last.body) : 'No messages yet. Ask the Host a question about this event.'}</small></div><button class="primary-button" data-marketplace-message="${item.id}" data-message-section="messages" type="button">${unread ? `Read ${unread} New Message${unread === 1 ? '' : 's'}` : thread.length ? 'Reply' : 'Start Conversation'}</button></article>`; }).join('')}</div>`;
+    const conversations = state.vendor.applications.map(item => {
+      const thread = conversationItems(item, state.vendor.messages.filter(message => message.application_id === item.id));
+      const last = thread.at(-1);
+      return { item, thread, last, unread: unreadVendorMessages(item.id, 'messages'), updatedAt: new Date(last?.created_at || item.applied_at || 0).getTime() };
+    }).sort((a, b) => Number(Boolean(b.unread)) - Number(Boolean(a.unread)) || b.updatedAt - a.updatedAt);
+    return `<div class="marketplace-record-list">${conversations.map(({ item, thread, last, unread }) => `<article class="marketplace-conversation-card ${unread ? 'marketplace-record-unread' : ''}" data-vendor-conversation-card="${escapeHtml(item.id)}" data-message-section="messages" role="button" tabindex="0" aria-label="Open full conversation for ${escapeHtml(item.opportunities?.title || 'opportunity')}"><div><div class="marketplace-conversation-status"><span class="status-pill ${item.status}">${escapeHtml(applicationStatusLabel(item.status))}</span>${unread ? '<strong class="marketplace-new-label">NEW</strong>' : ''}</div><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3>${vendorUnreadButton(item.id, 'messages', unread)}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || 'Host location')}</p><small>${thread.length} message${thread.length === 1 ? '' : 's'} in this event conversation</small><p class="marketplace-message-preview">${last ? escapeHtml(last.body) : 'No messages yet. Ask the Host a question about this event.'}</p><small>Click anywhere on this event to view the complete conversation.</small></div><button class="primary-button" data-marketplace-message="${item.id}" data-message-section="messages" type="button">${unread ? `Read ${unread} New Message${unread === 1 ? '' : 's'}` : thread.length ? 'Open Full Conversation' : 'Start Conversation'}</button></article>`).join('')}</div>`;
   }
 
   function bookingsMarkup() {
@@ -686,6 +691,8 @@
       if (modal.parentElement !== document.body) document.body.appendChild(modal);
       content.innerHTML = html;
       modal.classList.remove('hidden');
+      const thread = content.querySelector('.marketplace-message-thread');
+      if (thread) thread.scrollTop = thread.scrollHeight;
       return;
     }
     let marketplaceModal = document.getElementById('marketplaceModal');
@@ -696,6 +703,8 @@
     }
     marketplaceModal.querySelector('[data-marketplace-modal-content]').innerHTML = html;
     marketplaceModal.classList.remove('hidden');
+    const thread = marketplaceModal.querySelector('.marketplace-message-thread');
+    if (thread) thread.scrollTop = thread.scrollHeight;
   }
 
   function messageModal(applicationId) {
@@ -705,7 +714,7 @@
     const counterpart = state.activeRole === 'host'
       ? application?.trucks?.name || 'Food Truck'
       : application?.opportunities?.host_locations?.name || 'Event Host';
-    return `<p class="eyebrow">Event Conversation</p><h2 id="customerModalTitle">${escapeHtml(application?.opportunities?.title || 'Opportunity')}</h2><p>Conversation with ${escapeHtml(counterpart)}. Messages in this thread apply only to this event.</p><div class="message-thread marketplace-message-thread">${messages.length ? messages.map(item => `<article class="message-bubble ${item.sender_role === state.activeRole ? 'mine' : 'theirs'}"><strong>${escapeHtml(item.sender_role === 'host' ? 'Host' : 'Food Truck')}</strong><p>${escapeHtml(item.body)}</p><small>${escapeHtml(dateTime(item.created_at))}</small></article>`).join('') : '<p>No messages yet. Start the conversation below.</p>'}</div><form id="opportunityMessageForm" data-application-id="${applicationId}"><label>Reply to this event conversation<textarea name="body" required maxlength="1000" rows="3" placeholder="Type your reply here…"></textarea></label><button class="primary-button" type="submit">Send Reply</button><p class="form-message" data-marketplace-form-message></p></form>`;
+    return `<p class="eyebrow">Full Event Conversation</p><h2 id="customerModalTitle">${escapeHtml(application?.opportunities?.title || 'Opportunity')}</h2><p>Conversation with ${escapeHtml(counterpart)}. Messages in this thread apply only to this event and food truck. All messages are shown below.</p><div class="message-thread marketplace-message-thread">${messages.length ? messages.map(item => `<article class="message-bubble ${item.sender_role === state.activeRole ? 'mine' : 'theirs'}"><strong>${escapeHtml(item.sender_role === 'host' ? 'Host' : 'Food Truck')}</strong><p>${escapeHtml(item.body)}</p><small>${escapeHtml(dateTime(item.created_at))}</small></article>`).join('') : '<p>No messages yet. Start the conversation below.</p>'}</div><form id="opportunityMessageForm" data-application-id="${applicationId}"><label>Reply to this event conversation<textarea name="body" required maxlength="1000" rows="3" placeholder="Type your reply here…"></textarea></label><button class="primary-button" type="submit">Send Reply</button><p class="form-message" data-marketplace-form-message></p></form>`;
   }
 
   function contactModal(contact) {
@@ -899,6 +908,11 @@
     }
     const decision = event.target.closest('[data-host-decision]');
     if (decision) { await act(decision, async () => { await rpc('decide_opportunity_application', { p_application_id: decision.dataset.applicationId, p_decision: decision.dataset.hostDecision, p_host_response: '' }); await loadHostData(); renderHostRoot(); }, `Application ${decision.dataset.hostDecision}.`); return; }
+    const conversationCard = event.target.closest('[data-vendor-conversation-card]');
+    if (conversationCard && !event.target.closest('button, a, input, select, textarea, label')) {
+      conversationCard.querySelector('[data-marketplace-message]')?.click();
+      return;
+    }
     const message = event.target.closest('[data-marketplace-message]');
     if (message) {
       state.selectedApplication = message.dataset.marketplaceMessage;
@@ -1000,6 +1014,14 @@
     if (event.target.closest('[data-close-marketplace-modal]')) document.getElementById('marketplaceModal')?.classList.add('hidden');
   });
 
+  document.addEventListener('keydown', event => {
+    if (!['Enter', ' '].includes(event.key)) return;
+    const card = event.target.closest('[data-vendor-conversation-card]');
+    if (!card || event.target !== card) return;
+    event.preventDefault();
+    card.querySelector('[data-marketplace-message]')?.click();
+  });
+
   document.addEventListener('submit', async event => {
     if (event.target.id === 'marketplaceFilters') {
       event.preventDefault(); const form = new FormData(event.target); state.vendor.filters = Object.fromEntries(form.entries()); ['noFee', 'power', 'water'].forEach(key => state.vendor.filters[key] = event.target.elements[key].checked); renderVendorRoot(); return;
@@ -1070,12 +1092,12 @@
     if (!client?.channel) return;
     client.channel('foodtreknow-opportunity-marketplace')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'opportunities' }, () => {
-        if (state.activeRole === 'vendor') renderVendor();
-        if (state.activeRole === 'host') mountHost();
+        if (state.activeRole === 'vendor') refreshVisibleVendorPortal();
+        if (state.activeRole === 'host') refreshVisibleHostPortal();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'opportunity_applications' }, () => {
-        if (state.activeRole === 'vendor') renderVendor();
-        if (state.activeRole === 'host') mountHost();
+        if (state.activeRole === 'vendor') refreshVisibleVendorPortal();
+        if (state.activeRole === 'host') refreshVisibleHostPortal();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'opportunity_messages' }, async payload => {
         if (state.activeRole === 'vendor') await loadVendorData();
@@ -1085,7 +1107,26 @@
         else if (state.activeRole === 'vendor') renderVendorRoot();
         else if (state.activeRole === 'host') renderHostRoot();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'opportunity_bookings' }, () => {
+        if (state.activeRole === 'vendor') refreshVisibleVendorPortal();
+        if (state.activeRole === 'host') refreshVisibleHostPortal();
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'marketplace_notifications' }, () => {
+        if (state.activeRole === 'vendor') refreshVisibleVendorPortal();
+        if (state.activeRole === 'host') refreshVisibleHostPortal();
+      })
       .subscribe();
+  }
+
+  let vendorRefreshPromise = null;
+
+  async function refreshVisibleVendorPortal() {
+    if (state.activeRole !== 'vendor' || document.hidden || !document.getElementById('vendorOpportunityMarketplace')) return;
+    if (vendorRefreshPromise) return vendorRefreshPromise;
+    vendorRefreshPromise = (async () => {
+      try { await loadVendorData(); renderVendorRoot(); } catch { /* Realtime or the next refresh will retry. */ }
+    })();
+    try { await vendorRefreshPromise; } finally { vendorRefreshPromise = null; }
   }
 
   async function refreshVisibleHostPortal() {
@@ -1094,7 +1135,9 @@
   }
 
   window.addEventListener?.('focus', refreshVisibleHostPortal);
+  window.addEventListener?.('focus', refreshVisibleVendorPortal);
   window.setInterval?.(refreshVisibleHostPortal, 15000);
+  window.setInterval?.(refreshVisibleVendorPortal, 10000);
 
   window.FoodTrekNowOpportunityMarketplace = Object.freeze({
     available: Boolean(client),

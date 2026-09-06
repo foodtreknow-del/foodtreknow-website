@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=event-cancellation-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=vendor-inbox-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v38/);
+  assert.match(worker, /foodtreknow-shell-v39/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -358,6 +358,29 @@ test('vendor opportunity tabs track and clear unread messages independently by s
   assert.match(styles, /\.marketplace-unread-badge/);
   assert.match(styles, /marketplace-unread-button/);
   assert.match(styles, /article\.marketplace-record-unread/);
+});
+
+test('Vendor event inbox surfaces new conversations live and opens the complete thread', async () => {
+  const [marketplace, styles] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('css/opportunity-marketplace.css')
+  ]);
+  assert.match(marketplace, /Number\(Boolean\(b\.unread\)\) - Number\(Boolean\(a\.unread\)\)/);
+  assert.match(marketplace, /b\.updatedAt - a\.updatedAt/);
+  assert.match(marketplace, /marketplace-conversation-card/);
+  assert.match(marketplace, /data-vendor-conversation-card/);
+  assert.match(marketplace, /Click anywhere on this event to view the complete conversation/);
+  assert.match(marketplace, /Open Full Conversation/);
+  assert.match(marketplace, /Full Event Conversation/);
+  assert.match(marketplace, /Messages in this thread apply only to this event and food truck/);
+  assert.match(marketplace, /thread\.scrollTop = thread\.scrollHeight/);
+  assert.match(marketplace, /function refreshVisibleVendorPortal\(\)/);
+  assert.match(marketplace, /setInterval\?\.\(refreshVisibleVendorPortal, 10000\)/);
+  assert.match(marketplace, /table: 'opportunity_bookings'/);
+  assert.match(marketplace, /table: 'marketplace_notifications'/);
+  assert.match(styles, /marketplace-conversation-card/);
+  assert.match(styles, /marketplace-new-label/);
+  assert.match(styles, /marketplace-message-preview/);
 });
 
 test('confirmed Hosts and food trucks can securely exchange current contact details', async () => {
