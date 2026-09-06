@@ -26,6 +26,7 @@
 
 .marketplace-unread-badge{display:inline-grid;place-items:center;min-width:20px;height:20px;box-sizing:border-box;margin-left:7px;padding:0 6px;border-radius:999px;background:#dc3c28;color:#fff;font-size:.68rem;font-weight:900;line-height:1}.marketplace-tabs button.active .marketplace-unread-badge{background:#fff;color:#a52d1f}
 .marketplace-record-list>article.marketplace-record-unread{border-color:#e15a3d;background:#fff8f4;box-shadow:0 0 0 3px rgba(225,90,61,.12),0 10px 24px rgba(104,43,28,.08)}.marketplace-record-title{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.marketplace-record-title h3{margin-right:2px}.marketplace-record-title .marketplace-unread-badge{margin-left:0}
+.marketplace-unread-button{border:0;cursor:pointer;font:inherit;line-height:1}.marketplace-unread-button:hover,.marketplace-unread-button:focus-visible{transform:scale(1.08);outline:3px solid rgba(225,90,61,.2);outline-offset:2px}
 .marketplace-form input[readonly][aria-disabled="true"] {
   background: #e9edf2;
   border-color: #c8d0da;

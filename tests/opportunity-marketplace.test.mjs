@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=application-status-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=readable-notifications-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v36/);
+  assert.match(worker, /foodtreknow-shell-v37/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -321,7 +321,11 @@ test('vendor opportunity tabs track and clear unread messages independently by s
   assert.match(marketplace, /data-message-section="bookings"/);
   assert.match(marketplace, /mark_vendor_opportunity_section_read/);
   assert.match(marketplace, /p_section: section/);
+  assert.match(marketplace, /function vendorUnreadButton\(applicationId, section, unread\)/);
+  assert.match(marketplace, /Open and read \$\{label\}/);
+  assert.match(marketplace, /Read \$\{unread\} New Message/);
   assert.match(styles, /\.marketplace-unread-badge/);
+  assert.match(styles, /marketplace-unread-button/);
   assert.match(styles, /article\.marketplace-record-unread/);
 });
 
