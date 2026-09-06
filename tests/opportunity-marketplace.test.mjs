@@ -153,8 +153,9 @@ test('Host truck names open the existing customer storefront with a return path'
 });
 
 test('Hosts can securely cancel an unresponsive approved food truck', async () => {
-  const [migration, marketplace] = await Promise.all([
+  const [migration, threadMigration, marketplace] = await Promise.all([
     read('supabase/migrations/202609050001_host_booking_cancellations.sql'),
+    read('supabase/migrations/202609050002_host_cancellation_thread_messages.sql'),
     read('js/opportunity-marketplace.js')
   ]);
   assert.match(migration, /create or replace function public\.cancel_host_opportunity_booking/);
@@ -166,6 +167,12 @@ test('Hosts can securely cancel an unresponsive approved food truck', async () =
   assert.match(migration, /Refund the event payment before cancelling/);
   assert.match(migration, /revoke all on function public\.cancel_host_opportunity_booking\(uuid, text\) from public, anon/);
   assert.match(migration, /grant execute on function public\.cancel_host_opportunity_booking\(uuid, text\) to authenticated/);
+  assert.match(threadMigration, /create or replace function public\.cancel_host_opportunity_booking/);
+  assert.match(threadMigration, /insert into public\.opportunity_messages/);
+  assert.match(threadMigration, /The Host cancelled this approved booking\. Reason:/);
+  assert.match(threadMigration, /where b\.status = 'cancelled_by_host'/);
+  assert.match(threadMigration, /not exists \(/);
+  assert.match(threadMigration, /sender_role = 'host'/);
   assert.match(marketplace, /data-cancel-host-booking/);
   assert.match(marketplace, /id="cancelHostBookingForm"/);
   assert.match(marketplace, /Reason for cancellation/);
