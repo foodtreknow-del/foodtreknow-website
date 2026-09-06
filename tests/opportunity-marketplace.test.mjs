@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=readable-notifications-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=event-cancellation-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v37/);
+  assert.match(worker, /foodtreknow-shell-v38/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -288,6 +288,37 @@ test('Hosts can securely cancel an unresponsive approved food truck', async () =
   assert.match(marketplace, /waitlisted: 'Waitlisted'/);
   assert.match(marketplace, /approved: 'Approved'/);
   assert.match(marketplace, /declined: 'Declined'/);
+});
+
+test('Hosts can cancel an entire opportunity with refunds, messages, notifications, and archive history', async () => {
+  const [migration, marketplace] = await Promise.all([
+    read('supabase/migrations/202609060002_host_opportunity_cancellation.sql'),
+    read('js/opportunity-marketplace.js')
+  ]);
+  assert.match(migration, /create or replace function public\.cancel_host_opportunity\(/);
+  assert.match(migration, /h\.owner_id = auth\.uid\(\)/);
+  assert.match(migration, /char_length\(cancellation_reason\) > 600/);
+  assert.match(migration, /Refund all paid food truck event fees before cancelling this opportunity/);
+  assert.match(migration, /p\.status = 'checkout_open'/);
+  assert.match(migration, /a\.status in \('pending', 'waitlisted', 'approved'\)/);
+  assert.match(migration, /set status = 'cancelled'/);
+  assert.match(migration, /insert into public\.opportunity_messages/);
+  assert.match(migration, /The Host cancelled ' \|\| selected\.title \|\| '\. Reason:/);
+  assert.match(migration, /insert into public\.marketplace_notifications/);
+  assert.match(migration, /'host-opportunity-cancelled:' \|\| selected\.id/);
+  assert.match(migration, /set status = 'cancelled_by_host'/);
+  assert.match(migration, /delete from public\.vendor_route_stops/);
+  assert.match(migration, /status = 'cancelled', archived_at = now\(\)/);
+  assert.match(migration, /grant execute on function public\.cancel_host_opportunity\(uuid, text\) to authenticated/);
+  assert.match(marketplace, /data-cancel-host-opportunity/);
+  assert.match(marketplace, /id="cancelHostOpportunityForm"/);
+  assert.match(marketplace, /Why is this event being cancelled\?/);
+  assert.match(marketplace, /This message will be sent to every connected food truck/);
+  assert.match(marketplace, /Cancel Entire Event/);
+  assert.match(marketplace, /stripe-event-fee-refund/);
+  assert.match(marketplace, /cancel_host_opportunity/);
+  assert.match(marketplace, /state\.host\.tab = 'archive'/);
+  assert.match(marketplace, /Connected food trucks were notified and the event was archived/);
 });
 
 test('vendor opportunity tabs track and clear unread messages independently by section', async () => {
