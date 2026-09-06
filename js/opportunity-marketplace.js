@@ -288,12 +288,18 @@
 
   function vendorTabs() {
     const tabs = [['discover', 'Find Locations'], ['today', 'Open Spots Today'], ['applications', 'Applications'], ['messages', 'Messages'], ['bookings', 'Bookings'], ['route', 'Weekly Route'], ['notifications', 'Alerts']];
-    return `<div class="marketplace-tabs" role="tablist">${tabs.map(([key, label]) => `<button class="${state.vendor.tab === key ? 'active' : ''}" data-vendor-marketplace-tab="${key}" type="button">${label}</button>`).join('')}</div>`;
+    const unread = state.vendor.messages.filter(message => message.sender_role === 'host' && !message.read_at).length;
+    const unreadTabs = new Set(['applications', 'messages', 'bookings']);
+    return `<div class="marketplace-tabs" role="tablist">${tabs.map(([key, label]) => `<button class="${state.vendor.tab === key ? 'active' : ''}" data-vendor-marketplace-tab="${key}" type="button"${unreadTabs.has(key) ? ` aria-label="${label}, ${unread} unread message${unread === 1 ? '' : 's'}"` : ''}>${label}${unreadTabs.has(key) ? `<span class="marketplace-unread-badge" aria-hidden="true">${unread}</span>` : ''}</button>`).join('')}</div>`;
+  }
+
+  function unreadVendorMessages(applicationId) {
+    return state.vendor.messages.filter(message => message.application_id === applicationId && message.sender_role === 'host' && !message.read_at).length;
   }
 
   function applicationsMarkup() {
     if (!state.vendor.applications.length) return empty('📨', 'No applications yet', 'Request a spot and your application status will appear here.');
-    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${item.host_response ? `<small>Host response: ${escapeHtml(item.host_response)}</small>` : item.status === 'declined' ? '<small>You may still message the Host with questions about this decision.</small>' : ''}</div><button class="secondary-button" data-marketplace-message="${item.id}" type="button">Reply to Host</button></article>`).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => { const unread = unreadVendorMessages(item.id); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${item.host_response ? `<small>Host response: ${escapeHtml(item.host_response)}</small>` : item.status === 'declined' ? '<small>You may still message the Host with questions about this decision.</small>' : ''}</div><button class="secondary-button" data-marketplace-message="${item.id}" type="button">Reply to Host${unread ? `<span class="marketplace-unread-badge">${unread}</span>` : ''}</button></article>`; }).join('')}</div>`;
   }
 
   function eventPaymentSummary(booking, role) {
@@ -328,12 +334,12 @@
 
   function vendorMessagesMarkup() {
     if (!state.vendor.applications.length) return empty('💬', 'No event conversations', 'Apply for an opportunity to start a conversation with its Host.');
-    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => { const thread = conversationItems(item, state.vendor.messages.filter(message => message.application_id === item.id)); const last = thread.at(-1); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || 'Host location')}</p><small>${last ? escapeHtml(last.body) : 'No messages yet. Ask the Host a question about this event.'}</small></div><button class="primary-button" data-marketplace-message="${item.id}" type="button">${thread.length ? 'Reply' : 'Start Conversation'}</button></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => { const thread = conversationItems(item, state.vendor.messages.filter(message => message.application_id === item.id)); const last = thread.at(-1); const unread = unreadVendorMessages(item.id); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || 'Host location')}</p><small>${last ? escapeHtml(last.body) : 'No messages yet. Ask the Host a question about this event.'}</small></div><button class="primary-button" data-marketplace-message="${item.id}" type="button">${thread.length ? 'Reply' : 'Start Conversation'}${unread ? `<span class="marketplace-unread-badge">${unread}</span>` : ''}</button></article>`; }).join('')}</div>`;
   }
 
   function bookingsMarkup() {
     if (!state.vendor.bookings.length) return empty('📅', 'No confirmed bookings', 'Approved and instant bookings will appear here.');
-    return `<div class="marketplace-record-list">${state.vendor.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.vendor.reviews.some(review => review.booking_id === item.id); return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span><h3>${escapeHtml(item.opportunities?.title || 'Booking')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p><small>${escapeHtml(item.opportunities?.setup_instructions || 'Setup instructions will appear here.')}</small>${eventPaymentSummary(item, 'vendor')}</div><div class="stacked-actions">${item.status === 'confirmed' ? `<button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button>` : ''}<a class="secondary-button marketplace-link-button" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.opportunities?.host_locations?.address_line1, item.opportunities?.host_locations?.city, item.opportunities?.host_locations?.state, item.opportunities?.host_locations?.postal_code].filter(Boolean).join(', '))}">Navigate</a>${item.opportunities?.opportunity_type === 'recurring' ? `<button class="primary-button" data-route-booking="${item.id}" type="button">Add to Weekly Route</button>` : ''}${ended && !reviewed ? `<button class="secondary-button" data-review-booking="${item.id}" type="button">Leave Review</button>` : ''}</div></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.vendor.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.vendor.reviews.some(review => review.booking_id === item.id); const unread = item.application_id ? unreadVendorMessages(item.application_id) : 0; return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span><h3>${escapeHtml(item.opportunities?.title || 'Booking')}</h3><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p><small>${escapeHtml(item.opportunities?.setup_instructions || 'Setup instructions will appear here.')}</small>${eventPaymentSummary(item, 'vendor')}</div><div class="stacked-actions">${item.application_id ? `<button class="primary-button" data-marketplace-message="${item.application_id}" type="button">Messages${unread ? `<span class="marketplace-unread-badge">${unread}</span>` : ''}</button>` : ''}${item.status === 'confirmed' ? `<button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button>` : ''}<a class="secondary-button marketplace-link-button" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.opportunities?.host_locations?.address_line1, item.opportunities?.host_locations?.city, item.opportunities?.host_locations?.state, item.opportunities?.host_locations?.postal_code].filter(Boolean).join(', '))}">Navigate</a>${item.opportunities?.opportunity_type === 'recurring' ? `<button class="primary-button" data-route-booking="${item.id}" type="button">Add to Weekly Route</button>` : ''}${ended && !reviewed ? `<button class="secondary-button" data-review-booking="${item.id}" type="button">Leave Review</button>` : ''}</div></article>`; }).join('')}</div>`;
   }
 
   function routeMarkup() {
@@ -720,7 +726,18 @@
     const decision = event.target.closest('[data-host-decision]');
     if (decision) { await act(decision, async () => { await rpc('decide_opportunity_application', { p_application_id: decision.dataset.applicationId, p_decision: decision.dataset.hostDecision, p_host_response: '' }); await loadHostData(); renderHostRoot(); }, `Application ${decision.dataset.hostDecision}.`); return; }
     const message = event.target.closest('[data-marketplace-message]');
-    if (message) { state.selectedApplication = message.dataset.marketplaceMessage; openMarketplaceModal(messageModal(state.selectedApplication)); return; }
+    if (message) {
+      state.selectedApplication = message.dataset.marketplaceMessage;
+      openMarketplaceModal(messageModal(state.selectedApplication));
+      try {
+        await rpc('mark_opportunity_messages_read', { p_application_id: state.selectedApplication });
+        const messages = state.activeRole === 'vendor' ? state.vendor.messages : state.host.messages;
+        messages.forEach(item => { if (item.application_id === state.selectedApplication && item.sender_role !== state.activeRole) item.read_at = item.read_at || new Date().toISOString(); });
+        if (state.activeRole === 'vendor') renderVendorRoot();
+        else if (state.activeRole === 'host') renderHostRoot();
+      } catch (error) { toast(`Messages opened, but the unread count could not be updated: ${error.message}`, true); }
+      return;
+    }
     const contact = event.target.closest('[data-booking-contact]');
     if (contact) {
       contact.disabled = true;
