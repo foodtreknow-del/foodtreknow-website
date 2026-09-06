@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=vendor-unread-3/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-edit-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v29/);
+  assert.match(worker, /foodtreknow-shell-v30/);
 });
 
 test('Host dashboard summary cards open their live result sections', async () => {
@@ -129,6 +129,18 @@ test('Host dashboard summary cards open their live result sections', async () =>
   assert.match(marketplace, /function hostOpportunitiesMarkup\(\)/);
   assert.match(marketplace, /state\.host\.tab === 'opportunities'/);
   assert.match(styles, /host-summary-card:hover/);
+});
+
+test('Host opportunity edits retain their record id and confirm the saved update', async () => {
+  const marketplace = await read('js/opportunity-marketplace.js');
+  assert.match(marketplace, /editingOpportunityId: null/);
+  assert.match(marketplace, /state\.host\.editingOpportunityId = item\.id/);
+  assert.match(marketplace, /value="\$\{escapeHtml\(state\.host\.editingOpportunityId \|\| ''\)\}"/);
+  assert.match(marketplace, /editing \? 'Update Opportunity' : 'Publish Opportunity'/);
+  assert.match(marketplace, /data\.get\('opportunityId'\) \|\| state\.host\.editingOpportunityId \|\| null/);
+  assert.match(marketplace, /p_opportunity_id: opportunityId/);
+  assert.match(marketplace, /saved\.id !== opportunityId/);
+  assert.match(marketplace, /Opportunity updated successfully\./);
 });
 
 test('Host truck names open the existing customer storefront with a return path', async () => {
