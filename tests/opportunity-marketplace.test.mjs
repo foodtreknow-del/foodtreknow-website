@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=vendor-unread-2/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=vendor-unread-3/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v28/);
+  assert.match(worker, /foodtreknow-shell-v29/);
 });
 
 test('Host dashboard summary cards open their live result sections', async () => {
@@ -181,9 +181,10 @@ test('Hosts can securely cancel an unresponsive approved food truck', async () =
   assert.match(marketplace, /Food truck booking cancelled and vendor notified/);
 });
 
-test('vendor opportunity tabs show live unread message counts and clear them securely', async () => {
-  const [migration, marketplace, styles] = await Promise.all([
+test('vendor opportunity tabs track and clear unread messages independently by section', async () => {
+  const [migration, sectionMigration, marketplace, styles] = await Promise.all([
     read('supabase/migrations/202609050003_vendor_opportunity_unread_messages.sql'),
+    read('supabase/migrations/202609050004_independent_vendor_message_views.sql'),
     read('js/opportunity-marketplace.js'),
     read('css/opportunity-marketplace.css')
   ]);
@@ -193,14 +194,24 @@ test('vendor opportunity tabs show live unread message counts and clear them sec
   assert.match(migration, /sender_role <> reader_role and read_at is null/);
   assert.match(migration, /revoke all on function public\.mark_opportunity_messages_read\(uuid\) from public, anon/);
   assert.match(migration, /grant execute on function public\.mark_opportunity_messages_read\(uuid\) to authenticated/);
+  for (const field of ['vendor_applications_read_at', 'vendor_messages_read_at', 'vendor_bookings_read_at']) {
+    assert.match(sectionMigration, new RegExp(`add column if not exists ${field}`));
+    assert.match(marketplace, new RegExp(field));
+  }
+  assert.match(sectionMigration, /create or replace function public\.mark_vendor_opportunity_section_read/);
+  assert.match(sectionMigration, /p_section not in \('applications', 'messages', 'bookings'\)/);
+  assert.match(sectionMigration, /Only the food truck can update its unread messages/);
+  assert.match(sectionMigration, /grant execute on function public\.mark_vendor_opportunity_section_read\(uuid, text\) to authenticated/);
   assert.match(marketplace, /new Set\(\['applications', 'messages', 'bookings'\]\)/);
-  assert.match(marketplace, /message\.sender_role === 'host' && !message\.read_at/);
   assert.match(marketplace, /class="marketplace-unread-badge"/);
   assert.match(marketplace, /marketplace-record-unread/);
   assert.match(marketplace, /marketplace-record-title/);
   assert.match(marketplace, /aria-label="\$\{unread\} unread message/);
-  assert.match(marketplace, /mark_opportunity_messages_read/);
-  assert.match(marketplace, /item\.read_at = item\.read_at \|\| new Date\(\)\.toISOString\(\)/);
+  assert.match(marketplace, /data-message-section="applications"/);
+  assert.match(marketplace, /data-message-section="messages"/);
+  assert.match(marketplace, /data-message-section="bookings"/);
+  assert.match(marketplace, /mark_vendor_opportunity_section_read/);
+  assert.match(marketplace, /p_section: section/);
   assert.match(styles, /\.marketplace-unread-badge/);
   assert.match(styles, /article\.marketplace-record-unread/);
 });
