@@ -45,3 +45,27 @@
   font-size: 0.78rem;
   font-weight: 800;
 }
+
+.marketplace-count-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 7px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #e5ece8;
+  color: #29483a;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.marketplace-count-badge.unread {
+  background: #dc3c28;
+  color: #fff;
+}
+
+.marketplace-tabs button.active .marketplace-count-badge {
+  background: #fff;
+  color: #1f633f;
+}

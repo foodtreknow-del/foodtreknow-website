@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-edit-4/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-management-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v33/);
+  assert.match(worker, /foodtreknow-shell-v34/);
 });
 
 test('Host dashboard summary cards open their live result sections', async () => {
@@ -123,7 +123,7 @@ test('Host dashboard summary cards open their live result sections', async () =>
   assert.match(marketplace, /data-host-marketplace-tab="opportunities"[^>]+aria-label="View \$\{open\} open opportunities"/);
   assert.match(marketplace, /data-host-marketplace-tab="applications"[^>]+aria-label="View \$\{pending\} pending applications"/);
   assert.match(marketplace, /class="host-summary-card" data-host-marketplace-tab="bookings"/);
-  assert.match(marketplace, /aria-label="View \$\{state\.host\.bookings\.filter[\s\S]+approved food trucks"/);
+  assert.match(marketplace, /aria-label="View \$\{approved\} approved food trucks"/);
   assert.match(marketplace, /Approved Food Trucks/);
   assert.doesNotMatch(marketplace, /Approved Visits/);
   assert.match(marketplace, /function hostOpportunitiesMarkup\(\)/);
@@ -186,6 +186,28 @@ test('approved opportunities lock financial terms and show active food truck int
   assert.match(migration, /create or replace function public\.protect_approved_opportunity_terms\(\)/);
   assert.match(migration, /before update of flat_vendor_fee, sales_percentage, minimum_sales_guarantee, refundable_deposit/);
   assert.match(migration, /Financial terms cannot be changed after a food truck has been approved/);
+});
+
+test('Host portal counts incoming work, groups event conversations, and archives completed events', async () => {
+  const [marketplace, styles, migration] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('css/opportunity-marketplace.css'),
+    read('supabase/migrations/202609050008_host_event_archive.sql')
+  ]);
+  assert.match(marketplace, /function unreadHostMessages\(applicationId = null\)/);
+  assert.match(marketplace, /Posted Opportunities/);
+  assert.match(marketplace, /marketplace-count-badge/);
+  assert.match(marketplace, /messages: unreadHostMessages\(\)/);
+  assert.match(marketplace, /message\$\{thread\.length === 1 \? '' : 's'\} in this event conversation/);
+  assert.match(marketplace, /data-archive-host-opportunity/);
+  assert.match(marketplace, /data-restore-host-opportunity/);
+  assert.match(marketplace, /function hostArchiveMarkup\(\)/);
+  assert.match(marketplace, /setInterval\?\.\(refreshVisibleHostPortal, 15000\)/);
+  assert.match(styles, /marketplace-count-badge/);
+  assert.match(migration, /add column if not exists archived_at timestamptz/);
+  assert.match(migration, /create or replace function public\.archive_host_opportunity/);
+  assert.match(migration, /Only completed or cancelled opportunities can be archived/);
+  assert.match(migration, /create or replace function public\.restore_host_opportunity_archive/);
 });
 
 test('Host truck names open the existing customer storefront with a return path', async () => {
