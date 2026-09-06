@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-edit-3/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-edit-4/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v32/);
+  assert.match(worker, /foodtreknow-shell-v33/);
 });
 
 test('Host dashboard summary cards open their live result sections', async () => {
@@ -168,6 +168,24 @@ test('Host event edits remain saved and notify all connected, non-withdrawn vend
   assert.match(migration, /exception when others then/);
   assert.match(migration, /must never roll back the Host's saved event changes/);
   assert.match(migration, /clock_timestamp\(\)/);
+});
+
+test('approved opportunities lock financial terms and show active food truck interest', async () => {
+  const [marketplace, styles, migration] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('css/opportunity-marketplace.css'),
+    read('supabase/migrations/202609050007_lock_approved_event_terms.sql')
+  ]);
+  assert.match(marketplace, /const termsLocked = editing && state\.host\.bookings\.some/);
+  assert.match(marketplace, /readonly aria-disabled="true"/);
+  assert.match(marketplace, /Financial terms are locked/);
+  assert.match(marketplace, /function hostOpportunityInterestCount\(opportunityId\)/);
+  assert.match(marketplace, /\['pending', 'waitlisted', 'approved'\]\.includes/);
+  assert.match(marketplace, /opportunity-interest-count/);
+  assert.match(styles, /input\[readonly\]\[aria-disabled="true"\]/);
+  assert.match(migration, /create or replace function public\.protect_approved_opportunity_terms\(\)/);
+  assert.match(migration, /before update of flat_vendor_fee, sales_percentage, minimum_sales_guarantee, refundable_deposit/);
+  assert.match(migration, /Financial terms cannot be changed after a food truck has been approved/);
 });
 
 test('Host truck names open the existing customer storefront with a return path', async () => {
