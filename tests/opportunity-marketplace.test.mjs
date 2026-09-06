@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-location-edit-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=inline-event-location-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v42/);
+  assert.match(worker, /foodtreknow-shell-v43/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -178,18 +178,26 @@ test('Host opportunity drafts survive background marketplace refreshes', async (
   assert.ok(capture >= 0 && replace > capture && restore > replace);
 });
 
-test('Hosts can change and verify a saved location while editing an opportunity', async () => {
-  const [marketplace, migration] = await Promise.all([
+test('Hosts freely enter an event location when creating or editing an opportunity', async () => {
+  const [marketplace, migration, styles] = await Promise.all([
     read('js/opportunity-marketplace.js'),
-    read('supabase/migrations/202608280001_location_marketplace_phase1.sql')
+    read('supabase/migrations/202609060003_inline_opportunity_locations.sql'),
+    read('css/opportunity-marketplace.css')
   ]);
-  assert.match(marketplace, /Host location<select name="locationId" required>/);
-  assert.match(marketplace, /You can select a different saved Host location when creating or editing an opportunity/);
-  assert.match(marketplace, /\[item\.name, item\.address_line1, item\.city\]/);
-  assert.match(marketplace, /const selectedLocationId = data\.get\('locationId'\)/);
-  assert.match(marketplace, /p_location_id: selectedLocationId/);
-  assert.match(marketplace, /String\(saved\.location_id\) !== String\(selectedLocationId\)/);
-  assert.match(migration, /location_id = p_location_id/);
+  assert.doesNotMatch(marketplace, /Host location<select name="locationId"/);
+  assert.doesNotMatch(marketplace, /Add a host location first/);
+  for (const field of ['locationName', 'locationType', 'locationAddress1', 'locationAddress2', 'locationCity', 'locationState', 'locationPostalCode']) {
+    assert.match(marketplace, new RegExp(`name="${field}"`));
+  }
+  assert.match(marketplace, /It does not have to be selected from a saved-location list/);
+  assert.match(marketplace, /rpc\('publish_opportunity_with_location'/);
+  assert.match(marketplace, /locationName: location\.name/);
+  assert.match(migration, /create or replace function public\.publish_opportunity_with_location/);
+  assert.match(migration, /saved_opportunity := public\.publish_opportunity/);
+  assert.match(migration, /current_location\.address_line1 = trim\(p_location_address_line1\)/);
+  assert.match(migration, /insert into public\.host_locations/);
+  assert.match(migration, /grant execute on function public\.publish_opportunity_with_location/);
+  assert.match(styles, /marketplace-location-fields/);
 });
 
 test('saving a Host event edit notifies only vendors connected to that opportunity', async () => {
