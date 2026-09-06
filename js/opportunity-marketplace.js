@@ -626,11 +626,38 @@
     return hostDashboard();
   }
 
+  function captureHostOpportunityDraft() {
+    const form = document.getElementById('hostOpportunityForm');
+    if (!form) return null;
+    return [...form.elements].filter(field => field.name).map(field => ({
+      name: field.name,
+      value: field.value,
+      checked: ['checkbox', 'radio'].includes(field.type) ? field.checked : null
+    }));
+  }
+
+  function restoreHostOpportunityDraft(draft) {
+    const form = document.getElementById('hostOpportunityForm');
+    if (!form || !draft?.length) return;
+    const occurrences = new Map();
+    draft.forEach(saved => {
+      const matches = [...form.elements].filter(field => field.name === saved.name);
+      const index = occurrences.get(saved.name) || 0;
+      const field = matches[index];
+      occurrences.set(saved.name, index + 1);
+      if (!field) return;
+      field.value = saved.value;
+      if (saved.checked !== null) field.checked = saved.checked;
+    });
+  }
+
   function renderHostRoot() {
     const root = document.getElementById('hostOpportunityMarketplace');
     if (!root) return;
+    const opportunityDraft = captureHostOpportunityDraft();
     if (!state.host.profile) { root.innerHTML = hostProfileForm(); return; }
     root.innerHTML = `<section class="marketplace-hero host"><div><p class="eyebrow">Host Opportunity Center</p><h2>${escapeHtml(state.host.profile.business_name)}</h2><p>Request food trucks, review applicants, and manage recurring visits.</p></div><span class="status-pill ${state.host.profile.verification_status}">${escapeHtml(state.host.profile.verification_status)}</span></section>${hostTabs()}<section class="marketplace-panel">${hostContent()}</section>`;
+    restoreHostOpportunityDraft(opportunityDraft);
     if (state.host.tab === 'post' && state.host.editingOpportunityId) {
       const submit = root.querySelector('#hostOpportunityForm button[type="submit"]');
       if (submit) submit.textContent = 'Save Changes';

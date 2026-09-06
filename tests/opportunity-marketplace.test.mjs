@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=message-close-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-form-draft-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v40/);
+  assert.match(worker, /foodtreknow-shell-v41/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -164,6 +164,18 @@ test('Host opportunity edits retain their record id and confirm the saved update
   assert.match(marketplace, /String\(saved\.id\) !== String\(opportunityId\)/);
   assert.match(marketplace, /state\.host\.tab = 'opportunities'/);
   assert.match(marketplace, /Changes saved\. Connected food trucks were notified\./);
+});
+
+test('Host opportunity drafts survive background marketplace refreshes', async () => {
+  const marketplace = await read('js/opportunity-marketplace.js');
+  assert.match(marketplace, /function captureHostOpportunityDraft\(\)/);
+  assert.match(marketplace, /function restoreHostOpportunityDraft\(draft\)/);
+  assert.match(marketplace, /value: field\.value/);
+  assert.match(marketplace, /\['checkbox', 'radio'\]\.includes\(field\.type\) \? field\.checked : null/);
+  const capture = marketplace.indexOf('const opportunityDraft = captureHostOpportunityDraft();');
+  const replace = marketplace.indexOf('root.innerHTML = `<section class="marketplace-hero host"');
+  const restore = marketplace.indexOf('restoreHostOpportunityDraft(opportunityDraft);');
+  assert.ok(capture >= 0 && replace > capture && restore > replace);
 });
 
 test('saving a Host event edit notifies only vendors connected to that opportunity', async () => {
