@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=vendor-inbox-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=message-close-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v39/);
+  assert.match(worker, /foodtreknow-shell-v40/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -381,6 +381,12 @@ test('Vendor event inbox surfaces new conversations live and opens the complete 
   assert.match(styles, /marketplace-conversation-card/);
   assert.match(styles, /marketplace-new-label/);
   assert.match(styles, /marketplace-message-preview/);
+  assert.match(marketplace, /data-close-marketplace-conversation/);
+  assert.match(marketplace, /aria-label="Close event conversation"/);
+  assert.match(marketplace, /getElementById\('customerAccountModal'\)\?\.classList\.add\('hidden'\)/);
+  assert.match(marketplace, /getElementById\('marketplaceModal'\)\?\.classList\.add\('hidden'\)/);
+  assert.match(styles, /marketplace-conversation-close/);
+  assert.match(styles, /position:sticky/);
 });
 
 test('confirmed Hosts and food trucks can securely exchange current contact details', async () => {

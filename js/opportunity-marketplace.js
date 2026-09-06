@@ -714,7 +714,7 @@
     const counterpart = state.activeRole === 'host'
       ? application?.trucks?.name || 'Food Truck'
       : application?.opportunities?.host_locations?.name || 'Event Host';
-    return `<p class="eyebrow">Full Event Conversation</p><h2 id="customerModalTitle">${escapeHtml(application?.opportunities?.title || 'Opportunity')}</h2><p>Conversation with ${escapeHtml(counterpart)}. Messages in this thread apply only to this event and food truck. All messages are shown below.</p><div class="message-thread marketplace-message-thread">${messages.length ? messages.map(item => `<article class="message-bubble ${item.sender_role === state.activeRole ? 'mine' : 'theirs'}"><strong>${escapeHtml(item.sender_role === 'host' ? 'Host' : 'Food Truck')}</strong><p>${escapeHtml(item.body)}</p><small>${escapeHtml(dateTime(item.created_at))}</small></article>`).join('') : '<p>No messages yet. Start the conversation below.</p>'}</div><form id="opportunityMessageForm" data-application-id="${applicationId}"><label>Reply to this event conversation<textarea name="body" required maxlength="1000" rows="3" placeholder="Type your reply here…"></textarea></label><button class="primary-button" type="submit">Send Reply</button><p class="form-message" data-marketplace-form-message></p></form>`;
+    return `<button class="marketplace-conversation-close" data-close-marketplace-conversation type="button" aria-label="Close event conversation">×</button><p class="eyebrow">Full Event Conversation</p><h2 id="customerModalTitle">${escapeHtml(application?.opportunities?.title || 'Opportunity')}</h2><p>Conversation with ${escapeHtml(counterpart)}. Messages in this thread apply only to this event and food truck. All messages are shown below.</p><div class="message-thread marketplace-message-thread">${messages.length ? messages.map(item => `<article class="message-bubble ${item.sender_role === state.activeRole ? 'mine' : 'theirs'}"><strong>${escapeHtml(item.sender_role === 'host' ? 'Host' : 'Food Truck')}</strong><p>${escapeHtml(item.body)}</p><small>${escapeHtml(dateTime(item.created_at))}</small></article>`).join('') : '<p>No messages yet. Start the conversation below.</p>'}</div><form id="opportunityMessageForm" data-application-id="${applicationId}"><label>Reply to this event conversation<textarea name="body" required maxlength="1000" rows="3" placeholder="Type your reply here…"></textarea></label><button class="primary-button" type="submit">Send Reply</button><p class="form-message" data-marketplace-form-message></p></form>`;
   }
 
   function contactModal(contact) {
@@ -818,6 +818,11 @@
   }
 
   document.addEventListener('click', async event => {
+    if (event.target.closest('[data-close-marketplace-conversation]')) {
+      document.getElementById('customerAccountModal')?.classList.add('hidden');
+      document.getElementById('marketplaceModal')?.classList.add('hidden');
+      return;
+    }
     const vendorTab = event.target.closest('[data-vendor-marketplace-tab]');
     if (vendorTab) {
       state.vendor.tab = vendorTab.dataset.vendorMarketplaceTab;
