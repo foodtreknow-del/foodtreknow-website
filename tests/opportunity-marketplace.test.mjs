@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-edit-2/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-edit-3/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v31/);
+  assert.match(worker, /foodtreknow-shell-v32/);
 });
 
 test('Host dashboard summary cards open their live result sections', async () => {
@@ -140,8 +140,10 @@ test('Host opportunity edits retain their record id and confirm the saved update
   assert.match(marketplace, /submit\.textContent = 'Save Changes'/);
   assert.match(marketplace, /data\.get\('opportunityId'\) \|\| state\.host\.editingOpportunityId \|\| null/);
   assert.match(marketplace, /p_opportunity_id: opportunityId/);
-  assert.match(marketplace, /saved\.id !== opportunityId/);
-  assert.match(marketplace, /Opportunity updated successfully\./);
+  assert.match(marketplace, /const saved = relatedOne\(result\)/);
+  assert.match(marketplace, /String\(saved\.id\) !== String\(opportunityId\)/);
+  assert.match(marketplace, /state\.host\.tab = 'opportunities'/);
+  assert.match(marketplace, /Changes saved\. Connected food trucks were notified\./);
 });
 
 test('saving a Host event edit notifies only vendors connected to that opportunity', async () => {
@@ -156,6 +158,16 @@ test('saving a Host event edit notifies only vendors connected to that opportuni
   assert.match(migration, /b\.application_id = a\.id and b\.status = 'confirmed'/);
   assert.match(migration, /after update of[\s\S]+on public\.opportunities/);
   assert.match(migration, /revoke all on function public\.notify_vendors_of_opportunity_update\(\) from public, anon, authenticated/);
+});
+
+test('Host event edits remain saved and notify all connected, non-withdrawn vendors', async () => {
+  const migration = await read('supabase/migrations/202609050006_opportunity_edit_notification_reliability.sql');
+  assert.match(migration, /a\.opportunity_id = new\.id and a\.status <> 'withdrawn'/);
+  assert.match(migration, /insert into public\.opportunity_messages/);
+  assert.match(migration, /insert into public\.marketplace_notifications/);
+  assert.match(migration, /exception when others then/);
+  assert.match(migration, /must never roll back the Host's saved event changes/);
+  assert.match(migration, /clock_timestamp\(\)/);
 });
 
 test('Host truck names open the existing customer storefront with a return path', async () => {
