@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=vendor-unread-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=vendor-unread-2/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v27/);
+  assert.match(worker, /foodtreknow-shell-v28/);
 });
 
 test('Host dashboard summary cards open their live result sections', async () => {
@@ -196,9 +196,13 @@ test('vendor opportunity tabs show live unread message counts and clear them sec
   assert.match(marketplace, /new Set\(\['applications', 'messages', 'bookings'\]\)/);
   assert.match(marketplace, /message\.sender_role === 'host' && !message\.read_at/);
   assert.match(marketplace, /class="marketplace-unread-badge"/);
+  assert.match(marketplace, /marketplace-record-unread/);
+  assert.match(marketplace, /marketplace-record-title/);
+  assert.match(marketplace, /aria-label="\$\{unread\} unread message/);
   assert.match(marketplace, /mark_opportunity_messages_read/);
   assert.match(marketplace, /item\.read_at = item\.read_at \|\| new Date\(\)\.toISOString\(\)/);
   assert.match(styles, /\.marketplace-unread-badge/);
+  assert.match(styles, /article\.marketplace-record-unread/);
 });
 
 test('confirmed Hosts and food trucks can securely exchange current contact details', async () => {
