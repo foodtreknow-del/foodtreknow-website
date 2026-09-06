@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-management-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=vendor-calendar-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,27 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v34/);
+  assert.match(worker, /foodtreknow-shell-v35/);
+});
+
+test('confirmed Vendor bookings can be exported to popular calendars', async () => {
+  const [marketplace, styles] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('css/opportunity-marketplace.css')
+  ]);
+  assert.match(marketplace, /data-booking-calendar=/);
+  for (const label of ['Add to Calendar', 'Google Calendar', 'Outlook Calendar', 'Apple / Device Calendar', 'Download .ics File']) {
+    assert.match(marketplace, new RegExp(label.replace('.', '\\.')));
+  }
+  assert.match(marketplace, /https:\/\/calendar\.google\.com\/calendar\/render/);
+  assert.match(marketplace, /https:\/\/outlook\.live\.com\/calendar\/0\/deeplink\/compose/);
+  assert.match(marketplace, /BEGIN:VCALENDAR/);
+  assert.match(marketplace, /UID:booking-\$\{icsEscape\(booking\.id\)\}@foodtreknow\.com/);
+  assert.match(marketplace, /text\/calendar;charset=utf-8/);
+  assert.match(marketplace, /opportunity\.arrival_time \|\| opportunity\.starts_at/);
+  assert.match(marketplace, /opportunity\.parking_instructions/);
+  assert.match(marketplace, /opportunity\.setup_instructions/);
+  assert.match(styles, /calendar-choice-grid/);
 });
 
 test('Host dashboard summary cards open their live result sections', async () => {

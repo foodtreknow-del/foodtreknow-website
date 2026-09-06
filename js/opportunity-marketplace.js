@@ -57,6 +57,72 @@
     return new Date(value).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
+  function calendarDate(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  }
+
+  function bookingCalendarDetails(booking) {
+    const opportunity = booking?.opportunities || {};
+    const location = opportunity.host_locations || {};
+    const startValue = opportunity.arrival_time || opportunity.starts_at;
+    const eventStart = new Date(opportunity.starts_at);
+    const end = new Date(opportunity.ends_at);
+    if (Number.isNaN(new Date(startValue).getTime()) || Number.isNaN(end.getTime())) throw new Error('This booking does not have valid calendar dates yet.');
+    const address = [location.address_line1, location.city, location.state, location.postal_code].filter(Boolean).join(', ');
+    const title = `${booking.trucks?.name || 'Food Truck'} — ${opportunity.title || 'FoodTrekNow Booking'}`;
+    const notes = [
+      `FoodTrekNow booking reference: ${booking.id}`,
+      opportunity.arrival_time ? `Vendor arrival: ${dateTime(opportunity.arrival_time)}` : '',
+      !Number.isNaN(eventStart.getTime()) ? `Event starts: ${dateTime(opportunity.starts_at)}` : '',
+      opportunity.parking_instructions ? `Parking: ${opportunity.parking_instructions}` : '',
+      opportunity.setup_instructions ? `Setup: ${opportunity.setup_instructions}` : '',
+      'Manage this booking at https://www.foodtreknow.com/'
+    ].filter(Boolean);
+    return { title, start: new Date(startValue), end, address: address || location.name || '', description: notes.join('\n') };
+  }
+
+  function calendarChoiceModal(booking) {
+    const details = bookingCalendarDetails(booking);
+    return `<p class="eyebrow">Approved Booking</p><h2 id="customerModalTitle">Add to Calendar</h2><p><strong>${escapeHtml(details.title)}</strong></p><p>${escapeHtml(dateTime(details.start))} through ${escapeHtml(dateTime(details.end))}</p><p>${escapeHtml(details.address || 'Host location')}</p><div class="calendar-choice-grid"><button class="primary-button" data-booking-calendar-provider="google" data-booking-id="${escapeHtml(booking.id)}" type="button">Google Calendar</button><button class="secondary-button" data-booking-calendar-provider="outlook" data-booking-id="${escapeHtml(booking.id)}" type="button">Outlook Calendar</button><button class="secondary-button" data-booking-calendar-provider="device" data-booking-id="${escapeHtml(booking.id)}" type="button">Apple / Device Calendar</button><button class="secondary-button" data-booking-calendar-provider="ics" data-booking-id="${escapeHtml(booking.id)}" type="button">Download .ics File</button></div><p class="estimate-disclaimer">This adds the current booking details to your chosen calendar. If the Host later changes or cancels the event, update or remove the saved calendar entry when FoodTrekNow notifies you.</p>`;
+  }
+
+  function calendarUrl(provider, details) {
+    if (provider === 'google') {
+      const query = new URLSearchParams({ action: 'TEMPLATE', text: details.title, dates: `${calendarDate(details.start)}/${calendarDate(details.end)}`, details: details.description, location: details.address });
+      return `https://calendar.google.com/calendar/render?${query}`;
+    }
+    if (provider === 'outlook') {
+      const query = new URLSearchParams({ path: '/calendar/action/compose', rru: 'addevent', subject: details.title, startdt: details.start.toISOString(), enddt: details.end.toISOString(), body: details.description, location: details.address });
+      return `https://outlook.live.com/calendar/0/deeplink/compose?${query}`;
+    }
+    return '';
+  }
+
+  function icsEscape(value) {
+    return String(value || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+  }
+
+  function downloadBookingCalendar(booking) {
+    const details = bookingCalendarDetails(booking);
+    const lines = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FoodTrekNow//Vendor Booking//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+      'BEGIN:VEVENT', `UID:booking-${icsEscape(booking.id)}@foodtreknow.com`, `DTSTAMP:${calendarDate(new Date())}`,
+      `DTSTART:${calendarDate(details.start)}`, `DTEND:${calendarDate(details.end)}`, `SUMMARY:${icsEscape(details.title)}`,
+      `DESCRIPTION:${icsEscape(details.description)}`, `LOCATION:${icsEscape(details.address)}`, 'URL:https://www.foodtreknow.com/',
+      'STATUS:CONFIRMED', 'END:VEVENT', 'END:VCALENDAR'
+    ];
+    const blob = new Blob([`${lines.join('\r\n')}\r\n`], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${details.title.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 80) || 'foodtreknow-booking'}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   function sameLocalDay(value, target = new Date()) {
     const date = new Date(value);
     return date.getFullYear() === target.getFullYear() && date.getMonth() === target.getMonth() && date.getDate() === target.getDate();
@@ -340,7 +406,7 @@
 
   function bookingsMarkup() {
     if (!state.vendor.bookings.length) return empty('📅', 'No confirmed bookings', 'Approved and instant bookings will appear here.');
-    return `<div class="marketplace-record-list">${state.vendor.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.vendor.reviews.some(review => review.booking_id === item.id); const unread = item.application_id ? unreadVendorMessages(item.application_id, 'bookings') : 0; return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Booking')}</h3>${unread ? `<span class="marketplace-unread-badge" aria-label="${unread} unread message${unread === 1 ? '' : 's'}">${unread}</span>` : ''}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p><small>${escapeHtml(item.opportunities?.setup_instructions || 'Setup instructions will appear here.')}</small>${eventPaymentSummary(item, 'vendor')}</div><div class="stacked-actions">${item.application_id ? `<button class="primary-button" data-marketplace-message="${item.application_id}" data-message-section="bookings" type="button">Messages</button>` : ''}${item.status === 'confirmed' ? `<button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button>` : ''}<a class="secondary-button marketplace-link-button" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.opportunities?.host_locations?.address_line1, item.opportunities?.host_locations?.city, item.opportunities?.host_locations?.state, item.opportunities?.host_locations?.postal_code].filter(Boolean).join(', '))}">Navigate</a>${item.opportunities?.opportunity_type === 'recurring' ? `<button class="primary-button" data-route-booking="${item.id}" type="button">Add to Weekly Route</button>` : ''}${ended && !reviewed ? `<button class="secondary-button" data-review-booking="${item.id}" type="button">Leave Review</button>` : ''}</div></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.vendor.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.vendor.reviews.some(review => review.booking_id === item.id); const unread = item.application_id ? unreadVendorMessages(item.application_id, 'bookings') : 0; return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Booking')}</h3>${unread ? `<span class="marketplace-unread-badge" aria-label="${unread} unread message${unread === 1 ? '' : 's'}">${unread}</span>` : ''}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p><small>${escapeHtml(item.opportunities?.setup_instructions || 'Setup instructions will appear here.')}</small>${eventPaymentSummary(item, 'vendor')}</div><div class="stacked-actions">${item.application_id ? `<button class="primary-button" data-marketplace-message="${item.application_id}" data-message-section="bookings" type="button">Messages</button>` : ''}${item.status === 'confirmed' ? `<button class="secondary-button" data-booking-calendar="${item.id}" type="button">Add to Calendar</button><button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button>` : ''}<a class="secondary-button marketplace-link-button" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.opportunities?.host_locations?.address_line1, item.opportunities?.host_locations?.city, item.opportunities?.host_locations?.state, item.opportunities?.host_locations?.postal_code].filter(Boolean).join(', '))}">Navigate</a>${item.opportunities?.opportunity_type === 'recurring' ? `<button class="primary-button" data-route-booking="${item.id}" type="button">Add to Weekly Route</button>` : ''}${ended && !reviewed ? `<button class="secondary-button" data-review-booking="${item.id}" type="button">Leave Review</button>` : ''}</div></article>`; }).join('')}</div>`;
   }
 
   function routeMarkup() {
@@ -831,6 +897,32 @@
         openMarketplaceModal(contactModal(details));
       } catch (error) { toast(error.message, true); }
       finally { contact.disabled = false; }
+      return;
+    }
+    const calendar = event.target.closest('[data-booking-calendar]');
+    if (calendar) {
+      const booking = state.vendor.bookings.find(item => item.id === calendar.dataset.bookingCalendar);
+      if (booking) {
+        try { openMarketplaceModal(calendarChoiceModal(booking)); }
+        catch (error) { toast(error.message, true); }
+      }
+      return;
+    }
+    const calendarProvider = event.target.closest('[data-booking-calendar-provider]');
+    if (calendarProvider) {
+      const booking = state.vendor.bookings.find(item => item.id === calendarProvider.dataset.bookingId);
+      if (!booking) return;
+      try {
+        const provider = calendarProvider.dataset.bookingCalendarProvider;
+        if (provider === 'device' || provider === 'ics') {
+          downloadBookingCalendar(booking);
+          toast('Calendar file downloaded. Open it to add the booking to your device calendar.');
+        } else {
+          const url = calendarUrl(provider, bookingCalendarDetails(booking));
+          if (!url) throw new Error('That calendar option is unavailable.');
+          window.open(url, '_blank', 'noopener');
+        }
+      } catch (error) { toast(error.message, true); }
       return;
     }
     const payEventFee = event.target.closest('[data-event-fee-pay]');
