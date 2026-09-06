@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=inline-event-location-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=form-usability-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v43/);
+  assert.match(worker, /foodtreknow-shell-v44/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -176,6 +176,21 @@ test('Host opportunity drafts survive background marketplace refreshes', async (
   const replace = marketplace.indexOf('root.innerHTML = `<section class="marketplace-hero host"');
   const restore = marketplace.indexOf('restoreHostOpportunityDraft(opportunityDraft);');
   assert.ok(capture >= 0 && replace > capture && restore > replace);
+  assert.match(marketplace, /if \(document\.querySelector\('#hostOpportunityMarketplace form'\)\) return/);
+  assert.match(marketplace, /state\.activeRole === 'host' && !document\.querySelector\('#hostOpportunityMarketplace form'\)/);
+});
+
+test('date and time selectors have a visible close control across portals', async () => {
+  const [marketplace, styles] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('css/opportunity-marketplace.css')
+  ]);
+  assert.match(marketplace, /input\[type="date"\], input\[type="time"\], input\[type="datetime-local"\]/);
+  assert.match(marketplace, /id = 'nativeDateTimePickerClose'/);
+  assert.match(marketplace, /setAttribute\('aria-label', 'Close date or time selector'\)/);
+  assert.match(marketplace, /activeNativePickerInput\?\.blur\?\.\(\)/);
+  assert.match(marketplace, /dataset\.closeNativePicker/);
+  assert.match(styles, /native-picker-close\{position:fixed/);
 });
 
 test('Hosts freely enter an event location when creating or editing an opportunity', async () => {

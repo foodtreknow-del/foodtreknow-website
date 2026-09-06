@@ -146,6 +146,18 @@ test('customer account UI includes every required area and has unique static IDs
   assert.match(source, /cancelOrder\(account, orderId\)/);
 });
 
+test('every shared portal modal has a visible close button', () => {
+  for (const closeId of [
+    'closeFeedbackModalButton', 'closeCustomerAccountModal', 'closeModal',
+    'closePickupModal', 'closeMenuItemModal', 'closeCategoryModal',
+    'closeCustomerPreviewModal'
+  ]) {
+    assert.match(html, new RegExp(`id="${closeId}"[^>]+modal-close`));
+  }
+  assert.match(html, /id="closePickupModal"[^>]+aria-label="Close pickup window"/);
+  assert.match(vendorSource, /getElementById\('closePickupModal'\)\.addEventListener\('click',closePickupModal\)/);
+});
+
 test('homepage presents separate customer, host, and vendor entry points', () => {
   const customerActionIndex = html.indexOf("I'm Hungry Login");
   const hostActionIndex = html.indexOf('Host / Event Organizer Login');

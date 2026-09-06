@@ -1056,6 +1056,45 @@
     card.querySelector('[data-marketplace-message]')?.click();
   });
 
+  let activeNativePickerInput = null;
+
+  function closeNativeDateTimePicker() {
+    activeNativePickerInput?.blur?.();
+    activeNativePickerInput = null;
+    document.getElementById('nativeDateTimePickerClose')?.remove();
+  }
+
+  document.addEventListener('focusin', event => {
+    if (!event.target.matches?.('input[type="date"], input[type="time"], input[type="datetime-local"]')) return;
+    activeNativePickerInput = event.target;
+    let close = document.getElementById('nativeDateTimePickerClose');
+    if (!close) {
+      close = document.createElement('button');
+      close.id = 'nativeDateTimePickerClose';
+      close.className = 'native-picker-close';
+      close.type = 'button';
+      close.dataset.closeNativePicker = '';
+      close.setAttribute('aria-label', 'Close date or time selector');
+      close.textContent = '×';
+      document.body.appendChild(close);
+    }
+  });
+
+  document.addEventListener('focusout', event => {
+    if (event.target !== activeNativePickerInput) return;
+    window.setTimeout?.(() => {
+      if (document.activeElement?.id !== 'nativeDateTimePickerClose' && document.activeElement !== activeNativePickerInput) closeNativeDateTimePicker();
+    }, 0);
+  });
+
+  document.addEventListener('change', event => {
+    if (event.target === activeNativePickerInput) closeNativeDateTimePicker();
+  });
+
+  document.addEventListener('click', event => {
+    if (event.target.closest('[data-close-native-picker]')) closeNativeDateTimePicker();
+  });
+
   document.addEventListener('submit', async event => {
     if (event.target.id === 'marketplaceFilters') {
       event.preventDefault(); const form = new FormData(event.target); state.vendor.filters = Object.fromEntries(form.entries()); ['noFee', 'power', 'water'].forEach(key => state.vendor.filters[key] = event.target.elements[key].checked); renderVendorRoot(); return;
@@ -1169,7 +1208,7 @@
         const openForm = document.getElementById('opportunityMessageForm');
         if (openForm?.dataset.applicationId === payload.new.application_id) openMarketplaceModal(messageModal(payload.new.application_id));
         else if (state.activeRole === 'vendor') renderVendorRoot();
-        else if (state.activeRole === 'host') renderHostRoot();
+        else if (state.activeRole === 'host' && !document.querySelector('#hostOpportunityMarketplace form')) renderHostRoot();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'opportunity_bookings' }, () => {
         if (state.activeRole === 'vendor') refreshVisibleVendorPortal();
@@ -1195,6 +1234,7 @@
 
   async function refreshVisibleHostPortal() {
     if (state.activeRole !== 'host' || document.hidden || !document.getElementById('hostOpportunityMarketplace')) return;
+    if (document.querySelector('#hostOpportunityMarketplace form')) return;
     try { await loadHostData(); renderHostRoot(); } catch { /* Realtime or the next refresh will retry. */ }
   }
 
