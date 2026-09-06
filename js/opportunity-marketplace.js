@@ -57,6 +57,10 @@
     return new Date(value).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
+  function applicationStatusLabel(status) {
+    return ({ pending: 'Pending', approved: 'Approved', declined: 'Declined', waitlisted: 'Waitlisted', withdrawn: 'Withdrawn', cancelled: 'Cancelled' })[status] || String(status || 'Unknown').replaceAll('_', ' ');
+  }
+
   function calendarDate(value) {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? '' : date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
@@ -366,7 +370,7 @@
 
   function applicationsMarkup() {
     if (!state.vendor.applications.length) return empty('📨', 'No applications yet', 'Request a spot and your application status will appear here.');
-    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => { const unread = unreadVendorMessages(item.id, 'applications'); return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3>${unread ? `<span class="marketplace-unread-badge" aria-label="${unread} unread message${unread === 1 ? '' : 's'}">${unread}</span>` : ''}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${item.host_response ? `<small>Host response: ${escapeHtml(item.host_response)}</small>` : item.status === 'declined' ? '<small>You may still message the Host with questions about this decision.</small>' : ''}</div><button class="secondary-button" data-marketplace-message="${item.id}" data-message-section="applications" type="button">Reply to Host</button></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => { const unread = unreadVendorMessages(item.id, 'applications'); return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(applicationStatusLabel(item.status))}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3>${unread ? `<span class="marketplace-unread-badge" aria-label="${unread} unread message${unread === 1 ? '' : 's'}">${unread}</span>` : ''}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${item.host_response ? `<small>Host response: ${escapeHtml(item.host_response)}</small>` : item.status === 'declined' ? '<small>You may still message the Host with questions about this decision.</small>' : ''}</div><button class="secondary-button" data-marketplace-message="${item.id}" data-message-section="applications" type="button">Reply to Host</button></article>`; }).join('')}</div>`;
   }
 
   function eventPaymentSummary(booking, role) {
@@ -401,7 +405,7 @@
 
   function vendorMessagesMarkup() {
     if (!state.vendor.applications.length) return empty('💬', 'No event conversations', 'Apply for an opportunity to start a conversation with its Host.');
-    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => { const thread = conversationItems(item, state.vendor.messages.filter(message => message.application_id === item.id)); const last = thread.at(-1); const unread = unreadVendorMessages(item.id, 'messages'); return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3>${unread ? `<span class="marketplace-unread-badge" aria-label="${unread} unread message${unread === 1 ? '' : 's'}">${unread}</span>` : ''}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || 'Host location')}</p><small>${last ? escapeHtml(last.body) : 'No messages yet. Ask the Host a question about this event.'}</small></div><button class="primary-button" data-marketplace-message="${item.id}" data-message-section="messages" type="button">${thread.length ? 'Reply' : 'Start Conversation'}</button></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.vendor.applications.map(item => { const thread = conversationItems(item, state.vendor.messages.filter(message => message.application_id === item.id)); const last = thread.at(-1); const unread = unreadVendorMessages(item.id, 'messages'); return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(applicationStatusLabel(item.status))}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3>${unread ? `<span class="marketplace-unread-badge" aria-label="${unread} unread message${unread === 1 ? '' : 's'}">${unread}</span>` : ''}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || 'Host location')}</p><small>${last ? escapeHtml(last.body) : 'No messages yet. Ask the Host a question about this event.'}</small></div><button class="primary-button" data-marketplace-message="${item.id}" data-message-section="messages" type="button">${thread.length ? 'Reply' : 'Start Conversation'}</button></article>`; }).join('')}</div>`;
   }
 
   function bookingsMarkup() {

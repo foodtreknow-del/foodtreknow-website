@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=vendor-calendar-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=application-status-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v35/);
+  assert.match(worker, /foodtreknow-shell-v36/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -252,9 +252,10 @@ test('Host truck names open the existing customer storefront with a return path'
 });
 
 test('Hosts can securely cancel an unresponsive approved food truck', async () => {
-  const [migration, threadMigration, marketplace] = await Promise.all([
+  const [migration, threadMigration, statusMigration, marketplace] = await Promise.all([
     read('supabase/migrations/202609050001_host_booking_cancellations.sql'),
     read('supabase/migrations/202609050002_host_cancellation_thread_messages.sql'),
+    read('supabase/migrations/202609060001_cancelled_application_status.sql'),
     read('js/opportunity-marketplace.js')
   ]);
   assert.match(migration, /create or replace function public\.cancel_host_opportunity_booking/);
@@ -272,12 +273,21 @@ test('Hosts can securely cancel an unresponsive approved food truck', async () =
   assert.match(threadMigration, /where b\.status = 'cancelled_by_host'/);
   assert.match(threadMigration, /not exists \(/);
   assert.match(threadMigration, /sender_role = 'host'/);
+  assert.match(statusMigration, /check \(status in \('pending', 'approved', 'declined', 'waitlisted', 'withdrawn', 'cancelled'\)\)/);
+  assert.match(statusMigration, /set status = 'cancelled'/);
+  assert.match(statusMigration, /b\.status = 'cancelled_by_host'/);
+  assert.match(statusMigration, /a\.host_response like 'Host cancelled approved booking:%'/);
+  assert.doesNotMatch(statusMigration, /set status = 'declined'/);
   assert.match(marketplace, /data-cancel-host-booking/);
   assert.match(marketplace, /id="cancelHostBookingForm"/);
   assert.match(marketplace, /Reason for cancellation/);
   assert.match(marketplace, /stripe-event-fee-refund/);
   assert.match(marketplace, /cancel_host_opportunity_booking/);
   assert.match(marketplace, /Food truck booking cancelled and vendor notified/);
+  assert.match(marketplace, /cancelled: 'Cancelled'/);
+  assert.match(marketplace, /waitlisted: 'Waitlisted'/);
+  assert.match(marketplace, /approved: 'Approved'/);
+  assert.match(marketplace, /declined: 'Declined'/);
 });
 
 test('vendor opportunity tabs track and clear unread messages independently by section', async () => {
