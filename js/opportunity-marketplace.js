@@ -500,6 +500,10 @@
     if (!root) return;
     if (!state.host.profile) { root.innerHTML = hostProfileForm(); return; }
     root.innerHTML = `<section class="marketplace-hero host"><div><p class="eyebrow">Host Opportunity Center</p><h2>${escapeHtml(state.host.profile.business_name)}</h2><p>Request food trucks, review applicants, and manage recurring visits.</p></div><span class="status-pill ${state.host.profile.verification_status}">${escapeHtml(state.host.profile.verification_status)}</span></section>${hostTabs()}<section class="marketplace-panel">${hostContent()}</section>`;
+    if (state.host.tab === 'post' && state.host.editingOpportunityId) {
+      const submit = root.querySelector('#hostOpportunityForm button[type="submit"]');
+      if (submit) submit.textContent = 'Save Changes';
+    }
   }
 
   async function mountHost() {
