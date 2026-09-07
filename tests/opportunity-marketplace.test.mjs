@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=verified-event-edits-2/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=portal-tab-audit-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -77,10 +77,51 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(marketplace, /Click to view/);
   assert.match(marketplace, /opportunityCardTarget/);
   assert.match(styles, /opportunity-card-clickable/);
-  assert.match(marketplace, /appliedOpportunityIds\.has\(item\.id\)/);
+  assert.doesNotMatch(marketplace, /appliedOpportunityIds\.has\(item\.id\)/);
+  assert.match(marketplace, /function vendorApplicationFor\(opportunityId\)/);
+  assert.match(marketplace, /data-open-vendor-application/);
+  assert.match(marketplace, /Includes opportunities you already requested/);
   assert.match(marketplace, /Reply to Host/);
   assert.match(marketplace, /You may still message the Host with questions about this decision/);
   assert.match(marketplace, /Open Applications or Messages to continue the conversation/);
+});
+
+test('Customer, Vendor, and Host navigation tabs all resolve to portal content', async () => {
+  const [html, app, customer, marketplace, styles] = await Promise.all([
+    read('index.html'), read('js/app.js'), read('js/customer-account.js'),
+    read('js/opportunity-marketplace.js'), read('css/opportunity-marketplace.css')
+  ]);
+
+  for (const page of ['overview', 'cart', 'profile', 'addresses', 'favorites', 'orders', 'payments', 'notifications', 'settings']) {
+    assert.ok(html.includes(`data-customer-page="${page}"`), `missing Customer tab: ${page}`);
+    assert.ok(customer.includes(`${page}: render`), `missing Customer renderer: ${page}`);
+  }
+  assert.match(customer, /closest\('\[data-customer-page\]'\)/);
+
+  for (const page of ['dashboard', 'orders', 'menu', 'opportunities', 'reports', 'settings']) {
+    assert.ok(html.includes(`data-page="${page}"`), `missing Vendor tab: ${page}`);
+    assert.ok(html.includes(`id="${page}Page"`), `missing Vendor page: ${page}`);
+  }
+  assert.match(app, /getElementById\(`\$\{btn\.dataset\.page\}Page`\)/);
+
+  for (const tab of ['discover', 'today', 'applications', 'messages', 'bookings', 'route', 'notifications']) {
+    assert.ok(marketplace.includes(`['${tab}',`), `missing Vendor marketplace tab: ${tab}`);
+  }
+  for (const tab of ['applications', 'messages', 'bookings', 'route', 'notifications']) {
+    assert.ok(marketplace.includes(`state.vendor.tab === '${tab}'`), `missing Vendor marketplace content: ${tab}`);
+  }
+  assert.match(marketplace, /const todayOnly = state\.vendor\.tab === 'today'/);
+  assert.match(marketplace, /closest\('\[data-vendor-marketplace-tab\]'\)/);
+
+  for (const tab of ['dashboard', 'opportunities', 'locations', 'post', 'applications', 'bookings', 'messages', 'archive', 'payments', 'reviews', 'contact']) {
+    assert.ok(marketplace.includes(`['${tab}',`), `missing Host tab: ${tab}`);
+  }
+  for (const tab of ['opportunities', 'locations', 'post', 'applications', 'bookings', 'messages', 'archive', 'payments', 'reviews', 'contact']) {
+    assert.ok(marketplace.includes(`state.host.tab === '${tab}'`), `missing Host content: ${tab}`);
+  }
+  assert.match(marketplace, /return hostDashboard\(\)/);
+  assert.match(marketplace, /closest\('\[data-host-marketplace-tab\]'\)/);
+  assert.match(styles, /@media \(min-width: 761px\)[\s\S]*?\.marketplace-tabs\s*\{[\s\S]*?flex-wrap:\s*wrap;[\s\S]*?overflow-x:\s*visible;/);
 });
 
 test('Hosts can inspect applicant customer-facing truck menus and ratings without private account data', async () => {
@@ -111,8 +152,8 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /marketplace-truck-profile-link/);
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
-  assert.match(html, /opportunity-marketplace\.css\?v=event-save-status-1/);
-  assert.match(worker, /foodtreknow-shell-v46/);
+  assert.match(html, /opportunity-marketplace\.css\?v=portal-tab-audit-1/);
+  assert.match(worker, /foodtreknow-shell-v47/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {

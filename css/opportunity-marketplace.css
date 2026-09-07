@@ -85,3 +85,35 @@
 .marketplace-form .form-message.success {
   color: #176a43;
 }
+
+.marketplace-badge.application-status,
+.marketplace-application-summary {
+  background: #eef1ff;
+  color: #413b88;
+}
+
+.marketplace-application-summary {
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.opportunity-visibility {
+  display: block;
+  margin-top: 8px;
+  font-weight: 800;
+}
+
+.opportunity-visibility.visible {
+  color: #176a43;
+}
+
+.opportunity-visibility.hidden-from-vendors {
+  color: #826316;
+}
+
+@media (min-width: 761px) {
+  .marketplace-tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
