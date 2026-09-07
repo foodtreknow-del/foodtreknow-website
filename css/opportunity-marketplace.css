@@ -116,6 +116,29 @@
   color: #826316;
 }
 
+.weekly-route section > div > span:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.route-stop-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.route-stop-actions button {
+  padding: 8px 11px;
+}
+
+@media (max-width: 600px) {
+  .weekly-route section > div,
+  .route-stop-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 @media (min-width: 761px) {
   .marketplace-tabs {
     flex-wrap: wrap;

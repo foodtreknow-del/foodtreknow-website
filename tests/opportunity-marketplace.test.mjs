@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-message-count-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=schedule-controls-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -152,8 +152,8 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /marketplace-truck-profile-link/);
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
-  assert.match(html, /opportunity-marketplace\.css\?v=host-message-count-1/);
-  assert.match(worker, /foodtreknow-shell-v48/);
+  assert.match(html, /opportunity-marketplace\.css\?v=schedule-controls-1/);
+  assert.match(worker, /foodtreknow-shell-v49/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -174,6 +174,36 @@ test('confirmed Vendor bookings can be exported to popular calendars', async () 
   assert.match(marketplace, /opportunity\.parking_instructions/);
   assert.match(marketplace, /opportunity\.setup_instructions/);
   assert.match(styles, /calendar-choice-grid/);
+});
+
+test('Host and Vendor schedule edits and cancellations stay connected to the same event', async () => {
+  const [marketplace, migration, styles] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('supabase/migrations/202609070001_vendor_schedule_controls.sql'),
+    read('css/opportunity-marketplace.css')
+  ]);
+  assert.match(marketplace, /data-edit-route-booking/);
+  assert.match(marketplace, /data-remove-route-booking/);
+  assert.match(marketplace, /data-cancel-vendor-booking/);
+  assert.match(marketplace, /id="vendorRouteStopForm"/);
+  assert.match(marketplace, /id="cancelVendorBookingForm"/);
+  assert.match(marketplace, /Host date, time, and location edits automatically refresh here/);
+  assert.match(marketplace, /rpc\('remove_booking_from_weekly_route'/);
+  assert.match(marketplace, /rpc\('cancel_vendor_opportunity_booking'/);
+  assert.match(marketplace, /state\.vendor\.tab = 'route'/);
+  assert.match(marketplace, /state\.vendor\.tab = 'bookings'/);
+  assert.match(marketplace, /does not automatically refund a paid event fee/);
+  assert.match(migration, /create or replace function public\.remove_booking_from_weekly_route/);
+  assert.match(migration, /create or replace function public\.cancel_vendor_opportunity_booking/);
+  assert.match(migration, /vendor\.owner_id = auth\.uid\(\)/);
+  assert.match(migration, /status = 'cancelled_by_vendor'/);
+  assert.match(migration, /delete from public\.vendor_route_stops where booking_id = selected\.id/);
+  assert.match(migration, /set status = 'published'/);
+  assert.match(migration, /insert into public\.opportunity_messages/);
+  assert.match(migration, /Food truck cancelled booking/);
+  assert.match(migration, /grant execute on function public\.remove_booking_from_weekly_route\(uuid\) to authenticated/);
+  assert.match(migration, /grant execute on function public\.cancel_vendor_opportunity_booking\(uuid, text\) to authenticated/);
+  assert.match(styles, /route-stop-actions/);
 });
 
 test('Host dashboard summary cards open their live result sections', async () => {

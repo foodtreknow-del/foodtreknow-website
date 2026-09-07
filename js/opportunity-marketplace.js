@@ -435,9 +435,14 @@
     return `<div class="marketplace-record-list">${conversations.map(({ item, thread, last, unread }) => `<article class="marketplace-conversation-card ${unread ? 'marketplace-record-unread' : ''}" data-vendor-conversation-card="${escapeHtml(item.id)}" data-message-section="messages" role="button" tabindex="0" aria-label="Open full conversation for ${escapeHtml(item.opportunities?.title || 'opportunity')}"><div><div class="marketplace-conversation-status"><span class="status-pill ${item.status}">${escapeHtml(applicationStatusLabel(item.status))}</span>${unread ? '<strong class="marketplace-new-label">NEW</strong>' : ''}</div><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3>${vendorUnreadButton(item.id, 'messages', unread)}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || 'Host location')}</p><small>${thread.length} message${thread.length === 1 ? '' : 's'} in this event conversation</small><p class="marketplace-message-preview">${last ? escapeHtml(last.body) : 'No messages yet. Ask the Host a question about this event.'}</p><small>Click anywhere on this event to view the complete conversation.</small></div><button class="primary-button" data-marketplace-message="${item.id}" data-message-section="messages" type="button">${unread ? `Read ${unread} New Message${unread === 1 ? '' : 's'}` : thread.length ? 'Open Full Conversation' : 'Start Conversation'}</button></article>`).join('')}</div>`;
   }
 
+  function routeStopForBooking(bookingId) {
+    return state.vendor.routes.flatMap(route => asArray(route.vendor_route_stops))
+      .find(stop => String(stop.booking_id) === String(bookingId)) || null;
+  }
+
   function bookingsMarkup() {
     if (!state.vendor.bookings.length) return empty('📅', 'No confirmed bookings', 'Approved and instant bookings will appear here.');
-    return `<div class="marketplace-record-list">${state.vendor.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.vendor.reviews.some(review => review.booking_id === item.id); const unread = item.application_id ? unreadVendorMessages(item.application_id, 'bookings') : 0; return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Booking')}</h3>${vendorUnreadButton(item.application_id, 'bookings', unread)}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p><small>${escapeHtml(item.opportunities?.setup_instructions || 'Setup instructions will appear here.')}</small>${eventPaymentSummary(item, 'vendor')}</div><div class="stacked-actions">${item.application_id ? `<button class="primary-button" data-marketplace-message="${item.application_id}" data-message-section="bookings" type="button">${unread ? `Read ${unread} New Message${unread === 1 ? '' : 's'}` : 'Messages'}</button>` : ''}${item.status === 'confirmed' ? `<button class="secondary-button" data-booking-calendar="${item.id}" type="button">Add to Calendar</button><button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button>` : ''}<a class="secondary-button marketplace-link-button" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.opportunities?.host_locations?.address_line1, item.opportunities?.host_locations?.city, item.opportunities?.host_locations?.state, item.opportunities?.host_locations?.postal_code].filter(Boolean).join(', '))}">Navigate</a>${item.opportunities?.opportunity_type === 'recurring' ? `<button class="primary-button" data-route-booking="${item.id}" type="button">Add to Weekly Route</button>` : ''}${ended && !reviewed ? `<button class="secondary-button" data-review-booking="${item.id}" type="button">Leave Review</button>` : ''}</div></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${state.vendor.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.vendor.reviews.some(review => review.booking_id === item.id); const unread = item.application_id ? unreadVendorMessages(item.application_id, 'bookings') : 0; const routeStop = routeStopForBooking(item.id); return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Booking')}</h3>${vendorUnreadButton(item.application_id, 'bookings', unread)}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p><small>${escapeHtml(item.opportunities?.setup_instructions || 'Setup instructions will appear here.')}</small>${eventPaymentSummary(item, 'vendor')}</div><div class="stacked-actions">${item.application_id ? `<button class="primary-button" data-marketplace-message="${item.application_id}" data-message-section="bookings" type="button">${unread ? `Read ${unread} New Message${unread === 1 ? '' : 's'}` : 'Messages'}</button>` : ''}${item.status === 'confirmed' ? `<button class="secondary-button" data-booking-calendar="${item.id}" type="button">Add to Calendar</button><button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button>` : ''}<a class="secondary-button marketplace-link-button" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.opportunities?.host_locations?.address_line1, item.opportunities?.host_locations?.city, item.opportunities?.host_locations?.state, item.opportunities?.host_locations?.postal_code].filter(Boolean).join(', '))}">Navigate</a>${item.status === 'confirmed' && item.opportunities?.opportunity_type === 'recurring' ? `<button class="primary-button" ${routeStop ? `data-edit-route-booking="${item.id}"` : `data-route-booking="${item.id}"`} type="button">${routeStop ? 'Edit Weekly Route' : 'Add to Weekly Route'}</button>` : ''}${item.status === 'confirmed' && !ended ? `<button class="danger-button" data-cancel-vendor-booking="${item.id}" type="button">Cancel Booking</button>` : ''}${ended && !reviewed ? `<button class="secondary-button" data-review-booking="${item.id}" type="button">Leave Review</button>` : ''}</div></article>`; }).join('')}</div>`;
   }
 
   function routeMarkup() {
@@ -453,7 +458,7 @@
     }, 0);
     const travelCost = routeMiles * 0.67;
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return `<section class="route-summary-grid"><article><small>Estimated weekly sales</small><strong>${money(projected)}</strong></article><article><small>Total vendor fees</small><strong>${money(fees)}</strong></article><article><small>Round-trip mileage</small><strong>${state.vendor.location ? `${routeMiles.toFixed(1)} mi` : 'Enable location'}</strong></article><article><small>Estimated travel cost</small><strong>${state.vendor.location ? money(travelCost) : 'Not calculated'}</strong></article><article><small>Operating hours</small><strong>${hours.toFixed(1)}</strong></article><article><small>Estimated weekly profit</small><strong>${money(Math.max(0, projected - fees - projected * 0.3 - hours * 45 - travelCost))}</strong></article></section>${stops.length ? `<div class="weekly-route">${days.map((day, index) => `<section><strong>${day}</strong>${stops.filter(stop => stop.day_of_week === index).map(stop => `<div><span>${escapeHtml(stop.opportunity_bookings?.opportunities?.title)}</span><small>${escapeHtml(stop.opportunity_bookings?.opportunities?.host_locations?.name || '')}</small></div>`).join('') || '<small>Open</small>'}</section>`).join('')}</div><p class="estimate-disclaimer">Mileage is estimated as a round trip from your current location. Travel uses a $0.67-per-mile planning rate. All sales, cost, and profit figures are estimates—not guaranteed income.</p>` : empty('🛣️', 'Your weekly route is empty', 'Add confirmed recurring bookings to build a dependable weekly schedule.')}`;
+    return `<section class="route-summary-grid"><article><small>Estimated weekly sales</small><strong>${money(projected)}</strong></article><article><small>Total vendor fees</small><strong>${money(fees)}</strong></article><article><small>Round-trip mileage</small><strong>${state.vendor.location ? `${routeMiles.toFixed(1)} mi` : 'Enable location'}</strong></article><article><small>Estimated travel cost</small><strong>${state.vendor.location ? money(travelCost) : 'Not calculated'}</strong></article><article><small>Operating hours</small><strong>${hours.toFixed(1)}</strong></article><article><small>Estimated weekly profit</small><strong>${money(Math.max(0, projected - fees - projected * 0.3 - hours * 45 - travelCost))}</strong></article></section>${stops.length ? `<div class="weekly-route">${days.map((day, index) => `<section><strong>${day}</strong>${stops.filter(stop => stop.day_of_week === index).map(stop => `<div><span><b>${escapeHtml(stop.opportunity_bookings?.opportunities?.title)}</b><small>${escapeHtml(stop.opportunity_bookings?.opportunities?.host_locations?.name || '')}</small></span><span class="route-stop-actions"><button class="secondary-button" data-edit-route-booking="${escapeHtml(stop.booking_id)}" type="button">Change Day</button><button class="danger-button" data-remove-route-booking="${escapeHtml(stop.booking_id)}" type="button">Remove</button></span></div>`).join('') || '<small>Open</small>'}</section>`).join('')}</div><p class="estimate-disclaimer">Host date, time, and location edits automatically refresh here. Cancelling a booking removes it from this in-app route. External calendar entries may require a new calendar import.</p>` : empty('🛣️', 'Your weekly route is empty', 'Add confirmed recurring bookings to build a dependable weekly schedule.')}`;
   }
 
   function notificationsMarkup(items) {
@@ -794,6 +799,23 @@
     return `<form id="cancelHostBookingForm" data-booking-id="${escapeHtml(booking.id)}" class="marketplace-form"><p class="eyebrow">Approved Food Truck</p><h2 id="customerModalTitle">Cancel ${escapeHtml(booking.trucks?.name || 'this food truck')}?</h2><p>This removes the truck from <strong>${escapeHtml(booking.opportunities?.title || 'the opportunity')}</strong>, reopens the truck space when appropriate, and notifies the vendor.</p>${paymentNote}<label>Reason for cancellation<textarea name="reason" required minlength="3" maxlength="500" rows="4" placeholder="Example: We have not received a response after several follow-up messages."></textarea></label><div class="stacked-actions"><button class="secondary-button" data-close-customer-modal type="button">Keep Food Truck</button><button class="danger-button" type="submit" ${payment?.status === 'checkout_open' ? 'disabled title="Wait for the active Stripe Checkout session to expire"' : ''}>Cancel Food Truck${paid ? ' & Refund' : ''}</button></div><p class="form-message" data-marketplace-form-message></p></form>`;
   }
 
+  function vendorRouteStopModal(booking, stop) {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const selectedDay = Number(stop?.day_of_week ?? new Date(booking.opportunities?.starts_at).getDay());
+    return `<form id="vendorRouteStopForm" data-booking-id="${escapeHtml(booking.id)}" class="marketplace-form"><p class="eyebrow">Weekly Route</p><h2 id="customerModalTitle">${stop ? 'Edit' : 'Add'} ${escapeHtml(booking.opportunities?.title || 'booking')}</h2><p>Choose the weekday where this recurring stop belongs. Host changes to the event’s date, time, or location will automatically appear in your in-app schedule.</p><label>Route day<select name="day">${days.map((day, index) => `<option value="${index}"${index === selectedDay ? ' selected' : ''}>${day}</option>`).join('')}</select></label><div class="stacked-actions"><button class="secondary-button" data-close-customer-modal type="button">Close</button><button class="primary-button" type="submit">Save Route Day</button>${stop ? `<button class="danger-button" data-remove-route-booking="${escapeHtml(booking.id)}" type="button">Remove from Weekly Route</button>` : ''}</div><p class="form-message" data-marketplace-form-message></p></form>`;
+  }
+
+  function cancelVendorBookingModal(booking) {
+    const payment = relatedOne(booking?.event_fee_payments);
+    const paymentNote = payment?.status === 'paid'
+      ? '<p class="event-fee-guidance"><strong>This does not automatically refund a paid event fee.</strong> The Host’s posted cancellation policy applies. Use the event conversation to request any eligible refund.</p>'
+      : payment?.status === 'checkout_open' || payment?.status === 'refund_pending'
+        ? '<p class="event-fee-guidance"><strong>A payment or refund is still processing.</strong> Finish that process before cancelling.</p>'
+        : '<p class="event-fee-guidance">Cancelling removes this booking from your in-app schedule and notifies the Host.</p>';
+    const processing = ['checkout_open', 'refund_pending'].includes(payment?.status);
+    return `<form id="cancelVendorBookingForm" data-booking-id="${escapeHtml(booking.id)}" class="marketplace-form"><p class="eyebrow">Vendor Schedule</p><h2 id="customerModalTitle">Cancel ${escapeHtml(booking.opportunities?.title || 'this booking')}?</h2>${paymentNote}<label>Reason for cancellation<textarea name="reason" required minlength="3" maxlength="500" rows="4" placeholder="Tell the Host why your food truck cannot attend."></textarea></label><div class="stacked-actions"><button class="secondary-button" data-close-customer-modal type="button">Keep Booking</button><button class="danger-button" type="submit"${processing ? ' disabled title="Wait for payment processing to finish"' : ''}>Cancel Booking</button></div><p class="form-message" data-marketplace-form-message></p></form>`;
+  }
+
   function cancelHostOpportunityModal(opportunity) {
     const applications = state.host.applications.filter(item => item.opportunity_id === opportunity.id && ['pending', 'waitlisted', 'approved'].includes(item.status));
     const bookings = state.host.bookings.filter(item => item.opportunity_id === opportunity.id && item.status === 'confirmed');
@@ -1072,11 +1094,35 @@
     }
     const review = event.target.closest('[data-review-booking]');
     if (review) { openMarketplaceModal(reviewModal(review.dataset.reviewBooking)); return; }
+    const editRoute = event.target.closest('[data-edit-route-booking]');
+    if (editRoute) {
+      const booking = state.vendor.bookings.find(item => String(item.id) === String(editRoute.dataset.editRouteBooking));
+      if (booking) openMarketplaceModal(vendorRouteStopModal(booking, routeStopForBooking(booking.id)));
+      return;
+    }
+    const removeRoute = event.target.closest('[data-remove-route-booking]');
+    if (removeRoute) {
+      await act(removeRoute, async () => {
+        await rpc('remove_booking_from_weekly_route', { p_booking_id: removeRoute.dataset.removeRouteBooking });
+        await loadVendorData();
+        state.vendor.tab = 'route';
+        document.getElementById('customerAccountModal')?.classList.add('hidden');
+        document.getElementById('marketplaceModal')?.classList.add('hidden');
+        renderVendorRoot();
+      }, 'Booking removed from your weekly route.');
+      return;
+    }
+    const cancelVendorBooking = event.target.closest('[data-cancel-vendor-booking]');
+    if (cancelVendorBooking) {
+      const booking = state.vendor.bookings.find(item => String(item.id) === String(cancelVendorBooking.dataset.cancelVendorBooking));
+      if (booking) openMarketplaceModal(cancelVendorBookingModal(booking));
+      return;
+    }
     const route = event.target.closest('[data-route-booking]');
     if (route) {
       const booking = state.vendor.bookings.find(item => item.id === route.dataset.routeBooking);
-      const day = booking ? new Date(booking.opportunities?.starts_at).getDay() : 1;
-      await act(route, async () => { await rpc('add_booking_to_weekly_route', { p_booking_id: route.dataset.routeBooking, p_day_of_week: day }); await loadVendorData(); state.vendor.tab = 'route'; renderVendorRoot(); }, 'Booking added to your weekly route.'); return;
+      if (booking) openMarketplaceModal(vendorRouteStopModal(booking, null));
+      return;
     }
     if (event.target.closest('[data-marketplace-read-all]')) { await rpc('mark_marketplace_notifications_read'); if (state.vendor.context) { await loadVendorData(); renderVendorRoot(); } else { await loadHostData(); renderHostRoot(); } return; }
     const editLocation = event.target.closest('[data-edit-host-location]');
@@ -1234,6 +1280,28 @@
     if (event.target.id === 'opportunityMessageForm') {
       event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const data = new FormData(event.target);
       await act(button, async () => { await rpc('send_opportunity_message', { p_application_id: event.target.dataset.applicationId, p_body: data.get('body') }); event.target.reset(); if (state.activeRole === 'vendor') await loadVendorData(); else await loadHostData(); openMarketplaceModal(messageModal(event.target.dataset.applicationId)); }, 'Reply sent.'); return;
+    }
+    if (event.target.id === 'vendorRouteStopForm') {
+      event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const data = new FormData(event.target);
+      await act(button, async () => {
+        await rpc('add_booking_to_weekly_route', { p_booking_id: event.target.dataset.bookingId, p_day_of_week: Number(data.get('day')) });
+        await loadVendorData();
+        state.vendor.tab = 'route';
+        document.getElementById('customerAccountModal')?.classList.add('hidden');
+        document.getElementById('marketplaceModal')?.classList.add('hidden');
+        renderVendorRoot();
+      }, 'Weekly route day saved.'); return;
+    }
+    if (event.target.id === 'cancelVendorBookingForm') {
+      event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const data = new FormData(event.target);
+      await act(button, async () => {
+        await rpc('cancel_vendor_opportunity_booking', { p_booking_id: event.target.dataset.bookingId, p_reason: data.get('reason') });
+        await loadVendorData();
+        state.vendor.tab = 'bookings';
+        document.getElementById('customerAccountModal')?.classList.add('hidden');
+        document.getElementById('marketplaceModal')?.classList.add('hidden');
+        renderVendorRoot();
+      }, 'Booking cancelled, removed from your schedule, and the Host was notified.'); return;
     }
     if (event.target.id === 'cancelHostBookingForm') {
       event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const data = new FormData(event.target);
