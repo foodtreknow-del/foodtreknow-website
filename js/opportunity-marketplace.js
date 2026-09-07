@@ -7,6 +7,11 @@
   const clean = value => String(value || '').trim();
   const asArray = value => Array.isArray(value) ? value : [];
   const relatedOne = value => Array.isArray(value) ? value[0] || null : value || null;
+  const sameInstant = (left, right) => {
+    const leftTime = new Date(left).getTime();
+    const rightTime = new Date(right).getTime();
+    return Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime === rightTime;
+  };
   const safeImageUrl = value => { try { const url = new URL(value); return url.protocol === 'https:' ? url.href : ''; } catch { return ''; } };
   const MARKETPLACE_ERROR = 'The location marketplace database update has not been installed yet.';
   const state = {
@@ -1112,7 +1117,26 @@
       event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const form = event.target; const data = new FormData(form); const days = [...form.querySelectorAll('input[name="day"]:checked')].map(input => Number(input.value));
       const opportunityId = data.get('opportunityId') || state.host.editingOpportunityId || null;
       const editing = Boolean(opportunityId);
-      if (Number(data.get('flatFee') || 0) + Number(data.get('deposit') || 0) > 0 && state.host.stripe?.status !== 'active') {
+      const existingOpportunity = editing ? state.host.opportunities.find(item => String(item.id) === String(opportunityId)) : null;
+      const termsLocked = editing && state.host.bookings.some(booking => String(booking.opportunity_id) === String(opportunityId));
+      const financialTerms = {
+        flatFee: termsLocked ? Number(existingOpportunity?.flat_vendor_fee || 0) : Number(data.get('flatFee') || 0),
+        percentageFee: termsLocked ? Number(existingOpportunity?.sales_percentage || 0) : Number(data.get('percentageFee') || 0),
+        minimumGuarantee: termsLocked ? Number(existingOpportunity?.minimum_sales_guarantee || 0) : Number(data.get('minimumGuarantee') || 0),
+        deposit: termsLocked ? Number(existingOpportunity?.refundable_deposit || 0) : Number(data.get('deposit') || 0)
+      };
+      const expected = {
+        title: clean(data.get('title')),
+        description: clean(data.get('description')),
+        startsAt: new Date(data.get('startsAt')).toISOString(),
+        endsAt: new Date(data.get('endsAt')).toISOString(),
+        locationName: clean(data.get('locationName')),
+        locationAddress1: clean(data.get('locationAddress1')),
+        locationCity: clean(data.get('locationCity')),
+        locationState: clean(data.get('locationState')),
+        locationPostalCode: clean(data.get('locationPostalCode'))
+      };
+      if (financialTerms.flatFee + financialTerms.deposit > 0 && state.host.stripe?.status !== 'active') {
         toast('Connect and activate the Host Stripe account under Payments before publishing an opportunity with a fee or deposit.', true);
         state.host.tab = 'payments'; renderHostRoot(); return;
       }
@@ -1130,13 +1154,13 @@
           p_location_longitude: data.get('locationLongitude') || null,
           p_title: data.get('title'), p_description: data.get('description'),
           p_opportunity_type: data.get('opportunityType'), p_event_type: data.get('eventType'),
-          p_booking_mode: data.get('bookingMode'), p_starts_at: new Date(data.get('startsAt')).toISOString(),
-          p_ends_at: new Date(data.get('endsAt')).toISOString(), p_expected_customers: Number(data.get('expectedCustomers')),
+          p_booking_mode: data.get('bookingMode'), p_starts_at: expected.startsAt,
+          p_ends_at: expected.endsAt, p_expected_customers: Number(data.get('expectedCustomers')),
           p_trucks_requested: Number(data.get('trucksRequested')),
           p_cuisine_preferences: clean(data.get('cuisines')).split(',').map(value => value.trim()).filter(Boolean),
-          p_indoor_outdoor: data.get('indoorOutdoor'), p_flat_vendor_fee: Number(data.get('flatFee') || 0),
-          p_sales_percentage: Number(data.get('percentageFee') || 0), p_minimum_sales_guarantee: Number(data.get('minimumGuarantee') || 0),
-          p_refundable_deposit: Number(data.get('deposit') || 0), p_electricity_available: form.elements.electricity.checked,
+          p_indoor_outdoor: data.get('indoorOutdoor'), p_flat_vendor_fee: financialTerms.flatFee,
+          p_sales_percentage: financialTerms.percentageFee, p_minimum_sales_guarantee: financialTerms.minimumGuarantee,
+          p_refundable_deposit: financialTerms.deposit, p_electricity_available: form.elements.electricity.checked,
           p_water_available: form.elements.water.checked,
           p_arrival_time: data.get('arrivalTime') ? new Date(data.get('arrivalTime')).toISOString() : null,
           p_parking_instructions: data.get('parking'), p_setup_instructions: data.get('setup'),
@@ -1145,7 +1169,21 @@
         });
         const saved = relatedOne(result);
         if (!saved?.id || (editing && String(saved.id) !== String(opportunityId))) throw new Error('The opportunity update could not be confirmed. Please try again.');
-        await loadHostData(); state.host.editingOpportunityId = null; state.host.tab = 'opportunities'; renderHostRoot();
+        await loadHostData();
+        const reloaded = state.host.opportunities.find(item => String(item.id) === String(saved.id));
+        const reloadedLocation = reloaded ? state.host.locations.find(item => String(item.id) === String(reloaded.location_id)) : null;
+        const verified = reloaded && reloadedLocation
+          && clean(reloaded.title) === expected.title
+          && clean(reloaded.description) === expected.description
+          && sameInstant(reloaded.starts_at, expected.startsAt)
+          && sameInstant(reloaded.ends_at, expected.endsAt)
+          && clean(reloadedLocation.name) === expected.locationName
+          && clean(reloadedLocation.address_line1) === expected.locationAddress1
+          && clean(reloadedLocation.city) === expected.locationCity
+          && clean(reloadedLocation.state) === expected.locationState
+          && clean(reloadedLocation.postal_code) === expected.locationPostalCode;
+        if (!verified) throw new Error('The edited event was not returned with the new information. Your edit page remains open so you can try again.');
+        state.host.editingOpportunityId = null; state.host.tab = 'opportunities'; renderHostRoot();
       }, editing ? 'Changes saved. Connected food trucks were notified.' : 'Opportunity published successfully.'); return;
     }
     if (event.target.id === 'opportunityMessageForm') {

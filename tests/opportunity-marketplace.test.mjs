@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=form-usability-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=verified-event-edits-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -112,7 +112,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v44/);
+  assert.match(worker, /foodtreknow-shell-v45/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -237,6 +237,26 @@ test('Host event edits remain saved and notify all connected, non-withdrawn vend
   assert.match(migration, /exception when others then/);
   assert.match(migration, /must never roll back the Host's saved event changes/);
   assert.match(migration, /clock_timestamp\(\)/);
+});
+
+test('Host event edits are reloaded, verified, and atomically notify connected vendors', async () => {
+  const [marketplace, migration] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('supabase/migrations/202609060004_verified_opportunity_edits.sql')
+  ]);
+  assert.match(marketplace, /const financialTerms = \{/);
+  assert.match(marketplace, /termsLocked \? Number\(existingOpportunity\?\.flat_vendor_fee/);
+  assert.match(marketplace, /const expected = \{/);
+  assert.match(marketplace, /const reloaded = state\.host\.opportunities\.find/);
+  assert.match(marketplace, /const reloadedLocation = reloaded \? state\.host\.locations\.find/);
+  assert.match(marketplace, /sameInstant\(reloaded\.starts_at, expected\.startsAt\)/);
+  assert.match(marketplace, /if \(!verified\) throw new Error/);
+  assert.match(migration, /create or replace function public\.notify_vendors_of_opportunity_update\(\)/);
+  assert.match(migration, /insert into public\.opportunity_messages/);
+  assert.match(migration, /insert into public\.marketplace_notifications/);
+  assert.match(migration, /clock_timestamp\(\)/);
+  assert.doesNotMatch(migration, /exception when others/);
+  assert.match(migration, /drop trigger if exists notify_vendors_of_opportunity_update/);
 });
 
 test('approved opportunities lock financial terms and show active food truck interest', async () => {
