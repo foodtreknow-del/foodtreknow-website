@@ -1,4 +1,4 @@
-const CACHE_NAME = 'foodtreknow-shell-v49';
+const CACHE_NAME = 'foodtreknow-shell-v50';
 const APP_SHELL = [
   './',
   './index.html',

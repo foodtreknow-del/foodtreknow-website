@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=schedule-controls-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-opening-unread-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -153,7 +153,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=schedule-controls-1/);
-  assert.match(worker, /foodtreknow-shell-v49/);
+  assert.match(worker, /foodtreknow-shell-v50/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -395,6 +395,24 @@ test('Host unread message badge always resolves to a visible conversation', asyn
   assert.match(hostMessages, /Archived event/);
   assert.match(hostMessages, /Read \$\{unread\} New Message/);
   assert.match(styles, /marketplace-badge\.archived/);
+});
+
+test('Vendor opening interest notes remain unread for the Host until the conversation is opened', async () => {
+  const [marketplace, migration] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('supabase/migrations/202609070002_host_application_unread_interest.sql')
+  ]);
+  assert.match(marketplace, /const unreadOpeningNotes = state\.host\.applications\.filter/);
+  assert.match(marketplace, /clean\(application\.vendor_message\)/);
+  assert.match(marketplace, /!application\.host_application_read_at/);
+  assert.match(marketplace, /return unreadReplies \+ unreadOpeningNotes/);
+  assert.match(marketplace, /item\.host_application_read_at = item\.host_application_read_at \|\| new Date\(\)\.toISOString\(\)/);
+  assert.match(migration, /add column if not exists host_application_read_at timestamptz/);
+  assert.match(migration, /reader_role = 'host'/);
+  assert.match(migration, /nullif\(trim\(selected\.vendor_message\), ''\) is not null/);
+  assert.match(migration, /set host_application_read_at = now\(\)/);
+  assert.match(migration, /return changed \+ message_count/);
+  assert.match(migration, /grant execute on function public\.mark_opportunity_messages_read\(uuid\) to authenticated/);
 });
 
 test('Host truck names open the existing customer storefront with a return path', async () => {

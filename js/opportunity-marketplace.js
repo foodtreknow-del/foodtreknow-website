@@ -528,9 +528,15 @@
   }
 
   function unreadHostMessages(applicationId = null) {
-    return state.host.messages.filter(message =>
+    const unreadReplies = state.host.messages.filter(message =>
       (!applicationId || message.application_id === applicationId) && message.sender_role === 'vendor' && !message.read_at
     ).length;
+    const unreadOpeningNotes = state.host.applications.filter(application =>
+      (!applicationId || application.id === applicationId)
+      && clean(application.vendor_message)
+      && !application.host_application_read_at
+    ).length;
+    return unreadReplies + unreadOpeningNotes;
   }
 
   function hostTabs() {
@@ -1032,6 +1038,7 @@
         } else {
           await rpc('mark_opportunity_messages_read', { p_application_id: state.selectedApplication });
           state.host.messages.forEach(item => { if (item.application_id === state.selectedApplication && item.sender_role === 'vendor') item.read_at = item.read_at || new Date().toISOString(); });
+          state.host.applications.forEach(item => { if (item.id === state.selectedApplication && clean(item.vendor_message)) item.host_application_read_at = item.host_application_read_at || new Date().toISOString(); });
           renderHostRoot();
         }
       } catch (error) { toast(`Messages opened, but the unread count could not be updated: ${error.message}`, true); }
