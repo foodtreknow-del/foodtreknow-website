@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=application-workflow-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=vendor-alert-details-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -152,8 +152,29 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /marketplace-truck-profile-link/);
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
-  assert.match(html, /opportunity-marketplace\.css\?v=application-workflow-1/);
-  assert.match(worker, /foodtreknow-shell-v51/);
+  assert.match(html, /opportunity-marketplace\.css\?v=vendor-alert-details-1/);
+  assert.match(worker, /foodtreknow-shell-v52/);
+});
+
+test('Vendor alerts open their opportunity and active counts exclude completed events', async () => {
+  const [marketplace, styles] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('css/opportunity-marketplace.css')
+  ]);
+  assert.match(marketplace, /function loadVendorOpportunityDetail\(opportunityId\)/);
+  assert.match(marketplace, /data-vendor-alert-opportunity=/);
+  assert.match(marketplace, /data-marketplace-notification-id=/);
+  assert.match(marketplace, /mark_marketplace_notifications_read', \{ p_notification_ids: \[notificationId\] \}/);
+  assert.match(marketplace, /openMarketplaceModal\(opportunityModal\(item\)\)/);
+  assert.match(marketplace, /function activeVendorOpportunities\(\)/);
+  assert.match(marketplace, /function vendorBookingIsActive\(booking\)/);
+  assert.match(marketplace, /Completed & Cancelled/);
+  assert.match(marketplace, /Finished and cancelled events do not count as active/);
+  assert.match(marketplace, /data-vendor-booking-opportunity=/);
+  assert.match(marketplace, /activeBookingCount/);
+  assert.match(styles, /marketplace-notification-link/);
+  assert.match(styles, /marketplace-booking-history/);
+  assert.match(styles, /marketplace-hero-stats/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {

@@ -195,9 +195,23 @@
     return haversineMiles(state.vendor.location, item.location);
   }
 
+  function activeVendorOpportunities() {
+    const now = Date.now();
+    return state.vendor.opportunities.filter(item => (!item.status || item.status === 'published') && new Date(item.ends_at).getTime() > now);
+  }
+
+  function vendorBookingIsActive(booking) {
+    return booking.status === 'confirmed' && new Date(booking.opportunities?.ends_at).getTime() > Date.now();
+  }
+
+  function vendorBookingStatus(booking) {
+    if (booking.status === 'confirmed' && !vendorBookingIsActive(booking)) return 'Completed';
+    return String(booking.status || 'Unknown').replaceAll('_', ' ');
+  }
+
   function filteredOpportunities(todayOnly = false) {
     const filters = state.vendor.filters;
-    let items = state.vendor.opportunities.filter(item => !todayOnly || sameLocalDay(item.starts_at));
+    let items = activeVendorOpportunities().filter(item => !todayOnly || sameLocalDay(item.starts_at));
     if (filters.date) items = items.filter(item => new Date(item.starts_at).toISOString().slice(0, 10) === filters.date);
     if (filters.startTime) items = items.filter(item => new Date(item.starts_at).toTimeString().slice(0, 5) >= filters.startTime);
     if (filters.endTime) items = items.filter(item => new Date(item.ends_at).toTimeString().slice(0, 5) <= filters.endTime);
@@ -378,6 +392,24 @@
     return `<div class="marketplace-tabs" role="tablist">${tabs.map(([key, label]) => { const unread = unreadTabs.has(key) ? unreadVendorMessages(null, key) : 0; return `<button class="${state.vendor.tab === key ? 'active' : ''}" data-vendor-marketplace-tab="${key}" type="button"${unreadTabs.has(key) ? ` aria-label="${label}, ${unread} unread message${unread === 1 ? '' : 's'}"` : ''}>${label}${unreadTabs.has(key) ? `<span class="marketplace-unread-badge" aria-hidden="true">${unread}</span>` : ''}</button>`; }).join('')}</div>`;
   }
 
+  async function loadVendorOpportunityDetail(opportunityId) {
+    const active = state.vendor.opportunities.find(item => String(item.id) === String(opportunityId));
+    if (active) return active;
+    const rows = await query(client.from('opportunities')
+      .select('*, opportunity_recurrence_rules(*), host_locations(*)')
+      .eq('id', opportunityId)
+      .limit(1));
+    const opportunity = rows[0];
+    if (!opportunity) return null;
+    return {
+      ...opportunity,
+      location: relatedOne(opportunity.host_locations),
+      recurrence: relatedOne(opportunity.opportunity_recurrence_rules),
+      trucks_booked: state.vendor.bookings.filter(booking => String(booking.opportunity_id) === String(opportunity.id) && booking.status === 'confirmed').length,
+      host: null
+    };
+  }
+
   function unreadVendorMessages(applicationId, section) {
     const field = { applications: 'vendor_applications_read_at', messages: 'vendor_messages_read_at', bookings: 'vendor_bookings_read_at' }[section];
     if (!field) return 0;
@@ -442,7 +474,10 @@
 
   function bookingsMarkup() {
     if (!state.vendor.bookings.length) return empty('📅', 'No confirmed bookings', 'Approved and instant bookings will appear here.');
-    return `<div class="marketplace-record-list">${state.vendor.bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.vendor.reviews.some(review => review.booking_id === item.id); const unread = item.application_id ? unreadVendorMessages(item.application_id, 'bookings') : 0; const routeStop = routeStopForBooking(item.id); return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Booking')}</h3>${vendorUnreadButton(item.application_id, 'bookings', unread)}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p><small>${escapeHtml(item.opportunities?.setup_instructions || 'Setup instructions will appear here.')}</small>${eventPaymentSummary(item, 'vendor')}</div><div class="stacked-actions">${item.application_id ? `<button class="primary-button" data-marketplace-message="${item.application_id}" data-message-section="bookings" type="button">${unread ? `Read ${unread} New Message${unread === 1 ? '' : 's'}` : 'Messages'}</button>` : ''}${item.status === 'confirmed' ? `<button class="secondary-button" data-booking-calendar="${item.id}" type="button">Add to Calendar</button><button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button>` : ''}<a class="secondary-button marketplace-link-button" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.opportunities?.host_locations?.address_line1, item.opportunities?.host_locations?.city, item.opportunities?.host_locations?.state, item.opportunities?.host_locations?.postal_code].filter(Boolean).join(', '))}">Navigate</a>${item.status === 'confirmed' && item.opportunities?.opportunity_type === 'recurring' ? `<button class="primary-button" ${routeStop ? `data-edit-route-booking="${item.id}"` : `data-route-booking="${item.id}"`} type="button">${routeStop ? 'Edit Weekly Route' : 'Add to Weekly Route'}</button>` : ''}${item.status === 'confirmed' && !ended ? `<button class="danger-button" data-cancel-vendor-booking="${item.id}" type="button">Cancel Booking</button>` : ''}${ended && !reviewed ? `<button class="secondary-button" data-review-booking="${item.id}" type="button">Leave Review</button>` : ''}</div></article>`; }).join('')}</div>`;
+    const active = state.vendor.bookings.filter(vendorBookingIsActive);
+    const completed = state.vendor.bookings.filter(item => !vendorBookingIsActive(item));
+    const records = items => `<div class="marketplace-record-list">${items.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.vendor.reviews.some(review => review.booking_id === item.id); const unread = item.application_id ? unreadVendorMessages(item.application_id, 'bookings') : 0; const routeStop = routeStopForBooking(item.id); const displayStatus = vendorBookingStatus(item); return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${displayStatus.toLowerCase().replaceAll(' ', '_')}">${escapeHtml(displayStatus)}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Booking')}</h3>${vendorUnreadButton(item.application_id, 'bookings', unread)}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p><small>${escapeHtml(item.opportunities?.setup_instructions || 'Setup instructions will appear here.')}</small>${eventPaymentSummary(item, 'vendor')}</div><div class="stacked-actions"><button class="secondary-button" data-vendor-booking-opportunity="${escapeHtml(item.opportunity_id)}" type="button">View Opportunity</button>${item.application_id ? `<button class="primary-button" data-marketplace-message="${item.application_id}" data-message-section="bookings" type="button">${unread ? `Read ${unread} New Message${unread === 1 ? '' : 's'}` : 'Messages'}</button>` : ''}${vendorBookingIsActive(item) ? `<button class="secondary-button" data-booking-calendar="${item.id}" type="button">Add to Calendar</button><button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button>` : ''}<a class="secondary-button marketplace-link-button" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.opportunities?.host_locations?.address_line1, item.opportunities?.host_locations?.city, item.opportunities?.host_locations?.state, item.opportunities?.host_locations?.postal_code].filter(Boolean).join(', '))}">Navigate</a>${vendorBookingIsActive(item) && item.opportunities?.opportunity_type === 'recurring' ? `<button class="primary-button" ${routeStop ? `data-edit-route-booking="${item.id}"` : `data-route-booking="${item.id}"`} type="button">${routeStop ? 'Edit Weekly Route' : 'Add to Weekly Route'}</button>` : ''}${vendorBookingIsActive(item) ? `<button class="danger-button" data-cancel-vendor-booking="${item.id}" type="button">Cancel Booking</button>` : ''}${ended && !reviewed ? `<button class="secondary-button" data-review-booking="${item.id}" type="button">Leave Review</button>` : ''}</div></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-results-bar"><div><strong>${active.length} active booking${active.length === 1 ? '' : 's'}</strong><small>Finished and cancelled events do not count as active.</small></div></div><section class="marketplace-booking-section"><h3>Active Bookings</h3>${active.length ? records(active) : empty('✅', 'No active bookings', 'Completed and cancelled bookings are kept below for your records.')}</section>${completed.length ? `<section class="marketplace-booking-section marketplace-booking-history"><h3>Completed & Cancelled</h3>${records(completed)}</section>` : ''}`;
   }
 
   function routeMarkup() {
@@ -463,7 +498,7 @@
 
   function notificationsMarkup(items) {
     if (!items.length) return empty('🔔', 'No marketplace alerts yet', 'Nearby opportunities, decisions, reminders, and host messages will appear here.');
-    return `<div class="marketplace-notifications">${items.map(item => `<article class="${item.is_read ? '' : 'unread'}"><span>${item.kind === 'message' ? '💬' : item.kind === 'booking' ? '✅' : '📍'}</span><div><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.body)}</p><small>${escapeHtml(dateTime(item.created_at))}</small></div></article>`).join('')}</div><button class="secondary-button" data-marketplace-read-all type="button">Mark All Read</button>`;
+    return `<div class="marketplace-notifications">${items.map(item => `<article class="${item.is_read ? '' : 'unread'}"><button class="marketplace-notification-link" data-vendor-alert-opportunity="${escapeHtml(item.opportunity_id || '')}" data-vendor-alert-application="${escapeHtml(item.application_id || '')}" data-marketplace-notification-id="${escapeHtml(item.id)}" type="button"><span class="marketplace-notification-icon">${item.kind === 'message' ? '💬' : item.kind === 'booking' ? '✅' : '📍'}</span><span class="marketplace-notification-copy"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span><small>${escapeHtml(dateTime(item.created_at))}</small><b>View opportunity details →</b></span></button></article>`).join('')}</div><button class="secondary-button" data-marketplace-read-all type="button">Mark All Read</button>`;
   }
 
   function empty(icon, title, copy) {
@@ -484,8 +519,9 @@
   function renderVendorRoot() {
     const root = document.getElementById('vendorOpportunityMarketplace');
     if (!root) return;
-    const activeCount = state.vendor.opportunities.length;
-    root.innerHTML = `<section class="marketplace-hero"><div><p class="eyebrow">Location Opportunity Marketplace</p><h2>Where can your truck go and make money?</h2><p>Compare customers, fees, competition, distance, and estimated profit before committing.</p></div><button class="marketplace-hero-stat" data-vendor-marketplace-tab="discover" data-marketplace-show-available type="button" aria-label="View ${activeCount} active opportunities"><strong>${activeCount}</strong><span>active opportunities</span><small>Includes opportunities you already requested</small></button></section>${vendorTabs()}<section class="marketplace-panel">${vendorContent()}</section>`;
+    const activeCount = activeVendorOpportunities().length;
+    const activeBookingCount = state.vendor.bookings.filter(vendorBookingIsActive).length;
+    root.innerHTML = `<section class="marketplace-hero"><div><p class="eyebrow">Location Opportunity Marketplace</p><h2>Where can your truck go and make money?</h2><p>Compare customers, fees, competition, distance, and estimated profit before committing.</p></div><div class="marketplace-hero-stats"><button class="marketplace-hero-stat" data-vendor-marketplace-tab="discover" data-marketplace-show-available type="button" aria-label="View ${activeCount} active opportunities"><strong>${activeCount}</strong><span>active opportunities</span><small>Includes opportunities you already requested; completed events are removed</small></button><button class="marketplace-hero-stat" data-vendor-marketplace-tab="bookings" type="button" aria-label="View ${activeBookingCount} active bookings"><strong>${activeBookingCount}</strong><span>active bookings</span><small>Click to view bookings</small></button></div></section>${vendorTabs()}<section class="marketplace-panel">${vendorContent()}</section>`;
   }
 
   async function renderVendor() {
@@ -943,6 +979,45 @@
     if (event.target.closest('[data-marketplace-clear-filters]')) { state.vendor.filters = {}; renderVendorRoot(); return; }
     const view = event.target.closest('[data-marketplace-view]');
     if (view) { const item = state.vendor.opportunities.find(opportunity => opportunity.id === view.dataset.marketplaceView); if (item) openMarketplaceModal(opportunityModal(item)); return; }
+    const vendorAlert = event.target.closest('[data-vendor-alert-opportunity]');
+    if (vendorAlert) {
+      vendorAlert.disabled = true;
+      try {
+        const opportunityId = vendorAlert.dataset.vendorAlertOpportunity;
+        const applicationId = vendorAlert.dataset.vendorAlertApplication;
+        const notificationId = vendorAlert.dataset.marketplaceNotificationId;
+        const item = opportunityId ? await loadVendorOpportunityDetail(opportunityId) : null;
+        if (notificationId) {
+          await rpc('mark_marketplace_notifications_read', { p_notification_ids: [notificationId] });
+          const notification = state.vendor.notifications.find(entry => String(entry.id) === String(notificationId));
+          if (notification) notification.is_read = true;
+        }
+        renderVendorRoot();
+        if (item) {
+          openMarketplaceModal(opportunityModal(item));
+        } else if (applicationId) {
+          state.vendor.tab = 'applications';
+          renderVendorRoot();
+          document.querySelector(`[data-vendor-application-record="${CSS.escape(applicationId)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          toast('This opportunity is no longer available. Its application record is shown instead.');
+        } else {
+          toast('This opportunity is no longer available.', true);
+        }
+      } catch (error) {
+        vendorAlert.disabled = false;
+        toast(error.message || 'The opportunity details could not be opened.', true);
+      }
+      return;
+    }
+    const vendorBookingOpportunity = event.target.closest('[data-vendor-booking-opportunity]');
+    if (vendorBookingOpportunity) {
+      await act(vendorBookingOpportunity, async () => {
+        const item = await loadVendorOpportunityDetail(vendorBookingOpportunity.dataset.vendorBookingOpportunity);
+        if (!item) throw new Error('This opportunity is no longer available.');
+        openMarketplaceModal(opportunityModal(item));
+      }, 'Opportunity details opened.');
+      return;
+    }
     const openVendorApplication = event.target.closest('[data-open-vendor-application]');
     if (openVendorApplication) {
       state.vendor.tab = 'applications';
