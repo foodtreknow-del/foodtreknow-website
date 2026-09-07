@@ -175,6 +175,19 @@ test('homepage presents separate customer, host, and vendor entry points', () =>
   assert.match(accountStyles, /\.vendor-entry-button\{[^}]*background:#243b55/);
 });
 
+test("production I'm Hungry entry always opens customer sign-in and account creation choices", () => {
+  const handlerStart = source.indexOf("document.getElementById('openCustomerPortalButton').addEventListener");
+  const handlerEnd = source.indexOf("document.getElementById('openHostPortalButton').addEventListener", handlerStart);
+  const handler = source.slice(handlerStart, handlerEnd);
+  assert.match(handler, /CustomerAuthService\.usesSupabase\(\)/);
+  assert.match(handler, /showCustomerAuth\('welcome', 'customer'\)/);
+  assert.doesNotMatch(handler, /getCurrentAccount/);
+  assert.match(html, /id="showCustomerSignInButton"[^>]*>Sign In<\/button>/);
+  assert.match(html, /id="showCreateAccountButton"[^>]*>Create Account<\/button>/);
+  assert.match(html, /id="guestCheckoutButton"/);
+  assert.match(html, /js\/customer-account\.js\?v=customer-auth-entry-1/);
+});
+
 test('FoodTrekNow logos act as accessible home buttons in every portal', () => {
   const homeButtons = [...html.matchAll(/data-foodtrek-home="(public|customer|host|vendor)"/g)].map(match => match[1]);
   assert.equal(homeButtons.length, 6);

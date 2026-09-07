@@ -2533,14 +2533,7 @@
   document.getElementById('openCustomerPortalButton').addEventListener('click', async () => {
     setPortalDestination('customer');
     if (CustomerAuthService.usesSupabase()) {
-      try {
-        const account = currentAccount || await CustomerAuthService.getCurrentAccount();
-        if (account) openSelectedPortal(account);
-        else showCustomerAuth();
-      } catch (error) {
-        showCustomerAuth('signin');
-        document.getElementById('customerSignInMessage').textContent = error.message;
-      }
+      showCustomerAuth('welcome', 'customer');
       return;
     }
     const session = readSession();
