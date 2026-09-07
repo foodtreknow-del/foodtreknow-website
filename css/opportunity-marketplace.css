@@ -75,3 +75,13 @@
   background: #fff;
   color: #1f633f;
 }
+
+.marketplace-form .form-message {
+  grid-column: 1 / -1;
+  font-weight: 700;
+  color: #a02929;
+}
+
+.marketplace-form .form-message.success {
+  color: #176a43;
+}

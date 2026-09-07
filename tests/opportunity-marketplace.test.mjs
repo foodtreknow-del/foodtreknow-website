@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=verified-event-edits-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=verified-event-edits-2/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -111,8 +111,8 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /marketplace-truck-profile-link/);
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
-  assert.match(html, /opportunity-marketplace\.css\?v=host-dashboard-tabs-1/);
-  assert.match(worker, /foodtreknow-shell-v45/);
+  assert.match(html, /opportunity-marketplace\.css\?v=event-save-status-1/);
+  assert.match(worker, /foodtreknow-shell-v46/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -152,7 +152,10 @@ test('Host dashboard summary cards open their live result sections', async () =>
 });
 
 test('Host opportunity edits retain their record id and confirm the saved update', async () => {
-  const marketplace = await read('js/opportunity-marketplace.js');
+  const [marketplace, styles] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('css/opportunity-marketplace.css')
+  ]);
   assert.match(marketplace, /editingOpportunityId: null/);
   assert.match(marketplace, /state\.host\.editingOpportunityId = item\.id/);
   assert.match(marketplace, /value="\$\{escapeHtml\(state\.host\.editingOpportunityId \|\| ''\)\}"/);
@@ -164,6 +167,11 @@ test('Host opportunity edits retain their record id and confirm the saved update
   assert.match(marketplace, /String\(saved\.id\) !== String\(opportunityId\)/);
   assert.match(marketplace, /state\.host\.tab = 'opportunities'/);
   assert.match(marketplace, /Changes saved\. Connected food trucks were notified\./);
+  assert.match(marketplace, /<option value="location">Location visit<\/option>/);
+  assert.match(marketplace, /formMessage\.textContent = 'Saving your changes…'/);
+  assert.match(marketplace, /formMessage\.textContent = message/);
+  assert.match(marketplace, /data-marketplace-form-message aria-live="polite"/);
+  assert.match(styles, /marketplace-form \.form-message\.success/);
 });
 
 test('Host opportunity drafts survive background marketplace refreshes', async () => {
