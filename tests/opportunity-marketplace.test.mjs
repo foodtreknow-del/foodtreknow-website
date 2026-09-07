@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=portal-tab-audit-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-message-count-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -152,8 +152,8 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /marketplace-truck-profile-link/);
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
-  assert.match(html, /opportunity-marketplace\.css\?v=portal-tab-audit-1/);
-  assert.match(worker, /foodtreknow-shell-v47/);
+  assert.match(html, /opportunity-marketplace\.css\?v=host-message-count-1/);
+  assert.match(worker, /foodtreknow-shell-v48/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -346,6 +346,25 @@ test('Host portal counts incoming work, groups event conversations, and archives
   assert.match(migration, /create or replace function public\.archive_host_opportunity/);
   assert.match(migration, /Only completed or cancelled opportunities can be archived/);
   assert.match(migration, /create or replace function public\.restore_host_opportunity_archive/);
+});
+
+test('Host unread message badge always resolves to a visible conversation', async () => {
+  const [marketplace, styles] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('css/opportunity-marketplace.css')
+  ]);
+  const start = marketplace.indexOf('function hostMessagesMarkup()');
+  const end = marketplace.indexOf('function hostArchiveMarkup()', start);
+  const hostMessages = marketplace.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.doesNotMatch(hostMessages, /filter\(hostApplicationIsActive\)/);
+  assert.match(hostMessages, /conversationItems\(item, state\.host\.messages\.filter/);
+  assert.match(hostMessages, /filter\(conversation => conversation\.thread\.length\)/);
+  assert.match(hostMessages, /Number\(Boolean\(b\.unread\)\) - Number\(Boolean\(a\.unread\)\)/);
+  assert.match(hostMessages, /data-host-conversation-card/);
+  assert.match(hostMessages, /Archived event/);
+  assert.match(hostMessages, /Read \$\{unread\} New Message/);
+  assert.match(styles, /marketplace-badge\.archived/);
 });
 
 test('Host truck names open the existing customer storefront with a return path', async () => {

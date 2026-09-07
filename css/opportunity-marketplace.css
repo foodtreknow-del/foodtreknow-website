@@ -92,6 +92,11 @@
   color: #413b88;
 }
 
+.marketplace-badge.archived {
+  background: #edf0f3;
+  color: #53606a;
+}
+
 .marketplace-application-summary {
   padding: 12px 14px;
   border-radius: 12px;
