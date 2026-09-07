@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-opening-unread-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=application-workflow-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -152,8 +152,8 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /marketplace-truck-profile-link/);
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
-  assert.match(html, /opportunity-marketplace\.css\?v=schedule-controls-1/);
-  assert.match(worker, /foodtreknow-shell-v50/);
+  assert.match(html, /opportunity-marketplace\.css\?v=application-workflow-1/);
+  assert.match(worker, /foodtreknow-shell-v51/);
 });
 
 test('confirmed Vendor bookings can be exported to popular calendars', async () => {
@@ -220,6 +220,34 @@ test('Host dashboard summary cards open their live result sections', async () =>
   assert.match(marketplace, /function hostOpportunitiesMarkup\(\)/);
   assert.match(marketplace, /state\.host\.tab === 'opportunities'/);
   assert.match(styles, /host-summary-card:hover/);
+});
+
+test('approved food trucks leave Host Applications and unapproved records can be archived', async () => {
+  const [marketplace, migration, styles] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('supabase/migrations/202609070003_host_application_archive.sql'),
+    read('css/opportunity-marketplace.css')
+  ]);
+  const applicationsStart = marketplace.indexOf('function hostApplicationsMarkup()');
+  const bookingsStart = marketplace.indexOf('function hostBookingsMarkup()', applicationsStart);
+  const applications = marketplace.slice(applicationsStart, bookingsStart);
+  const bookingsEnd = marketplace.indexOf('function hostPaymentsMarkup()', bookingsStart);
+  const bookings = marketplace.slice(bookingsStart, bookingsEnd);
+  assert.match(applications, /item\.status !== 'approved'/);
+  assert.match(applications, /data-archive-host-application/);
+  assert.match(bookings, /item\.status === 'confirmed'/);
+  assert.match(marketplace, /data-restore-host-application/);
+  assert.match(marketplace, /Food truck approved and moved to Approved Food Trucks/);
+  assert.match(marketplace, /decision\.dataset\.hostDecision === 'approved'\) state\.host\.tab = 'bookings'/);
+  assert.match(marketplace, /rpc\('archive_host_application'/);
+  assert.match(marketplace, /rpc\('restore_host_application_archive'/);
+  assert.match(migration, /add column if not exists archived_at timestamptz/);
+  assert.match(migration, /create or replace function public\.archive_host_application/);
+  assert.match(migration, /selected\.status = 'approved'/);
+  assert.match(migration, /booking\.status = 'confirmed'/);
+  assert.match(migration, /create or replace function public\.restore_host_application_archive/);
+  assert.match(migration, /grant execute on function public\.archive_host_application\(uuid\) to authenticated/);
+  assert.match(styles, /marketplace-archive-section/);
 });
 
 test('Host opportunity edits retain their record id and confirm the saved update', async () => {

@@ -517,7 +517,7 @@
   }
 
   function hostApplicationIsActive(application) {
-    return !application.opportunities?.archived_at;
+    return !application.archived_at && !application.opportunities?.archived_at;
   }
 
   function hostVendorVisibility(item) {
@@ -543,10 +543,10 @@
     const activeOpportunityIds = new Set(hostActiveOpportunities().map(item => item.id));
     const counts = {
       opportunities: hostActiveOpportunities().filter(item => ['published', 'filled'].includes(item.status)).length,
-      applications: state.host.applications.filter(item => hostApplicationIsActive(item) && ['pending', 'waitlisted', 'approved'].includes(item.status)).length,
+      applications: state.host.applications.filter(item => hostApplicationIsActive(item) && item.status !== 'approved').length,
       bookings: state.host.bookings.filter(item => activeOpportunityIds.has(item.opportunity_id) && item.status === 'confirmed').length,
       messages: unreadHostMessages(),
-      archive: hostArchivedOpportunities().length
+      archive: hostArchivedOpportunities().length + state.host.applications.filter(item => item.archived_at).length
     };
     const tabs = [['dashboard', 'Dashboard'], ['opportunities', 'Posted Opportunities'], ['locations', 'Locations'], ['post', 'Post Opportunity'], ['applications', 'Applications'], ['bookings', 'Approved Food Trucks'], ['messages', 'Messages'], ['archive', 'Archive'], ['payments', 'Payments'], ['reviews', 'Reviews'], ['contact', 'Contact']];
     return `<div class="marketplace-tabs host-tabs" role="tablist">${tabs.map(([key, label]) => `<button class="${state.host.tab === key ? 'active' : ''}" data-host-marketplace-tab="${key}" type="button">${label}${Object.hasOwn(counts, key) ? `<span class="marketplace-count-badge ${key === 'messages' && counts[key] ? 'unread' : ''}" aria-label="${counts[key]} ${escapeHtml(label.toLowerCase())}">${counts[key]}</span>` : ''}</button>`).join('')}</div>`;
@@ -582,7 +582,7 @@
 
   function hostOpportunityInterestCount(opportunityId) {
     return state.host.applications.filter(application =>
-      application.opportunity_id === opportunityId && ['pending', 'waitlisted', 'approved'].includes(application.status)
+      application.opportunity_id === opportunityId && hostApplicationIsActive(application) && ['pending', 'waitlisted', 'approved'].includes(application.status)
     ).length;
   }
 
@@ -604,13 +604,13 @@
   }
 
   function hostApplicationsMarkup() {
-    const applications = state.host.applications.filter(hostApplicationIsActive);
+    const applications = state.host.applications.filter(item => hostApplicationIsActive(item) && item.status !== 'approved');
     if (!applications.length) return empty('📨', 'No active applications', 'Vendor applications will appear after you publish an approval-required opportunity.');
-    return `<div class="marketplace-record-list">${applications.map(item => { const booking = state.host.bookings.find(entry => entry.application_id === item.id && entry.status === 'confirmed'); const unread = unreadHostMessages(item.id); const thread = conversationItems(item, state.host.messages.filter(message => message.application_id === item.id)); const last = thread.at(-1); return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span>${truckProfileLink(item.trucks)}<div class="marketplace-record-title"><p>${escapeHtml(item.opportunities?.title || 'Opportunity')} · ${escapeHtml(item.trucks?.cuisine || 'Cuisine not listed')}</p>${unread ? `<span class="marketplace-unread-badge" aria-label="${unread} unread message${unread === 1 ? '' : 's'}">${unread}</span>` : ''}</div><small>${last ? escapeHtml(last.body) : 'No opening message. You can still start this event conversation.'}</small></div><div class="stacked-actions">${['pending', 'waitlisted'].includes(item.status) ? `<button class="primary-button" data-host-decision="approved" data-application-id="${item.id}" type="button">Approve</button><button class="secondary-button" data-host-decision="waitlisted" data-application-id="${item.id}" type="button">Waitlist</button><button class="danger-button" data-host-decision="declined" data-application-id="${item.id}" type="button">Decline Request</button>` : ''}${booking ? `<button class="danger-button" data-cancel-host-booking="${booking.id}" type="button">Cancel Food Truck</button>` : ''}<button class="secondary-button" data-marketplace-message="${item.id}" type="button">View &amp; Reply</button></div></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${applications.map(item => { const unread = unreadHostMessages(item.id); const thread = conversationItems(item, state.host.messages.filter(message => message.application_id === item.id)); const last = thread.at(-1); return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(applicationStatusLabel(item.status))}</span>${truckProfileLink(item.trucks)}<div class="marketplace-record-title"><p>${escapeHtml(item.opportunities?.title || 'Opportunity')} · ${escapeHtml(item.trucks?.cuisine || 'Cuisine not listed')}</p>${unread ? `<span class="marketplace-unread-badge" aria-label="${unread} unread message${unread === 1 ? '' : 's'}">${unread}</span>` : ''}</div><small>${last ? escapeHtml(last.body) : 'No opening message. You can still start this event conversation.'}</small></div><div class="stacked-actions">${['pending', 'waitlisted'].includes(item.status) ? `<button class="primary-button" data-host-decision="approved" data-application-id="${item.id}" type="button">Approve</button><button class="secondary-button" data-host-decision="waitlisted" data-application-id="${item.id}" type="button">Waitlist</button><button class="danger-button" data-host-decision="declined" data-application-id="${item.id}" type="button">Decline Request</button>` : ''}<button class="secondary-button" data-marketplace-message="${item.id}" type="button">View &amp; Reply</button><button class="secondary-button" data-archive-host-application="${item.id}" type="button">Archive Application</button></div></article>`; }).join('')}</div>`;
   }
 
   function hostBookingsMarkup() {
-    const bookings = state.host.bookings.filter(item => !item.opportunities?.archived_at);
+    const bookings = state.host.bookings.filter(item => !item.opportunities?.archived_at && item.status === 'confirmed');
     if (!bookings.length) return empty('📅', 'No active approved food trucks', 'Approved and instant bookings will appear here.');
     return `<div class="marketplace-record-list">${bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.host.reviews.some(review => review.booking_id === item.id && review.reviewer_role === 'host'); const unread = item.application_id ? unreadHostMessages(item.application_id) : 0; return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span>${truckProfileLink(item.trucks)}<div class="marketplace-record-title"><p>${escapeHtml(item.opportunities?.title || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${unread ? `<span class="marketplace-unread-badge" aria-label="${unread} unread message${unread === 1 ? '' : 's'}">${unread}</span>` : ''}</div>${eventPaymentSummary(item, 'host')}</div><div class="stacked-actions">${item.status === 'confirmed' ? `<button class="danger-button" data-cancel-host-booking="${item.id}" type="button">Cancel Food Truck</button>` : ''}${item.application_id ? `<button class="secondary-button" data-marketplace-message="${item.application_id}" type="button">View Messages</button>` : ''}${ended && !reviewed ? `<button class="primary-button" data-review-booking="${item.id}" type="button">Rate Vendor</button>` : ''}</div></article>`; }).join('')}</div>`;
   }
@@ -635,16 +635,19 @@
     }).filter(conversation => conversation.thread.length)
       .sort((a, b) => Number(Boolean(b.unread)) - Number(Boolean(a.unread)) || b.updatedAt - a.updatedAt);
     if (!conversations.length) return `<div class="opportunity-empty"><span>💬</span><h3>No vendor conversations yet</h3><p>Posting an opportunity does not create a message. A conversation appears here after a food truck requests a spot or books the event.</p><button class="secondary-button" data-host-marketplace-tab="opportunities" type="button">View Posted Opportunities</button></div>`;
-    return `<div class="marketplace-record-list">${conversations.map(({ item, thread, last, unread }) => { const archived = Boolean(item.opportunities?.archived_at); return `<article class="marketplace-conversation-card ${unread ? 'marketplace-record-unread' : ''}" data-host-conversation-card="${escapeHtml(item.id)}"><div><div class="marketplace-conversation-status"><span class="status-pill ${item.status}">${escapeHtml(applicationStatusLabel(item.status))}</span>${archived ? '<span class="marketplace-badge archived">Archived event</span>' : ''}${unread ? '<strong class="marketplace-new-label">NEW</strong>' : ''}</div><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3>${unread ? `<span class="marketplace-unread-badge" aria-label="${unread} unread message${unread === 1 ? '' : 's'}">${unread}</span>` : ''}</div><p>${escapeHtml(item.trucks?.name || 'Food Truck')}</p><small>${thread.length} message${thread.length === 1 ? '' : 's'} in this event conversation</small><p class="marketplace-message-preview">${escapeHtml(last.body)}</p><small>Click Open Conversation to read the complete event thread.</small></div><button class="primary-button" data-marketplace-message="${escapeHtml(item.id)}" type="button">${unread ? `Read ${unread} New Message${unread === 1 ? '' : 's'}` : 'Open Conversation'}</button></article>`; }).join('')}</div>`;
+    return `<div class="marketplace-record-list">${conversations.map(({ item, thread, last, unread }) => { const archived = Boolean(item.opportunities?.archived_at); return `<article class="marketplace-conversation-card ${unread ? 'marketplace-record-unread' : ''}" data-host-conversation-card="${escapeHtml(item.id)}"><div><div class="marketplace-conversation-status"><span class="status-pill ${item.status}">${escapeHtml(applicationStatusLabel(item.status))}</span>${archived ? '<span class="marketplace-badge archived">Archived event</span>' : item.archived_at ? '<span class="marketplace-badge archived">Archived application</span>' : ''}${unread ? '<strong class="marketplace-new-label">NEW</strong>' : ''}</div><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Opportunity')}</h3>${unread ? `<span class="marketplace-unread-badge" aria-label="${unread} unread message${unread === 1 ? '' : 's'}">${unread}</span>` : ''}</div><p>${escapeHtml(item.trucks?.name || 'Food Truck')}</p><small>${thread.length} message${thread.length === 1 ? '' : 's'} in this event conversation</small><p class="marketplace-message-preview">${escapeHtml(last.body)}</p><small>Click Open Conversation to read the complete event thread.</small></div><button class="primary-button" data-marketplace-message="${escapeHtml(item.id)}" type="button">${unread ? `Read ${unread} New Message${unread === 1 ? '' : 's'}` : 'Open Conversation'}</button></article>`; }).join('')}</div>`;
   }
 
   function hostArchiveMarkup() {
     const opportunities = hostArchivedOpportunities().sort((a, b) => new Date(b.archived_at) - new Date(a.archived_at));
-    if (!opportunities.length) return empty('🗄️', 'No archived events', 'Completed or cancelled events can be archived from Posted Opportunities.');
-    return `<div class="marketplace-record-list">${opportunities.map(item => {
+    const applications = state.host.applications.filter(item => item.archived_at).sort((a, b) => new Date(b.archived_at) - new Date(a.archived_at));
+    if (!opportunities.length && !applications.length) return empty('🗄️', 'Nothing archived', 'Completed or cancelled events and unapproved applications can be archived here.');
+    const eventSection = opportunities.length ? `<section class="marketplace-archive-section"><h3>Archived Events</h3><div class="marketplace-record-list">${opportunities.map(item => {
       const applications = state.host.applications.filter(application => application.opportunity_id === item.id);
       return `<article><div><span class="status-pill ${item.status}">${escapeHtml(item.status)}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(dateTime(item.starts_at))}</p><small>Archived ${escapeHtml(new Date(item.archived_at).toLocaleDateString())} · ${applications.length} food truck conversation${applications.length === 1 ? '' : 's'}</small></div><div class="stacked-actions">${applications.map(application => `<button class="secondary-button" data-marketplace-message="${application.id}" type="button">${escapeHtml(application.trucks?.name || 'Food Truck')} Messages</button>`).join('')}<button class="secondary-button" data-restore-host-opportunity="${item.id}" type="button">Restore to History</button></div></article>`;
-    }).join('')}</div>`;
+    }).join('')}</div></section>` : '';
+    const applicationSection = applications.length ? `<section class="marketplace-archive-section"><h3>Archived Applications</h3><div class="marketplace-record-list">${applications.map(item => `<article><div><span class="status-pill ${item.status}">${escapeHtml(applicationStatusLabel(item.status))}</span>${truckProfileLink(item.trucks)}<p>${escapeHtml(item.opportunities?.title || 'Opportunity')}</p><small>Archived ${escapeHtml(new Date(item.archived_at).toLocaleDateString())}</small></div><div class="stacked-actions"><button class="secondary-button" data-marketplace-message="${item.id}" type="button">View Messages</button><button class="secondary-button" data-restore-host-application="${item.id}" type="button">Restore Application</button></div></article>`).join('')}</div></section>` : '';
+    return `${eventSection}${applicationSection}`;
   }
 
   function hostReviewsMarkup() {
@@ -1017,8 +1020,29 @@
       }, 'Event removed from Archive.');
       return;
     }
+    const archiveApplication = event.target.closest('[data-archive-host-application]');
+    if (archiveApplication) {
+      if (!window.confirm('Archive this unapproved application? Its event conversation will remain available.')) return;
+      await act(archiveApplication, async () => {
+        await rpc('archive_host_application', { p_application_id: archiveApplication.dataset.archiveHostApplication });
+        await loadHostData();
+        state.host.tab = 'applications';
+        renderHostRoot();
+      }, 'Application moved to Archive.');
+      return;
+    }
+    const restoreApplication = event.target.closest('[data-restore-host-application]');
+    if (restoreApplication) {
+      await act(restoreApplication, async () => {
+        await rpc('restore_host_application_archive', { p_application_id: restoreApplication.dataset.restoreHostApplication });
+        await loadHostData();
+        state.host.tab = 'applications';
+        renderHostRoot();
+      }, 'Application restored.');
+      return;
+    }
     const decision = event.target.closest('[data-host-decision]');
-    if (decision) { await act(decision, async () => { await rpc('decide_opportunity_application', { p_application_id: decision.dataset.applicationId, p_decision: decision.dataset.hostDecision, p_host_response: '' }); await loadHostData(); renderHostRoot(); }, `Application ${decision.dataset.hostDecision}.`); return; }
+    if (decision) { await act(decision, async () => { await rpc('decide_opportunity_application', { p_application_id: decision.dataset.applicationId, p_decision: decision.dataset.hostDecision, p_host_response: '' }); await loadHostData(); if (decision.dataset.hostDecision === 'approved') state.host.tab = 'bookings'; renderHostRoot(); }, decision.dataset.hostDecision === 'approved' ? 'Food truck approved and moved to Approved Food Trucks.' : `Application ${decision.dataset.hostDecision}.`); return; }
     const conversationCard = event.target.closest('[data-vendor-conversation-card]');
     if (conversationCard && !event.target.closest('button, a, input, select, textarea, label')) {
       conversationCard.querySelector('[data-marketplace-message]')?.click();

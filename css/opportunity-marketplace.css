@@ -131,6 +131,12 @@
   padding: 8px 11px;
 }
 
+.marketplace-archive-section + .marketplace-archive-section {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid #dfe7e2;
+}
+
 @media (max-width: 600px) {
   .weekly-route section > div,
   .route-stop-actions {
