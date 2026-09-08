@@ -3,7 +3,7 @@ const configuredOrigins = (Deno.env.get('APP_ORIGINS') || Deno.env.get('APP_BASE
   .map(value => value.trim().replace(/\/$/, ''))
   .filter(Boolean);
 
-const developmentOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+const developmentOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000', 'https://localhost', 'capacitor://localhost'];
 
 export function isAllowedOrigin(request: Request) {
   const origin = request.headers.get('origin');

@@ -6,6 +6,24 @@ const workflow = fs.readFileSync(new URL('../.github/workflows/android-test-buil
 const releaseWorkflow = fs.readFileSync(new URL('../.github/workflows/android-release-build.yml', import.meta.url), 'utf8');
 const gradle = fs.readFileSync(new URL('../android/app/build.gradle', import.meta.url), 'utf8');
 const manifest = fs.readFileSync(new URL('../android/app/src/main/AndroidManifest.xml', import.meta.url), 'utf8');
+const nativePaymentFunctions = [
+  '_shared/http.ts',
+  'stripe-checkout-complete/index.ts',
+  'stripe-checkout-start/index.ts',
+  'stripe-connect-start/index.ts',
+  'stripe-connect-status/index.ts',
+  'stripe-event-fee-checkout-complete/index.ts',
+  'stripe-event-fee-checkout-start/index.ts',
+  'stripe-event-fee-refund/index.ts',
+  'stripe-host-connect-start/index.ts',
+  'stripe-host-connect-status/index.ts',
+  'stripe-vendor-billing-portal/index.ts',
+  'stripe-vendor-subscription-start/index.ts',
+  'stripe-vendor-subscription-status/index.ts'
+].map(path => ({
+  path,
+  source: fs.readFileSync(new URL(`../supabase/functions/${path}`, import.meta.url), 'utf8')
+}));
 
 test('Android workflow generates a tested API 36 debug application', () => {
   assert.match(workflow, /workflow_dispatch:/);
@@ -47,4 +65,11 @@ test('Android test artifact contains no release signing configuration', () => {
   assert.match(workflow, /app-debug\.apk/);
   assert.match(workflow, /retention-days: 14/);
   assert.doesNotMatch(workflow, /keystore|storePassword|keyPassword|signingConfig/i);
+});
+
+test('native Android and iOS origins can call protected payment functions', () => {
+  for (const paymentFunction of nativePaymentFunctions) {
+    assert.match(paymentFunction.source, /['"]https:\/\/localhost['"]/, `${paymentFunction.path} must allow the Android Capacitor origin`);
+    assert.match(paymentFunction.source, /['"]capacitor:\/\/localhost['"]/, `${paymentFunction.path} must allow the iOS Capacitor origin`);
+  }
 });
