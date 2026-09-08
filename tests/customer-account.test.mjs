@@ -185,7 +185,7 @@ test("production I'm Hungry entry always opens customer sign-in and account crea
   assert.match(html, /id="showCustomerSignInButton"[^>]*>Sign In<\/button>/);
   assert.match(html, /id="showCreateAccountButton"[^>]*>Create Account<\/button>/);
   assert.match(html, /id="guestCheckoutButton"/);
-  assert.match(html, /js\/customer-account\.js\?v=customer-auth-entry-1/);
+  assert.match(html, /js\/customer-account\.js\?v=menu-item-details-1/);
 });
 
 test('FoodTrekNow logos act as accessible home buttons in every portal', () => {
