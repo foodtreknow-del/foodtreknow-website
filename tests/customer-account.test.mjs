@@ -551,8 +551,16 @@ test('customer ordering journey persists cart, places an order, and opens live t
   assert.match(element('customerAccountContent').innerHTML, /Sold Out/);
 
   assert.match(element('customerAccountContent').innerHTML, /floating-cart-summary/);
+  assert.match(element('customerAccountContent').innerHTML, /data-open-menu-item="capital-smash-burger"/);
   assert.match(element('customerAccountContent').innerHTML, /data-menu-item-decrease="capital-smash-burger"/);
   assert.match(element('customerAccountContent').innerHTML, /data-menu-item-quantity="capital-smash-burger">0/);
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ openMenuItem: 'capital-smash-burger' }) });
+  assert.match(element('customerAccountModalContent').innerHTML, /id="customerMenuItemDetailForm"/);
+  assert.match(element('customerAccountModalContent').innerHTML, /Classic Cheeseburger/);
+  assert.match(element('customerAccountModalContent').innerHTML, /Special Instructions/);
+  assert.match(element('customerAccountModalContent').innerHTML, /menuItemDetailQuantity/);
+  assert.match(element('customerAccountModalContent').innerHTML, /Add to Cart/);
+  await emit(element('customerAccountModalContent'), 'click', { target: actionTarget({ closeCustomerModal: '' }) });
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
 
@@ -667,6 +675,10 @@ test('vendor saved availability controls the signed-in customer menu and checkou
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-menu' }) });
   assert.match(element('customerAccountContent').innerHTML, /Classic Cheeseburger/);
   assert.match(element('customerAccountContent').innerHTML, /data-add-menu-item="capital-smash-burger"[^>]*disabled/);
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ openMenuItem: 'capital-smash-burger' }) });
+  assert.match(element('customerAccountModalContent').innerHTML, /Sold Out/);
+  assert.match(element('customerAccountModalContent').innerHTML, /item-add-button" type="submit" disabled/);
+  await emit(element('customerAccountModalContent'), 'click', { target: actionTarget({ closeCustomerModal: '' }) });
 
   burger.available = true;
   localStorage.setItem('ftnVendorMenuV0400', JSON.stringify(vendorMenu));

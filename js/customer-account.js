@@ -1794,7 +1794,7 @@
       : 0;
     const requiresChoice = Boolean(item.requiredChoices?.length);
     const canOrder = item.available && customerCanOrderTruck(selectedTruck());
-    return `<article class="ordering-item-card ${compact ? 'compact' : ''} ${canOrder ? '' : 'sold-out'}">
+    return `<article class="ordering-item-card ${compact ? 'compact' : ''} ${canOrder ? '' : 'sold-out'}" data-open-menu-item="${item.id}" role="button" tabindex="0" aria-label="View ${escapeHtml(item.name)} details">
       <span class="ordering-item-photo" aria-hidden="true">${item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : item.icon}${canOrder ? '' : `<b>${item.available ? 'Closed' : 'Sold Out'}</b>`}</span>
       <div class="ordering-item-copy"><small>${escapeHtml(item.category)}</small><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.description)}</span><em>${item.calories ? `${item.calories} cal · ` : ''}${customerMoney(item.price)}</em>
         <div class="menu-item-quantity-control" aria-label="Quantity of ${escapeHtml(item.name)}">
@@ -1847,6 +1847,31 @@
     openModal(`<form id="requiredMenuItemForm" class="required-options-modal"><input id="requiredMenuItemId" type="hidden" value="${item.id}"><div class="required-options-heading"><span>${item.icon}</span><div><p class="eyebrow">One quick choice</p><h2 id="customerModalTitle">${escapeHtml(item.name)}</h2><p>${escapeHtml(item.description)}</p></div></div>${item.requiredChoices.map(requiredChoiceMarkup).join('')}<div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" type="submit">Add to Cart · ${customerMoney(item.price)}</button></div></form>`);
   }
 
+  function menuItemDetailModal(item) {
+    const canOrder = item.available && customerCanOrderTruck(selectedTruck());
+    const status = item.available ? 'This truck is currently closed' : 'Sold Out';
+    openModal(`<form id="customerMenuItemDetailForm" class="menu-item-detail-modal">
+      <input id="menuItemDetailId" type="hidden" value="${item.id}">
+      <div class="menu-item-detail-photo">${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}">` : `<span aria-hidden="true">${item.icon}</span>`}${canOrder ? '' : `<b>${escapeHtml(status)}</b>`}</div>
+      <div class="menu-item-detail-copy">
+        <p class="eyebrow">${escapeHtml(item.category)}</p>
+        <h2 id="customerModalTitle">${escapeHtml(item.name)}</h2>
+        <p>${escapeHtml(item.description)}</p>
+        <strong class="menu-item-detail-price">${customerMoney(item.price)}</strong>
+      </div>
+      ${item.requiredChoices?.map(requiredChoiceMarkup).join('') || ''}
+      <label class="item-instructions" for="menuItemDetailInstructions"><strong>Special Instructions</strong><textarea id="menuItemDetailInstructions" class="customer-textarea" rows="3" maxlength="240" placeholder="No onions · Extra sauce · Cut in half"></textarea></label>
+      <div class="item-add-bar menu-item-detail-actions">
+        <div class="ordering-quantity" aria-label="Quantity">
+          <button data-menu-detail-quantity="-1" type="button" aria-label="Decrease quantity">−</button>
+          <input id="menuItemDetailQuantity" type="number" min="1" max="99" value="1" aria-label="Quantity">
+          <button data-menu-detail-quantity="1" type="button" aria-label="Increase quantity">+</button>
+        </div>
+        <button class="primary-button item-add-button" type="submit" ${canOrder ? '' : 'disabled'}>${canOrder ? `Add to Cart · ${customerMoney(item.price)}` : escapeHtml(status)}</button>
+      </div>
+    </form>`);
+  }
+
   function selectedRequiredChoices() {
     return [...modalContent.querySelectorAll('[data-required-choice]:checked')].map(input => ({
       group: input.dataset.choiceGroup,
@@ -1855,7 +1880,7 @@
     }));
   }
 
-  function addMenuItem(item, modifiers = []) {
+  function addMenuItem(item, modifiers = [], instructions = '', quantity = 1) {
     if (!item || !item.available || !customerCanOrderTruck(selectedTruck())) {
       if (currentAccount?.isGuest && selectedTruck().supabase) customerToast('Sign in or create an account to send a live order to this truck.');
       else if (selectedTruck().acceptingOrders === false) customerToast(`${selectedTruck().name} is not accepting orders right now.`);
@@ -1864,10 +1889,12 @@
     if (currentAccount.cart.items.length && currentAccount.cart.truckId !== selectedTruckId && !confirm('Your cart contains items from another truck. Start a new cart?')) return false;
     if (currentAccount.cart.truckId !== selectedTruckId) currentAccount.cart = { truckId: selectedTruckId, orderNumber: generateOrderNumber(), items: [] };
     if (!currentAccount.cart.orderNumber) currentAccount.cart.orderNumber = generateOrderNumber();
+    const normalizedInstructions = String(instructions || '').trim();
+    const normalizedQuantity = Math.max(1, Math.min(99, Number(quantity) || 1));
     const signature = modifiers.map(modifier => `${modifier.group}:${modifier.name}`).sort().join('|');
-    const existing = currentAccount.cart.items.find(cartItem => cartItem.menuItemId === item.id && (cartItem.modifiers || []).map(modifier => `${modifier.group}:${modifier.name}`).sort().join('|') === signature && !cartItem.instructions);
+    const existing = currentAccount.cart.items.find(cartItem => cartItem.menuItemId === item.id && (cartItem.modifiers || []).map(modifier => `${modifier.group}:${modifier.name}`).sort().join('|') === signature && String(cartItem.instructions || '') === normalizedInstructions);
     if (existing) {
-      existing.quantity += 1;
+      existing.quantity = Math.min(99, Number(existing.quantity || 0) + normalizedQuantity);
       existing.qty = existing.quantity;
     } else {
       currentAccount.cart.items.push({
@@ -1877,10 +1904,10 @@
         icon: item.icon,
         basePrice: item.price,
         price: item.price,
-        quantity: 1,
-        qty: 1,
+        quantity: normalizedQuantity,
+        qty: normalizedQuantity,
         modifiers,
-        instructions: ''
+        instructions: normalizedInstructions
       });
     }
     CustomerOrderingService.saveCart(currentAccount, currentAccount.cart);
@@ -2911,6 +2938,12 @@
       decreaseMenuItem(decreaseMenuItemButton.dataset.menuItemDecrease);
       return;
     }
+    const openMenuItem = event.target.closest('[data-open-menu-item]');
+    if (openMenuItem) {
+      const item = menuForTruck().find(menuItem => menuItem.id === openMenuItem.dataset.openMenuItem);
+      if (item) menuItemDetailModal(item);
+      return;
+    }
     const categoryJump = event.target.closest('[data-menu-category]');
     if (categoryJump) {
       const section = accountContent.querySelector(`[data-menu-section="${categoryJump.dataset.menuCategory}"]`);
@@ -3298,6 +3331,12 @@
 
   modalContent.addEventListener('click', async event => {
     if (event.target.closest('[data-close-customer-modal]')) closeModal();
+    const detailQuantity = event.target.closest('[data-menu-detail-quantity]');
+    if (detailQuantity) {
+      const input = document.getElementById('menuItemDetailQuantity');
+      input.value = String(Math.max(1, Math.min(99, Number(input.value || 1) + Number(detailQuantity.dataset.menuDetailQuantity || 0))));
+      return;
+    }
     const eventTruck = event.target.closest('[data-event-truck]');
     if (eventTruck) {
       selectedTruckId = eventTruck.dataset.eventTruck;
@@ -3407,6 +3446,15 @@
       const item = menuForTruck().find(menuItem => menuItem.id === document.getElementById('requiredMenuItemId').value);
       const choices = selectedRequiredChoices();
       if (item && choices.length === item.requiredChoices.length && addMenuItem(item, choices)) closeModal();
+      return;
+    }
+    if (event.target.id === 'customerMenuItemDetailForm') {
+      const item = menuForTruck().find(menuItem => menuItem.id === document.getElementById('menuItemDetailId').value);
+      const choices = selectedRequiredChoices();
+      if (!item || choices.length !== (item.requiredChoices?.length || 0)) return;
+      const quantity = document.getElementById('menuItemDetailQuantity').value;
+      const instructions = document.getElementById('menuItemDetailInstructions').value;
+      if (addMenuItem(item, choices, instructions, quantity)) closeModal();
       return;
     }
     if (event.target.id === 'customerCartItemNoteForm') {
