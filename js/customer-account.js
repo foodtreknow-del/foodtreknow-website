@@ -2746,6 +2746,10 @@
     const open = sidebar.classList.toggle('open');
     event.currentTarget.setAttribute('aria-expanded', String(open));
   });
+  document.getElementById('closeHostPortalMenuButton').addEventListener('click', () => {
+    document.querySelector('.host-portal-sidebar')?.classList.remove('open');
+    document.getElementById('hostPortalMobileMenuButton')?.setAttribute('aria-expanded', 'false');
+  });
   document.getElementById('customerMenuButton').addEventListener('click', event => {
     const sidebar = document.querySelector('.customer-sidebar');
     const open = sidebar.classList.toggle('open');

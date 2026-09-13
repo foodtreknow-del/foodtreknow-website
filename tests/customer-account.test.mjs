@@ -9,6 +9,7 @@ const source = fs.readFileSync(new URL('../js/customer-account.js', import.meta.
 const betaBannerSource = fs.readFileSync(new URL('../js/beta-banner.js', import.meta.url), 'utf8');
 const betaBannerStyles = fs.readFileSync(new URL('../css/beta-banner.css', import.meta.url), 'utf8');
 const accountStyles = fs.readFileSync(new URL('../css/customer-account.css', import.meta.url), 'utf8');
+const marketplaceStyles = fs.readFileSync(new URL('../css/opportunity-marketplace.css', import.meta.url), 'utf8');
 const orderingStyles = fs.readFileSync(new URL('../css/customer-ordering.css', import.meta.url), 'utf8');
 const vendorStyles = fs.readFileSync(new URL('../css/vendor.css', import.meta.url), 'utf8');
 const officialLogo = fs.readFileSync(new URL('../assets/foodtreknow-logo.png', import.meta.url));
@@ -185,7 +186,16 @@ test("production I'm Hungry entry always opens customer sign-in and account crea
   assert.match(html, /id="showCustomerSignInButton"[^>]*>Sign In<\/button>/);
   assert.match(html, /id="showCreateAccountButton"[^>]*>Create Account<\/button>/);
   assert.match(html, /id="guestCheckoutButton"/);
-  assert.match(html, /js\/customer-account\.js\?v=production-trucks-1/);
+  assert.match(html, /js\/customer-account\.js\?v=host-menu-close-1/);
+});
+
+test('mobile host account menu has a visible internal close control', () => {
+  assert.match(html, /id="closeHostPortalMenuButton"[^>]*aria-label="Close host account menu"/);
+  assert.match(marketplaceStyles, /\.host-portal-menu-close\{display:none\}/);
+  assert.match(marketplaceStyles, /@media\(max-width:860px\)[\s\S]*\.host-portal-menu-close\{[^}]*display:grid/);
+  assert.match(source, /getElementById\('closeHostPortalMenuButton'\)\.addEventListener\('click'/);
+  assert.match(source, /querySelector\('\.host-portal-sidebar'\)\?\.classList\.remove\('open'\)/);
+  assert.match(source, /getElementById\('hostPortalMobileMenuButton'\)\?\.setAttribute\('aria-expanded', 'false'\)/);
 });
 
 test('FoodTrekNow logos act as accessible home buttons in every portal', () => {
