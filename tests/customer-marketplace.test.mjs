@@ -53,8 +53,10 @@ test('customer marketplace loads before customer UI code', () => {
   assert.ok(marketplacePosition >= 0 && marketplacePosition < customerPosition);
 });
 
-test('customer UI merges Supabase trucks without removing sample functionality', () => {
+test('customer UI replaces sample discovery trucks after Supabase responds', () => {
   assert.match(customerSource, /refreshCustomerMarketplace\(\)/);
+  assert.match(customerSource, /TRUCKS\.splice\(0, TRUCKS\.length\)/);
+  assert.doesNotMatch(customerSource, /const sampleTrucks = TRUCKS\.filter/);
   assert.match(customerSource, /TRUCKS\.push\(/);
   assert.match(customerSource, /TRUCK_MENUS\[truck\.id\]/);
   assert.match(customerSource, /customerCanOrderTruck/);

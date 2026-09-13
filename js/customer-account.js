@@ -1301,8 +1301,10 @@
       : Promise.resolve([]);
     try {
       const [marketplace, marketplaceEvents] = await Promise.all([marketplaceLoadPromise, customerEventLoadPromise]);
-      const sampleTrucks = TRUCKS.filter(truck => !remoteTruckIds.has(truck.id));
-      TRUCKS.splice(0, TRUCKS.length, ...sampleTrucks);
+      // Once the production marketplace responds, its approved truck records
+      // are the source of truth. The bundled catalog remains available only
+      // when no remote marketplace is configured (for local demos/tests).
+      TRUCKS.splice(0, TRUCKS.length);
       const sampleEvents = EVENTS.filter(event => !remoteEventIds.has(event.id));
       EVENTS.splice(0, EVENTS.length, ...sampleEvents);
       const connectedEvents = marketplaceEvents.map(customerEventFromMarketplace);
