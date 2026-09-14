@@ -2036,11 +2036,14 @@
     const defaultPayment = currentAccount.paymentMethods.find(method => method.isDefault) || currentAccount.paymentMethods[0];
     const defaultAddress = currentAccount.addresses.find(address => address.isDefault) || currentAccount.addresses[0];
     const secureStripeCheckout = Boolean(truck.supabase && !currentAccount.isGuest && window.FoodTrekNowCustomerPayments?.available);
+    const testPaymentMode = Boolean(secureStripeCheckout && window.FoodTrekNowCustomerPayments?.testMode);
     const availableVendorCredit = Number(vendorCreditsByTruck.get(truck.id) || 0) / 100;
-    const vendorCreditMarkup = secureStripeCheckout && availableVendorCredit > 0
+    const vendorCreditMarkup = secureStripeCheckout && !testPaymentMode && availableVendorCredit > 0
       ? `<label class="checkout-choice vendor-credit-choice"><input id="useVendorCredit" type="checkbox" checked><span><strong>Use ${customerMoney(availableVendorCredit)} ${escapeHtml(truck.name)} credit</strong><small>This credit works only with this food truck. Stripe will charge any remaining balance.</small></span></label>`
       : '';
-    const paymentMarkup = secureStripeCheckout
+    const paymentMarkup = testPaymentMode
+      ? `<div class="stripe-checkout-choice"><strong>Google Play test order - no charge</strong><p>This order will be sent to ${escapeHtml(truck.name)} and marked Test Paid. No card information is requested and no money is charged.</p><small>Test orders are excluded from the food truck's sales reports.</small></div>`
+      : secureStripeCheckout
       ? `<div class="stripe-checkout-choice"><strong>Pay securely with Stripe</strong><p>Your payment goes directly to ${escapeHtml(truck.name)}. Available methods may include card, Apple Pay, Google Pay, and Cash App Pay based on your device and the truck's Stripe settings.</p><small>FoodTrekNow never receives or stores your full card number or security code.</small></div>`
       : defaultPayment
         ? `<label class="checkout-choice"><input name="paymentMethod" value="${defaultPayment.id}" type="radio" checked><span><strong>${escapeHtml(defaultPayment.brand)} ••••${escapeHtml(defaultPayment.last4)}</strong><small>${defaultPayment.isDefault ? 'Default payment preference' : `Expires ${escapeHtml(defaultPayment.expiry)}`}</small></span></label>`
@@ -2057,7 +2060,7 @@
         <section class="checkout-card"><span class="checkout-step">3</span><div class="checkout-card-content"><h2>Saved Address <small>Future Delivery</small></h2><p>${defaultAddress ? `${escapeHtml(defaultAddress.label)} · ${escapeHtml(defaultAddress.street)}, ${escapeHtml(defaultAddress.city)}` : 'Add a saved address from your profile when delivery becomes available.'}</p></div></section>
         <section class="checkout-card"><span class="checkout-step">4</span><div class="checkout-card-content"><h2>Payment Method</h2>${paymentMarkup}${vendorCreditMarkup}${secureStripeCheckout ? '' : '<button class="checkout-link" data-customer-action="view-payments" type="button">Manage Payment Methods</button>'}</div></section>
         <section class="checkout-card checkout-fields"><span class="checkout-step">5</span><div class="checkout-card-content"><label for="checkoutPromoCode"><strong>Promo Code</strong></label><div class="promo-row"><input id="checkoutPromoCode" class="customer-input" placeholder="Enter code"><button class="secondary-button" data-ordering-action="apply-promo" type="button">Apply</button></div><label for="checkoutOrderNotes"><strong>Order Notes</strong></label><textarea id="checkoutOrderNotes" class="customer-textarea" rows="3" maxlength="300" placeholder="Notes for the truck team"></textarea><p id="checkoutMessage" class="form-message"></p></div></section>
-      </div><aside class="checkout-order-summary"><p class="order-number-banner"><small>Order Number</small><strong>${orderNumberLabel(currentAccount.cart.orderNumber)}</strong></p><p class="eyebrow">Final Summary</p><h2>${escapeHtml(truck.name)}</h2>${currentAccount.cart.items.map(item => `<div class="checkout-item-line"><span>${item.quantity}× ${escapeHtml(item.name)}</span><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong></div>`).join('')}${checkoutSummaryMarkup(totals)}<button class="primary-button full" type="submit">${secureStripeCheckout ? 'Continue to Secure Payment' : 'Place Order'}</button><button class="secondary-button full" data-customer-page-back="cart" type="button">Back to Cart</button></aside></div></form>
+      </div><aside class="checkout-order-summary"><p class="order-number-banner"><small>Order Number</small><strong>${orderNumberLabel(currentAccount.cart.orderNumber)}</strong></p><p class="eyebrow">Final Summary</p><h2>${escapeHtml(truck.name)}</h2>${currentAccount.cart.items.map(item => `<div class="checkout-item-line"><span>${item.quantity}× ${escapeHtml(item.name)}</span><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong></div>`).join('')}${checkoutSummaryMarkup(totals)}<button class="primary-button full" type="submit">${testPaymentMode ? 'Place Test Order - No Charge' : secureStripeCheckout ? 'Continue to Secure Payment' : 'Place Order'}</button><button class="secondary-button full" data-customer-page-back="cart" type="button">Back to Cart</button></aside></div></form>
     </div>`;
   }
 
@@ -3211,7 +3214,7 @@
           checkoutMessage.textContent = 'Secure Stripe Checkout is temporarily unavailable. Please try again shortly.';
           return;
         }
-        checkoutMessage.textContent = 'Opening secure Stripe Checkout…';
+        checkoutMessage.textContent = window.FoodTrekNowCustomerPayments.testMode ? 'Sending your no-charge test order…' : 'Opening secure Stripe Checkout…';
         if (submitButton) submitButton.disabled = true;
         try {
           const checkoutResult = await window.FoodTrekNowCustomerPayments.startCheckout({
@@ -3235,7 +3238,9 @@
             await hydrateVendorCredits();
             lastPlacedOrderId = Number(checkoutResult.order.order_number);
             renderCustomerPage('confirmation');
-            customerToast(`${orderNumberLabel(lastPlacedOrderId)} was paid with ${truck.name} credit and sent to the truck.`);
+            customerToast(checkoutResult.testPayment
+              ? `${orderNumberLabel(lastPlacedOrderId)} was sent as a Test Paid order. No money was charged.`
+              : `${orderNumberLabel(lastPlacedOrderId)} was paid with ${truck.name} credit and sent to the truck.`);
           }
         } catch (error) {
           checkoutMessage.textContent = error.message || 'Stripe Checkout could not be opened. Please try again.';

@@ -2,6 +2,7 @@
   'use strict';
 
   const client = window.FoodTrekNowSupabaseClient;
+  const testMode = window.FoodTrekNowBuildConfig?.paymentMode === 'test';
 
   async function invoke(functionName, body) {
     if (!client) throw new Error('Secure online payments are unavailable.');
@@ -27,7 +28,7 @@
   }
 
   async function startCheckout(payload) {
-    const result = await invoke('stripe-checkout-start', payload);
+    const result = await invoke(testMode ? 'test-checkout-start' : 'stripe-checkout-start', payload);
     if (result?.order) return result;
     window.location.assign(trustedStripeCheckoutUrl(result?.checkoutUrl));
     return result;
@@ -55,6 +56,7 @@
 
   window.FoodTrekNowCustomerPayments = Object.freeze({
     available: Boolean(client),
+    testMode,
     startCheckout,
     completeCheckout,
     cancelCheckout,

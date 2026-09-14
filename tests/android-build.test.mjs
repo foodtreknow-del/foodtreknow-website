@@ -4,6 +4,7 @@ import fs from 'node:fs';
 
 const workflow = fs.readFileSync(new URL('../.github/workflows/android-test-build.yml', import.meta.url), 'utf8');
 const releaseWorkflow = fs.readFileSync(new URL('../.github/workflows/android-release-build.yml', import.meta.url), 'utf8');
+const closedTestingWorkflow = fs.readFileSync(new URL('../.github/workflows/android-closed-test-build.yml', import.meta.url), 'utf8');
 const gradle = fs.readFileSync(new URL('../android/app/build.gradle', import.meta.url), 'utf8');
 const manifest = fs.readFileSync(new URL('../android/app/src/main/AndroidManifest.xml', import.meta.url), 'utf8');
 const nativePaymentFunctions = [
@@ -50,6 +51,13 @@ test('production workflow builds a versioned signed Android App Bundle', () => {
   assert.match(releaseWorkflow, /jarsigner -verify -verbose -certs/);
   assert.match(releaseWorkflow, /app-release\.aab/);
   assert.doesNotMatch(releaseWorkflow, /BEGIN (?:RSA )?PRIVATE KEY|\.jks['"]?\s*:/);
+});
+
+test('closed testing workflow signs a versioned bundle with no-charge payment mode', () => {
+  assert.match(closedTestingWorkflow, /environment: google-play/);
+  assert.match(closedTestingWorkflow, /FOODTREKNOW_PAYMENT_MODE: test/);
+  assert.match(closedTestingWorkflow, /bundleRelease/);
+  assert.match(closedTestingWorkflow, /FoodTrekNow-Android-TEST/);
 });
 
 test('native Android release accepts protected signing and version configuration', () => {

@@ -1,4 +1,4 @@
-import { cp, mkdir, rm, stat } from 'node:fs/promises';
+import { cp, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -27,5 +27,10 @@ for (const entry of entries) {
   await stat(source);
   await cp(source, path.join(output, entry), { recursive: true });
 }
+
+const paymentMode = process.env.FOODTREKNOW_PAYMENT_MODE === 'test' ? 'test' : 'live';
+const distribution = paymentMode === 'test' ? 'google-play-testing' : 'production';
+const buildConfig = `window.FoodTrekNowBuildConfig = Object.freeze(${JSON.stringify({ paymentMode, distribution })});\n`;
+await writeFile(path.join(output, 'js', 'build-config.js'), buildConfig, 'utf8');
 
 console.log(`FoodTrekNow web assets built in ${output}`);

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'foodtreknow-shell-v56';
+const CACHE_NAME = 'foodtreknow-shell-v57';
 const APP_SHELL = [
   './',
   './index.html',
@@ -15,6 +15,7 @@ const APP_SHELL = [
   './css/beta-banner.css',
   './css/legal.css',
   './js/app.js',
+  './js/build-config.js',
   './js/customer-account.js',
   './js/customer-marketplace.js',
   './js/opportunity-marketplace.js',

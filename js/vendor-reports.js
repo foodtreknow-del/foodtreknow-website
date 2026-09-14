@@ -30,7 +30,7 @@
   }
 
   function calculateSalesReport(source, range = activeRange, now = Date.now()) {
-    const filteredOrders = filterOrdersByRange(source, range, now);
+    const filteredOrders = filterOrdersByRange(source, range, now).filter(order => !order.isTest);
     const cancelledOrders = filteredOrders.filter(order => order.status === 'cancelled');
     const salesOrders = filteredOrders.filter(order => order.status !== 'cancelled' && order.paid !== false);
     const grossSales = [...salesOrders, ...cancelledOrders].reduce((sum, order) => sum + amount(order.total), 0);

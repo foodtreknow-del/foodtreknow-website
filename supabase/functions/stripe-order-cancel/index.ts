@@ -35,6 +35,35 @@ Deno.serve(async request => {
     const orderId = String(body.orderId || '');
     const resolution = String(body.resolution || '');
     if (!/^[0-9a-f-]{36}$/i.test(orderId)) throw new Error('A valid order is required.');
+    const { data: ownedOrder, error: ownedOrderError } = await userClient.from('orders')
+      .select('id,status,is_test_order,cancellation_resolution')
+      .eq('id', orderId).eq('customer_id', userData.user.id).maybeSingle();
+    if (ownedOrderError) throw ownedOrderError;
+    if (!ownedOrder) throw new Error('Order not found.');
+    if (ownedOrder.is_test_order) {
+      if (ownedOrder.status !== 'received' && ownedOrder.status !== 'cancelled') {
+        throw new Error('This test order is already being prepared and can no longer be cancelled automatically.');
+      }
+      if (ownedOrder.status !== 'cancelled') {
+        const { error: testCancellationError } = await serviceClient.from('orders').update({
+          status: 'cancelled',
+          cancellation_resolution: 'original_payment',
+          payment_status: 'refunded',
+          refund_status: 'succeeded',
+          refunded_amount_cents: 0,
+          refund_failure_message: null,
+          cancelled_at: new Date().toISOString()
+        }).eq('id', orderId).eq('customer_id', userData.user.id).eq('is_test_order', true);
+        if (testCancellationError) throw testCancellationError;
+      }
+      cancellation = {
+        order_id: orderId,
+        resolution: 'original_payment',
+        stripe_refund_cents: 0,
+        test_order: true
+      };
+      return json(request, { cancellation, refund: null, testPayment: true, noCharge: true });
+    }
     const { data, error } = await userClient.rpc('begin_customer_paid_cancellation', { p_order_id: orderId, p_resolution: resolution });
     if (error) throw error;
     cancellation = Array.isArray(data) ? data[0] : data;
