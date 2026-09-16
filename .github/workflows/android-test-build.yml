@@ -42,7 +42,10 @@ jobs:
       - name: Use runner Android SDK
         run: |
           echo "ANDROID_HOME=${ANDROID_SDK_ROOT}" >> "$GITHUB_ENV"
-          sdkmanager --version
+          SDKMANAGER_PATH="$(find "${ANDROID_SDK_ROOT}/cmdline-tools" -type f -name sdkmanager -print -quit)"
+          test -x "$SDKMANAGER_PATH"
+          echo "$(dirname "$SDKMANAGER_PATH")" >> "$GITHUB_PATH"
+          "$SDKMANAGER_PATH" --version
 
       - name: Install Android API 36
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
