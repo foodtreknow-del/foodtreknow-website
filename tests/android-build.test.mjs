@@ -30,6 +30,8 @@ test('Android workflow generates a tested API 36 debug application', () => {
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /node-version: "24"/);
   assert.match(workflow, /java-version: "21"/);
+  assert.match(workflow, /sdkmanager --version/);
+  assert.doesNotMatch(workflow, /android-actions\/setup-android@v3/);
   assert.match(workflow, /platforms;android-36/);
   assert.match(workflow, /npm test/);
   assert.match(workflow, /npx cap sync android/);
@@ -50,6 +52,8 @@ test('production workflow builds a versioned signed Android App Bundle', () => {
   assert.match(releaseWorkflow, /bundleRelease/);
   assert.match(releaseWorkflow, /jarsigner -verify -verbose -certs/);
   assert.match(releaseWorkflow, /app-release\.aab/);
+  assert.match(releaseWorkflow, /sdkmanager --version/);
+  assert.doesNotMatch(releaseWorkflow, /android-actions\/setup-android@v3/);
   assert.doesNotMatch(releaseWorkflow, /BEGIN (?:RSA )?PRIVATE KEY|\.jks['"]?\s*:/);
 });
 
@@ -58,6 +62,8 @@ test('closed testing workflow signs a versioned bundle with no-charge payment mo
   assert.match(closedTestingWorkflow, /FOODTREKNOW_PAYMENT_MODE: test/);
   assert.match(closedTestingWorkflow, /bundleRelease/);
   assert.match(closedTestingWorkflow, /FoodTrekNow-Android-TEST/);
+  assert.match(closedTestingWorkflow, /sdkmanager --version/);
+  assert.doesNotMatch(closedTestingWorkflow, /android-actions\/setup-android@v3/);
 });
 
 test('native Android release accepts protected signing and version configuration', () => {
