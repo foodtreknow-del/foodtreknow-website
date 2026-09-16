@@ -30,6 +30,24 @@
     return placed;
   }
 
+  async function placeVendorCashSale(payload) {
+    if (!client) throw new Error('Secure vendor sales are unavailable.');
+    const { data, error } = await client.rpc('place_vendor_cash_sale', {
+      p_truck_id: payload.truckId,
+      p_items: payload.items.map(item => ({
+        menu_item_id: item.menuItemId,
+        quantity: Number(item.quantity)
+      })),
+      p_customer_name: payload.customerName || 'Walk-up Customer',
+      p_order_notes: payload.orderNotes || null,
+      p_cash_received: Number(payload.cashReceived)
+    });
+    if (error) throw error;
+    const placed = Array.isArray(data) ? data[0] : data;
+    if (!placed?.order_id) throw new Error('The cash sale was not returned by the server.');
+    return placed;
+  }
+
   async function loadCustomerOrders() {
     if (!client) return [];
     const { data, error } = await client.from('orders').select(orderSelection).order('created_at', { ascending: false });
@@ -144,6 +162,7 @@
   window.FoodTrekNowLiveOrders = Object.freeze({
     available: Boolean(client),
     placeOrder,
+    placeVendorCashSale,
     loadCustomerOrders,
     loadVendorOrders,
     updateVendorStatus,

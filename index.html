@@ -274,7 +274,7 @@
       <header class="topbar">
         <div><p id="pageEyebrow" class="eyebrow">Vendor Dashboard</p><h1 id="pageTitle">Capital City Eats</h1></div>
         <div class="topbar-actions">
-          <button id="vendorLocationQuickButton" class="secondary-button" type="button">📍 Share Location</button><button id="soundToggleButton" class="secondary-button" type="button">🔔 Sound On</button><button id="simulateOrderButton" class="secondary-button">+ Simulate New Order</button>
+          <button id="vendorLocationQuickButton" class="secondary-button" type="button">📍 Share Location</button><button id="soundToggleButton" class="secondary-button" type="button">🔔 Sound On</button><button id="newCashSaleButton" class="primary-button" type="button">+ New Cash Sale</button>
           <div class="status-control"><span id="statusDot" class="status-dot online"></span><span id="statusText">Online</span><label class="switch"><input id="onlineToggle" type="checkbox" checked /><span class="slider"></span></label></div>
         </div>
       </header>
@@ -498,6 +498,32 @@
   <div id="orderModal" class="modal hidden" role="dialog" aria-modal="true">
     <div class="modal-card"><button id="closeModal" class="modal-close" aria-label="Close">×</button><div id="modalContent"></div></div>
   </div>
+  <div id="cashSaleModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="cashSaleTitle">
+    <div class="modal-card cash-sale-modal-card">
+      <button id="closeCashSaleModal" class="modal-close" type="button" aria-label="Close cash sale window">×</button>
+      <p class="eyebrow">Vendor Counter Sale</p>
+      <h2 id="cashSaleTitle">Walk-up Cash Sale</h2>
+      <p class="muted">Select the items sold, enter the cash received, and save the completed sale to your reports.</p>
+      <form id="cashSaleForm">
+        <div class="cash-sale-customer-grid">
+          <div><label for="cashSaleCustomer">Customer Name <small>(optional)</small></label><input id="cashSaleCustomer" type="text" maxlength="80" value="Walk-up Customer"></div>
+          <div><label for="cashSaleNotes">Sale Notes <small>(optional)</small></label><input id="cashSaleNotes" type="text" maxlength="240" placeholder="Example: Extra utensils"></div>
+        </div>
+        <h3>Menu Items</h3>
+        <div id="cashSaleItems" class="cash-sale-items"></div>
+        <section class="cash-sale-summary" aria-live="polite">
+          <div><span>Subtotal</span><strong id="cashSaleSubtotal">$0.00</strong></div>
+          <div><span>Tax</span><strong id="cashSaleTax">$0.00</strong></div>
+          <div class="cash-sale-total"><span>Total</span><strong id="cashSaleTotal">$0.00</strong></div>
+          <label for="cashSaleReceived">Cash Received</label>
+          <div class="cash-sale-tender"><input id="cashSaleReceived" type="number" min="0" max="100000" step="0.01" inputmode="decimal" required placeholder="0.00"><button id="cashSaleExactButton" class="secondary-button" type="button">Use Exact Total</button></div>
+          <div class="cash-sale-change"><span>Change Due</span><strong id="cashSaleChange">$0.00</strong></div>
+        </section>
+        <p id="cashSaleError" class="form-message" aria-live="polite"></p>
+        <div class="cash-sale-actions"><button id="cancelCashSaleButton" class="secondary-button" type="button">Cancel</button><button id="cashSaleSubmitButton" class="primary-button" type="submit">Save Paid Cash Sale</button></div>
+      </form>
+    </div>
+  </div>
   <div id="pickupModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="pickupTitle">
     <div class="modal-card pickup-confirm-card">
       <button id="closePickupModal" class="modal-close" type="button" aria-label="Close pickup window">×</button>
@@ -564,7 +590,8 @@
 <script src="js/opportunity-marketplace.js?v=vendor-alert-details-1"></script>
 <script src="js/live-orders.js?v=communications-1"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=modal-close-1"></script>
+<script src="js/app.js?v=walk-up-cash-1"></script>
+<script src="js/vendor-cash-sales.js?v=walk-up-cash-1"></script>
 <script src="js/vendor-reports.js?v=print-fix-1"></script>
 <script src="js/vendor-settings.js?v=vendor-data-2"></script>
 <script src="js/vendor-location.js?v=live-location-1"></script>

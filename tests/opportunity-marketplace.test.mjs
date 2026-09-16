@@ -153,7 +153,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-menu-close-1/);
-  assert.match(worker, /foodtreknow-shell-v57/);
+  assert.match(worker, /foodtreknow-shell-v58/);
 });
 
 test('Vendor alerts open their opportunity and active counts exclude completed events', async () => {

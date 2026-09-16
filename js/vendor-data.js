@@ -22,6 +22,7 @@
     return {
       categories: (categories || []).map(category => category.name),
       items: (items || []).map(item => ({
+        databaseId: item.id,
         id: /^\d+$/.test(item.client_key) ? Number(item.client_key) : item.client_key,
         name: item.name,
         category: item.menu_categories?.name || 'Featured',
