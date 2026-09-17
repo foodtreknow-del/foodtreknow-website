@@ -1,0 +1,184 @@
+name: iOS TestFlight Testing Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: Testing version, for example 1.0.1
+        required: true
+        default: "1.0.1"
+        type: string
+      build_number:
+        description: Increasing App Store Connect build number
+        required: true
+        default: "1"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-upload-testflight:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out FoodTrekNow
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install pinned dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run application tests
+        run: pnpm test
+
+      - name: Build no-charge TestFlight assets
+        env:
+          FOODTREKNOW_PAYMENT_MODE: test
+        run: |
+          pnpm run build:web
+          pnpm exec cap sync ios
+
+      - name: Validate testing mode and release version
+        env:
+          RELEASE_VERSION_NAME: ${{ inputs.version_name }}
+          RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          grep -q '"paymentMode":"test"' www/js/build-config.js
+          [[ "$RELEASE_BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "Build number must be a positive integer."; exit 1; }
+          [[ "$RELEASE_VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Version name must use the format 1.0.1."; exit 1; }
+
+      - name: Restore Apple signing files
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+        run: |
+          [[ -n "$APPLE_CERTIFICATE_BASE64" ]] || { echo "Missing APPLE_CERTIFICATE_BASE64 secret."; exit 1; }
+          [[ -n "$APPLE_CERTIFICATE_PASSWORD" ]] || { echo "Missing APPLE_CERTIFICATE_PASSWORD secret."; exit 1; }
+          [[ -n "$APPLE_PROVISIONING_PROFILE_BASE64" ]] || { echo "Missing APPLE_PROVISIONING_PROFILE_BASE64 secret."; exit 1; }
+          [[ -n "$APP_STORE_CONNECT_API_KEY_ID" ]] || { echo "Missing APP_STORE_CONNECT_API_KEY_ID secret."; exit 1; }
+          [[ -n "$APP_STORE_CONNECT_API_PRIVATE_KEY" ]] || { echo "Missing APP_STORE_CONNECT_API_PRIVATE_KEY secret."; exit 1; }
+
+          printf '%s' "$APPLE_CERTIFICATE_BASE64" | /usr/bin/base64 -D > "$RUNNER_TEMP/distribution.p12"
+          printf '%s' "$APPLE_PROVISIONING_PROFILE_BASE64" | /usr/bin/base64 -D > "$RUNNER_TEMP/FoodTrekNow_App_Store.mobileprovision"
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "$APP_STORE_CONNECT_API_PRIVATE_KEY" > "$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+
+      - name: Import Apple distribution certificate
+        env:
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+          echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> "$GITHUB_ENV"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/foodtreknow.keychain-db"
+          security set-keychain-settings -lut 21600 "$RUNNER_TEMP/foodtreknow.keychain-db"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/foodtreknow.keychain-db"
+          security import "$RUNNER_TEMP/distribution.p12" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$RUNNER_TEMP/foodtreknow.keychain-db"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/foodtreknow.keychain-db"
+          security list-keychains -d user -s "$RUNNER_TEMP/foodtreknow.keychain-db"
+
+      - name: Install App Store provisioning profile
+        run: |
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          security cms -D -i "$RUNNER_TEMP/FoodTrekNow_App_Store.mobileprovision" > "$RUNNER_TEMP/profile.plist"
+          PROFILE_UUID="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$RUNNER_TEMP/profile.plist")"
+          PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$RUNNER_TEMP/profile.plist")"
+          cp "$RUNNER_TEMP/FoodTrekNow_App_Store.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/${PROFILE_UUID}.mobileprovision"
+          echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
+          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+
+      - name: Create App Store export settings
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>export</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>6BPWC7DZ2J</string>
+            <key>signingCertificate</key>
+            <string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.foodtreknow.app</key>
+              <string>FoodTrekNow App Store</string>
+            </dict>
+            <key>manageAppVersionAndBuildNumber</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Archive FoodTrekNow for TestFlight
+        env:
+          RELEASE_VERSION_NAME: ${{ inputs.version_name }}
+          RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/FoodTrekNow.xcarchive" \
+            DEVELOPMENT_TEAM=6BPWC7DZ2J \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            MARKETING_VERSION="$RELEASE_VERSION_NAME" \
+            CURRENT_PROJECT_VERSION="$RELEASE_BUILD_NUMBER" \
+            clean archive
+
+      - name: Export signed TestFlight IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/FoodTrekNow.xcarchive" \
+            -exportPath "$RUNNER_TEMP/TestFlight" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Upload build to App Store Connect
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          [[ -n "$APP_STORE_CONNECT_ISSUER_ID" ]] || { echo "Missing APP_STORE_CONNECT_ISSUER_ID secret."; exit 1; }
+          IPA_PATH="$(find "$RUNNER_TEMP/TestFlight" -maxdepth 1 -type f -name '*.ipa' -print -quit)"
+          [[ -n "$IPA_PATH" ]] || { echo "The exported IPA was not found."; exit 1; }
+          xcrun altool --upload-app --type ios --file "$IPA_PATH" --apiKey "$APP_STORE_CONNECT_API_KEY_ID" --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Upload signed TestFlight package
+        uses: actions/upload-artifact@v4
+        with:
+          name: FoodTrekNow-iOS-TEST-${{ inputs.version_name }}-${{ inputs.build_number }}
+          path: ${{ runner.temp }}/TestFlight/*.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Clean up signing materials
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/foodtreknow.keychain-db" 2>/dev/null || true
+          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/${PROFILE_UUID:-missing}.mobileprovision"
+          rm -rf "$HOME/.appstoreconnect/private_keys"
+          rm -f "$RUNNER_TEMP/distribution.p12" "$RUNNER_TEMP/FoodTrekNow_App_Store.mobileprovision" "$RUNNER_TEMP/profile.plist"

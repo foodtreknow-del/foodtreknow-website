@@ -3,6 +3,7 @@ www/
 .npm-cache/
 .android-tools/
 .android-signing/
+.private/
 .DS_Store
 *.log
 
