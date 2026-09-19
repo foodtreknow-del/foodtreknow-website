@@ -143,6 +143,8 @@ test('customer account UI includes every required area and has unique static IDs
   assert.doesNotMatch(source, /Choose Spice Level|Choose Protein|Extra Sauce/);
   assert.match(orderingStyles, /floating-cart-summary/);
   assert.match(html, /id="customerMobileCartButton"/);
+  assert.match(html, /id="customerNotificationButton"[^>]+aria-label="View notifications"/);
+  assert.match(source, /getElementById\('customerNotificationButton'\)\.addEventListener\('click', \(\) => renderCustomerPage\('notifications'\)\)/);
   assert.equal((html.match(/data-customer-cart-count/g) || []).length, 3);
   assert.match(source, /cancelOrder\(account, orderId\)/);
 });

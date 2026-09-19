@@ -35,7 +35,8 @@ test('message RPCs require an authorized customer or vendor screen context', () 
 });
 
 test('customer notification center includes unread state and live order messages', () => {
-  assert.match(html, /data-customer-notification-count/);
+  assert.equal((html.match(/data-customer-notification-count/g) || []).length, 2);
+  assert.match(html, /id="customerNotificationButton"/);
   assert.match(customerSource, /customerNotifications/);
   assert.match(customerSource, /data-mark-notifications-read/);
   assert.match(customerSource, /customerOrderMessageForm/);

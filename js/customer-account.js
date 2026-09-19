@@ -2759,6 +2759,7 @@
     event.currentTarget.setAttribute('aria-expanded', String(open));
   });
   document.getElementById('customerMobileCartButton').addEventListener('click', () => renderCustomerPage('cart'));
+  document.getElementById('customerNotificationButton').addEventListener('click', () => renderCustomerPage('notifications'));
   document.getElementById('customerAccountNav').addEventListener('click', event => {
     const button = event.target.closest('[data-customer-page]');
     if (button) renderCustomerPage(button.dataset.customerPage);
