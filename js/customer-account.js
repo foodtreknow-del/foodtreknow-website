@@ -2386,7 +2386,7 @@
     ];
     const feed = customerNotifications.length ? customerNotifications.map(notification => {
       const order = currentAccount.orders.find(item => item.supabaseOrderId === notification.order_id);
-      return `<article class="communication-notification ${notification.is_read ? '' : 'unread'}"><span class="communication-notification-icon" aria-hidden="true">${notification.kind === 'order_message' ? '💬' : '🛍️'}</span><div><div class="communication-notification-heading"><strong>${escapeHtml(notification.title)}</strong>${notification.is_read ? '' : '<b>New</b>'}</div><p>${escapeHtml(notification.body)}</p><small>${new Date(notification.created_at).toLocaleString()}</small></div>${order ? `<button class="customer-small-button" data-notification-order="${escapeHtml(order.id)}" type="button">View Order</button>` : ''}</article>`;
+      return `<article class="communication-notification ${notification.is_read ? '' : 'unread'}"><span class="communication-notification-icon" aria-hidden="true">${notification.kind === 'order_message' ? '💬' : '🛍️'}</span><div><div class="communication-notification-heading"><strong>${escapeHtml(notification.title)}</strong>${notification.is_read ? '' : '<b>New</b>'}</div><p>${escapeHtml(notification.body)}</p><small>${new Date(notification.created_at).toLocaleString()}</small></div>${order ? `<button class="customer-small-button" data-notification-order="${escapeHtml(order.id)}" data-notification-id="${escapeHtml(notification.id)}" type="button">View Order</button>` : ''}</article>`;
     }).join('') : '<div class="empty-customer-state communication-empty"><span>🔔</span><strong>No notifications yet</strong><p>Order updates and truck messages will appear here.</p></div>';
     return `${pageHeader('Stay in the Loop', 'Notifications', 'Order updates and messages, all in one place.', unreadCount ? '<button class="secondary-button" data-mark-notifications-read type="button">Mark All Read</button>' : '')}<section class="customer-card communication-inbox"><div class="communication-section-heading"><div><p class="eyebrow">Notification Center</p><h2>Recent Updates</h2></div><span>${unreadCount} unread</span></div><div class="communication-notification-list">${feed}</div></section><section class="customer-card communication-preferences"><h2 class="customer-section-title">Preferences</h2>${rows.map(([key, title, copy]) => `<div class="setting-row"><div><strong>${title}</strong><small>${copy}</small></div><label class="customer-switch" aria-label="${title}"><input type="checkbox" data-notification-setting="${key}" ${preferences[key] ? 'checked' : ''}><span></span></label></div>`).join('')}</section>`;
   }
@@ -2534,8 +2534,6 @@
       const messages = await window.FoodTrekNowLiveOrders.loadOrderConversation(order.supabaseOrderId);
       container.innerHTML = customerConversationMarkup(messages);
       await window.FoodTrekNowLiveOrders.markOrderMessagesRead(order.supabaseOrderId, 'customer');
-      const relatedIds = customerNotifications.filter(notification => notification.order_id === order.supabaseOrderId && !notification.is_read).map(notification => notification.id);
-      if (relatedIds.length) await markCustomerNotificationsRead(relatedIds);
       container.scrollTop = container.scrollHeight;
     } catch (error) {
       container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`;
@@ -2803,7 +2801,10 @@
     const notificationOrder = event.target.closest('[data-notification-order]');
     if (notificationOrder) {
       const order = currentAccount.orders.find(item => String(item.id) === String(notificationOrder.dataset.notificationOrder));
+      const notificationId = notificationOrder.dataset.notificationId;
+      if (notificationId) await markCustomerNotificationsRead([notificationId]);
       if (order) orderModal(order);
+      if (currentPage === 'notifications') renderCustomerPage('notifications');
       return;
     }
     const vendorDecision = event.target.closest('[data-vendor-decision]');

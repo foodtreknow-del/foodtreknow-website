@@ -293,6 +293,19 @@
           <article class="summary-card pickedup-summary"><span>Picked Up</span><strong id="pickedUpCount">0</strong></article>
           <article class="summary-card completed-summary"><span>Completed</span><strong id="completedCount">0</strong></article>
         </section>
+        <section class="panel pickup-order-lookup" aria-labelledby="pickupOrderLookupTitle">
+          <div>
+            <p class="eyebrow">Customer Pickup</p>
+            <h2 id="pickupOrderLookupTitle">Find an Order Number</h2>
+            <p class="muted">Enter the customer's order number to open the order immediately.</p>
+          </div>
+          <form id="pickupOrderLookupForm" class="pickup-order-lookup-form">
+            <label class="sr-only" for="pickupOrderLookup">Order number</label>
+            <input id="pickupOrderLookup" class="search-input" type="search" inputmode="numeric" autocomplete="off" placeholder="Enter order number" />
+            <button class="primary-button" type="submit">Find Order</button>
+          </form>
+          <p id="pickupOrderLookupMessage" class="form-message pickup-order-lookup-message" aria-live="polite"></p>
+        </section>
         <section class="dashboard-grid">
           <div class="panel workflow-panel panel-new"><div class="panel-heading"><div><p class="eyebrow">Incoming</p><h2>New Orders</h2></div><span id="newOrderCount" class="count-pill">0</span></div><div id="newOrders" class="order-list"></div></div>
           <div class="panel workflow-panel panel-preparing"><div class="panel-heading"><div><p class="eyebrow">Kitchen</p><h2>Received / Preparing</h2></div></div><div id="preparingOrders" class="order-list"></div></div>
@@ -590,7 +603,7 @@
 <script src="js/opportunity-marketplace.js?v=vendor-alert-details-1"></script>
 <script src="js/live-orders.js?v=communications-1"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=walk-up-cash-1"></script>
+<script src="js/app.js?v=pickup-lookup-alerts-1"></script>
 <script src="js/vendor-cash-sales.js?v=walk-up-cash-1"></script>
 <script src="js/vendor-reports.js?v=print-fix-1"></script>
 <script src="js/vendor-settings.js?v=vendor-data-2"></script>
@@ -598,7 +611,7 @@
 <script src="js/vendor-subscription.js?v=vendor-trial-1"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>
-<script src="js/customer-account.js?v=host-menu-close-1"></script>
+<script src="js/customer-account.js?v=single-notification-read-1"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>

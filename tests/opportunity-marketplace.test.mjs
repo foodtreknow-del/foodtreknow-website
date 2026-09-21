@@ -153,7 +153,7 @@ test('Hosts can inspect applicant customer-facing truck menus and ratings withou
   assert.match(styles, /host-truck-menu-grid/);
   assert.match(styles, /@media\(max-width:480px\).*host-truck-facts/);
   assert.match(html, /opportunity-marketplace\.css\?v=host-menu-close-1/);
-  assert.match(worker, /foodtreknow-shell-v58/);
+  assert.match(worker, /foodtreknow-shell-v59/);
 });
 
 test('Vendor alerts open their opportunity and active counts exclude completed events', async () => {
@@ -482,7 +482,7 @@ test('Host truck names open the existing customer storefront with a return path'
   const hostBookings = marketplace.slice(marketplace.indexOf('function hostBookingsMarkup'), marketplace.indexOf('function hostPaymentsMarkup'));
   assert.doesNotMatch(hostBookings, /data-booking-contact/);
   assert.match(hostBookings, /data-marketplace-message/);
-  assert.match(html, /js\/customer-account\.js\?v=host-menu-close-1/);
+  assert.match(html, /js\/customer-account\.js\?v=single-notification-read-1/);
 });
 
 test('Hosts can securely cancel an unresponsive approved food truck', async () => {
