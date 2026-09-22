@@ -188,7 +188,7 @@ test("production I'm Hungry entry always opens customer sign-in and account crea
   assert.match(html, /id="showCustomerSignInButton"[^>]*>Sign In<\/button>/);
   assert.match(html, /id="showCreateAccountButton"[^>]*>Create Account<\/button>/);
   assert.match(html, /id="guestCheckoutButton"/);
-  assert.match(html, /js\/customer-account\.js\?v=single-notification-read-1/);
+  assert.match(html, /js\/customer-account\.js\?v=event-logistics-1/);
 });
 
 test('mobile host account menu has a visible internal close control', () => {

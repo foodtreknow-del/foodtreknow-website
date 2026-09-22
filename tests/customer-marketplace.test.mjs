@@ -48,7 +48,7 @@ test('confirmed host events load with their attending food trucks', async () => 
 });
 
 test('customer marketplace loads before customer UI code', () => {
-  const marketplacePosition = html.indexOf('js/customer-marketplace.js?v=customer-events-1');
+  const marketplacePosition = html.indexOf('js/customer-marketplace.js?v=event-logistics-1');
   const customerPosition = html.indexOf('js/customer-account.js?v=');
   assert.ok(marketplacePosition >= 0 && marketplacePosition < customerPosition);
 });

@@ -1282,6 +1282,11 @@
       detail: `${trucks.length} confirmed truck${trucks.length === 1 ? '' : 's'}${expected ? ` · ${expected.toLocaleString()} expected` : ''}`,
       description: event.description || '',
       hostName: event.host_name || '',
+      siteMapImageUrl: event.site_map_image_url || '',
+      vendorZoneName: event.vendor_zone_name || '',
+      vendorEntrance: event.vendor_entrance || '',
+      customerMapEnabled: Boolean(event.customer_map_enabled),
+      eventLogisticsNotes: event.event_logistics_notes || '',
       startsAt: event.starts_at,
       endsAt: event.ends_at,
       live: true
@@ -2262,6 +2267,7 @@
         <button class="home-action-card trucks" data-home-target="explore" type="button"><span>📍</span><strong>Find Trucks</strong><small>Near your location</small><b>›</b></button>
         <button class="home-action-card events" data-home-target="events" type="button"><span>🎪</span><strong>Events</strong><small>Food & community</small><b>›</b></button>
         <button class="home-action-card favorites" data-customer-action="view-favorites" type="button"><span>❤️</span><strong>Favorites</strong><small>Your saved spots</small><b>›</b></button>
+        <button class="home-action-card host-request" data-customer-action="need-food-truck" type="button"><span>🚚</span><strong>Need a Food Truck?</strong><small>Post a location or event request</small><b>›</b></button>
       </section>
 
       <section class="home-section home-order-section">
@@ -2465,9 +2471,13 @@
       .map(truckId => TRUCKS.find(truck => truck.id === truckId))
       .filter(Boolean);
     const truckMarkup = attendingTrucks.length
-      ? attendingTrucks.map(truck => `<article class="customer-event-truck"><span>${truck.logo ? `<img src="${escapeHtml(truck.logo)}" alt="">` : truck.icon || '🚚'}</span><div><strong>${escapeHtml(truck.name)}</strong><small>${escapeHtml(truck.cuisine || 'Food Truck')} · ${escapeHtml(truck.wait || 'View menu')}</small></div><button class="primary-button" data-event-truck="${truck.id}" type="button">View Menu</button></article>`).join('')
+      ? attendingTrucks.map(truck => { const assigned = (eventItem.trucks || []).find(item => item.id === truck.id); return `<article class="customer-event-truck"><span>${truck.logo ? `<img src="${escapeHtml(truck.logo)}" alt="">` : truck.icon || '🚚'}</span><div><strong>${escapeHtml(truck.name)}</strong><small>${escapeHtml(truck.cuisine || 'Food Truck')} · ${escapeHtml(truck.wait || 'View menu')}</small>${assigned?.space_code ? `<b class="customer-event-space-code">Pickup at ${escapeHtml(assigned.space_code)}${assigned.space_label ? ` · ${escapeHtml(assigned.space_label)}` : ''}</b>` : ''}</div><button class="primary-button" data-event-truck="${truck.id}" type="button">View Menu</button></article>`; }).join('')
       : '<p class="muted">Attending truck details will be available soon.</p>';
-    openModal(`<div class="customer-event-modal"><p class="eyebrow">Confirmed Host Event</p><h2 id="customerModalTitle">${escapeHtml(eventItem.name)}</h2><div class="customer-event-summary"><div class="event-date"><span>${escapeHtml(eventItem.date.split(' ')[0] || 'TBD')}</span><strong>${escapeHtml(eventItem.date.split(' ')[1] || '')}</strong></div><div><strong>${escapeHtml(eventItem.location)}</strong><p>${escapeHtml(eventItem.time)} · ${escapeHtml(eventItem.detail)}</p>${eventItem.hostName ? `<small>Hosted by ${escapeHtml(eventItem.hostName)}</small>` : ''}</div></div>${eventItem.description ? `<p class="customer-event-description">${escapeHtml(eventItem.description)}</p>` : ''}<div class="customer-event-actions">${eventItem.address ? `<button class="secondary-button" data-event-directions="${eventItem.id}" type="button">Directions</button>` : ''}</div><h3>Food trucks attending</h3><div class="customer-event-trucks">${truckMarkup}</div></div>`);
+    let mapImage = '';
+    try { const parsed = new URL(eventItem.siteMapImageUrl); if (parsed.protocol === 'https:') mapImage = parsed.href; } catch { /* Optional Host map image. */ }
+    const mappedTrucks = (eventItem.trucks || []).filter(truck => Number.isFinite(Number(truck.map_x)) && Number.isFinite(Number(truck.map_y)));
+    const mapMarkup = eventItem.customerMapEnabled && mappedTrucks.length ? `<section class="customer-event-map-section"><div><h3>Event pickup map</h3><p>${escapeHtml(eventItem.vendorZoneName || 'Food vendor zone')}${eventItem.vendorEntrance ? ` · Enter at ${escapeHtml(eventItem.vendorEntrance)}` : ''}</p></div><div class="customer-event-layout-map${mapImage ? ' has-image' : ''}"${mapImage ? ` style="background-image:linear-gradient(rgba(10,22,36,.12),rgba(10,22,36,.12)),url('${escapeHtml(mapImage)}')"` : ''}>${mappedTrucks.map(truck => `<button class="customer-event-map-pin" style="left:${Number(truck.map_x)}%;top:${Number(truck.map_y)}%" data-event-truck="${escapeHtml(truck.id)}" type="button"><strong>${escapeHtml(truck.space_code || 'Truck')}</strong><small>${escapeHtml(truck.name || '')}</small></button>`).join('')}</div>${eventItem.eventLogisticsNotes ? `<p class="customer-event-map-notes">${escapeHtml(eventItem.eventLogisticsNotes)}</p>` : ''}</section>` : '';
+    openModal(`<div class="customer-event-modal"><p class="eyebrow">Confirmed Host Event</p><h2 id="customerModalTitle">${escapeHtml(eventItem.name)}</h2><div class="customer-event-summary"><div class="event-date"><span>${escapeHtml(eventItem.date.split(' ')[0] || 'TBD')}</span><strong>${escapeHtml(eventItem.date.split(' ')[1] || '')}</strong></div><div><strong>${escapeHtml(eventItem.location)}</strong><p>${escapeHtml(eventItem.time)} · ${escapeHtml(eventItem.detail)}</p>${eventItem.hostName ? `<small>Hosted by ${escapeHtml(eventItem.hostName)}</small>` : ''}</div></div>${eventItem.description ? `<p class="customer-event-description">${escapeHtml(eventItem.description)}</p>` : ''}<div class="customer-event-actions">${eventItem.address ? `<button class="secondary-button" data-event-directions="${eventItem.id}" type="button">Directions</button>` : ''}</div>${mapMarkup}<h3>Food trucks attending</h3><div class="customer-event-trucks">${truckMarkup}</div></div>`);
   }
 
   function addressModal(address = null) {
@@ -2832,7 +2842,8 @@
         'add-address': () => addressModal(),
         'add-payment': paymentModal,
         'change-password': passwordModal,
-        'delete-account': deleteAccountModal
+        'delete-account': deleteAccountModal,
+        'need-food-truck': () => openHostPortal(currentAccount)
       };
       actions[actionButton.dataset.customerAction]?.();
       return;

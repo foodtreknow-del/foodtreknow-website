@@ -250,7 +250,7 @@
     const [opportunities, applications, bookings, favorites, routes, notifications] = await Promise.all([
       rpc('list_marketplace_opportunities'),
       query(client.from('opportunity_applications').select('*, opportunities(title, starts_at, ends_at, location_id, host_locations(name, city, state)), trucks(name)').eq('vendor_profile_id', vendorId).order('applied_at', { ascending: false })),
-      query(client.from('opportunity_bookings').select('*, opportunities(title, opportunity_type, starts_at, ends_at, arrival_time, parking_instructions, setup_instructions, flat_vendor_fee, sales_percentage, refundable_deposit, host_locations(name, address_line1, city, state, postal_code, latitude, longitude)), trucks(name)').eq('vendor_profile_id', vendorId).order('confirmed_at', { ascending: false })),
+      query(client.from('opportunity_bookings').select('*, opportunities(title, opportunity_type, starts_at, ends_at, arrival_time, parking_instructions, setup_instructions, flat_vendor_fee, sales_percentage, refundable_deposit, site_map_image_url, vendor_zone_name, vendor_entrance, customer_map_enabled, event_logistics_notes, placement_strategy, host_locations(name, address_line1, city, state, postal_code, latitude, longitude)), trucks(name)').eq('vendor_profile_id', vendorId).order('confirmed_at', { ascending: false })),
       query(client.from('opportunity_favorites').select('opportunity_id').eq('vendor_profile_id', vendorId)),
       query(client.from('vendor_routes').select('*, vendor_route_stops(*, opportunity_bookings(*, opportunities(title, starts_at, ends_at, flat_vendor_fee, sales_percentage, expected_customers, trucks_requested, host_locations(name, city, state, latitude, longitude))))').eq('vendor_profile_id', vendorId)),
       query(client.from('marketplace_notifications').select('*').eq('profile_id', context.user.id).order('created_at', { ascending: false }).limit(50))
@@ -307,7 +307,7 @@
     }
     const [applications, bookings, reviews] = await Promise.all([
       query(client.from('opportunity_applications').select('*, trucks(id, name, cuisine), opportunities(title, starts_at, ends_at, archived_at, host_locations(name, city, state))').in('opportunity_id', ids).order('applied_at', { ascending: false })),
-      query(client.from('opportunity_bookings').select('*, trucks(id, name, cuisine), opportunities(title, starts_at, ends_at, archived_at, flat_vendor_fee, sales_percentage, refundable_deposit)').in('opportunity_id', ids).order('confirmed_at', { ascending: false })),
+      query(client.from('opportunity_bookings').select('*, trucks(id, name, cuisine), opportunities(title, starts_at, ends_at, archived_at, flat_vendor_fee, sales_percentage, refundable_deposit, site_map_image_url, vendor_zone_name, vendor_entrance, customer_map_enabled, event_logistics_notes, placement_strategy, host_locations(name, address_line1, city, state, postal_code, latitude, longitude))').in('opportunity_id', ids).order('confirmed_at', { ascending: false })),
       query(client.from('opportunity_reviews').select('*').in('opportunity_id', ids).order('created_at', { ascending: false }))
     ]);
     state.host.applications = applications;
@@ -444,6 +444,39 @@
     return `<span class="status-pill pending">Awaiting ${amount}</span>${percentageNote}`;
   }
 
+  function localDateTimeValue(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  }
+
+  function bookingHasMapPosition(booking) {
+    return Number.isFinite(Number(booking?.map_x)) && Number.isFinite(Number(booking?.map_y));
+  }
+
+  function eventSpaceMap(opportunity, bookings, options = {}) {
+    const mapImage = safeImageUrl(opportunity?.site_map_image_url);
+    const positioned = bookings.filter(bookingHasMapPosition);
+    const mapStyle = mapImage ? ` style="background-image:linear-gradient(rgba(10,22,36,.18),rgba(10,22,36,.18)),url('${escapeHtml(mapImage)}')"` : '';
+    const pins = positioned.map(booking => {
+      const selected = String(options.highlightBookingId || '') === String(booking.id) ? ' selected' : '';
+      const label = booking.space_code || booking.trucks?.name || 'Truck';
+      return `<button class="event-space-pin${selected}" style="left:${Number(booking.map_x)}%;top:${Number(booking.map_y)}%" data-event-space-booking="${escapeHtml(booking.id)}" type="button" aria-label="${escapeHtml(label)}: ${escapeHtml(booking.trucks?.name || 'Food truck')}"><strong>${escapeHtml(label)}</strong><small>${escapeHtml(booking.trucks?.name || '')}</small></button>`;
+    }).join('');
+    return `<div class="event-space-map${mapImage ? ' has-image' : ''}"${mapStyle}><div class="event-space-map-grid" aria-hidden="true"></div><span class="event-map-entrance">Entrance<br>${escapeHtml(opportunity?.vendor_entrance || 'Set entrance')}</span>${pins || '<p class="event-map-empty">Assign spaces manually or use Smart Placement to position approved trucks.</p>'}</div>`;
+  }
+
+  function vendorSpaceSummary(booking) {
+    const opportunity = booking.opportunities || {};
+    if (!booking.space_code && !booking.space_label && !opportunity.vendor_zone_name) return '<p class="event-space-pending">The Host has not assigned an exact vendor space yet.</p>';
+    const arrival = booking.arrival_window_start
+      ? `${dateTime(booking.arrival_window_start)}${booking.arrival_window_end ? `–${new Date(booking.arrival_window_end).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}`
+      : 'Not specified';
+    return `<section class="vendor-space-summary"><div><small>Assigned space</small><strong>${escapeHtml(booking.space_code || 'Assigned')}</strong><span>${escapeHtml(booking.space_label || opportunity.vendor_zone_name || '')}</span></div><dl><div><dt>Vendor zone</dt><dd>${escapeHtml(opportunity.vendor_zone_name || 'Not specified')}</dd></div><div><dt>Vendor entrance</dt><dd>${escapeHtml(opportunity.vendor_entrance || 'Not specified')}</dd></div><div><dt>Arrival window</dt><dd>${escapeHtml(arrival)}</dd></div><div><dt>Electricity</dt><dd>${escapeHtml(booking.electrical_access || 'None assigned')}</dd></div><div><dt>Water</dt><dd>${escapeHtml(booking.water_access || 'None assigned')}</dd></div><div><dt>Generator</dt><dd>${booking.generator_permitted ? 'Permitted' : 'Not permitted'}</dd></div></dl>${opportunity.event_logistics_notes ? `<p>${escapeHtml(opportunity.event_logistics_notes)}</p>` : ''}</section>`;
+  }
+
   function conversationItems(application, messages) {
     const initial = clean(application?.vendor_message) ? [{
       id: `application-${application.id}`,
@@ -476,7 +509,7 @@
     if (!state.vendor.bookings.length) return empty('📅', 'No confirmed bookings', 'Approved and instant bookings will appear here.');
     const active = state.vendor.bookings.filter(vendorBookingIsActive);
     const completed = state.vendor.bookings.filter(item => !vendorBookingIsActive(item));
-    const records = items => `<div class="marketplace-record-list">${items.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.vendor.reviews.some(review => review.booking_id === item.id); const unread = item.application_id ? unreadVendorMessages(item.application_id, 'bookings') : 0; const routeStop = routeStopForBooking(item.id); const displayStatus = vendorBookingStatus(item); return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${displayStatus.toLowerCase().replaceAll(' ', '_')}">${escapeHtml(displayStatus)}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Booking')}</h3>${vendorUnreadButton(item.application_id, 'bookings', unread)}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p><small>${escapeHtml(item.opportunities?.setup_instructions || 'Setup instructions will appear here.')}</small>${eventPaymentSummary(item, 'vendor')}</div><div class="stacked-actions"><button class="secondary-button" data-vendor-booking-opportunity="${escapeHtml(item.opportunity_id)}" type="button">View Opportunity</button>${item.application_id ? `<button class="primary-button" data-marketplace-message="${item.application_id}" data-message-section="bookings" type="button">${unread ? `Read ${unread} New Message${unread === 1 ? '' : 's'}` : 'Messages'}</button>` : ''}${vendorBookingIsActive(item) ? `<button class="secondary-button" data-booking-calendar="${item.id}" type="button">Add to Calendar</button><button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button>` : ''}<a class="secondary-button marketplace-link-button" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.opportunities?.host_locations?.address_line1, item.opportunities?.host_locations?.city, item.opportunities?.host_locations?.state, item.opportunities?.host_locations?.postal_code].filter(Boolean).join(', '))}">Navigate</a>${vendorBookingIsActive(item) && item.opportunities?.opportunity_type === 'recurring' ? `<button class="primary-button" ${routeStop ? `data-edit-route-booking="${item.id}"` : `data-route-booking="${item.id}"`} type="button">${routeStop ? 'Edit Weekly Route' : 'Add to Weekly Route'}</button>` : ''}${vendorBookingIsActive(item) ? `<button class="danger-button" data-cancel-vendor-booking="${item.id}" type="button">Cancel Booking</button>` : ''}${ended && !reviewed ? `<button class="secondary-button" data-review-booking="${item.id}" type="button">Leave Review</button>` : ''}</div></article>`; }).join('')}</div>`;
+    const records = items => `<div class="marketplace-record-list">${items.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.vendor.reviews.some(review => review.booking_id === item.id); const unread = item.application_id ? unreadVendorMessages(item.application_id, 'bookings') : 0; const routeStop = routeStopForBooking(item.id); const displayStatus = vendorBookingStatus(item); return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${displayStatus.toLowerCase().replaceAll(' ', '_')}">${escapeHtml(displayStatus)}</span><div class="marketplace-record-title"><h3>${escapeHtml(item.opportunities?.title || 'Booking')}</h3>${vendorUnreadButton(item.application_id, 'bookings', unread)}</div><p>${escapeHtml(item.opportunities?.host_locations?.name || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p><small>${escapeHtml(item.opportunities?.setup_instructions || 'Setup instructions will appear here.')}</small>${vendorSpaceSummary(item)}${eventPaymentSummary(item, 'vendor')}</div><div class="stacked-actions"><button class="secondary-button" data-vendor-booking-opportunity="${escapeHtml(item.opportunity_id)}" type="button">View Opportunity</button>${bookingHasMapPosition(item) ? `<button class="primary-button" data-vendor-space-map="${escapeHtml(item.id)}" type="button">View Assigned Space</button>` : ''}${item.application_id ? `<button class="primary-button" data-marketplace-message="${item.application_id}" data-message-section="bookings" type="button">${unread ? `Read ${unread} New Message${unread === 1 ? '' : 's'}` : 'Messages'}</button>` : ''}${vendorBookingIsActive(item) ? `<button class="secondary-button" data-booking-calendar="${item.id}" type="button">Add to Calendar</button><button class="secondary-button" data-booking-contact="${item.id}" type="button">Contact Details</button><button class="secondary-button" data-vendor-check-in="${item.id}" data-check-in-status="${item.check_in_status === 'not_arrived' ? 'arrived' : item.check_in_status === 'arrived' ? 'checked_in' : 'departed'}" type="button">${item.check_in_status === 'not_arrived' ? 'I Have Arrived' : item.check_in_status === 'arrived' ? 'Check In' : item.check_in_status === 'checked_in' ? 'Mark Departed' : 'Departed'}</button>` : ''}<a class="secondary-button marketplace-link-button" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.opportunities?.host_locations?.address_line1, item.opportunities?.host_locations?.city, item.opportunities?.host_locations?.state, item.opportunities?.host_locations?.postal_code].filter(Boolean).join(', '))}">Navigate to Event</a>${vendorBookingIsActive(item) && item.opportunities?.opportunity_type === 'recurring' ? `<button class="primary-button" ${routeStop ? `data-edit-route-booking="${item.id}"` : `data-route-booking="${item.id}"`} type="button">${routeStop ? 'Edit Weekly Route' : 'Add to Weekly Route'}</button>` : ''}${vendorBookingIsActive(item) ? `<button class="danger-button" data-cancel-vendor-booking="${item.id}" type="button">Cancel Booking</button>` : ''}${ended && !reviewed ? `<button class="secondary-button" data-review-booking="${item.id}" type="button">Leave Review</button>` : ''}</div></article>`; }).join('')}</div>`;
     return `<div class="marketplace-results-bar"><div><strong>${active.length} active booking${active.length === 1 ? '' : 's'}</strong><small>Finished and cancelled events do not count as active.</small></div></div><section class="marketplace-booking-section"><h3>Active Bookings</h3>${active.length ? records(active) : empty('✅', 'No active bookings', 'Completed and cancelled bookings are kept below for your records.')}</section>${completed.length ? `<section class="marketplace-booking-section marketplace-booking-history"><h3>Completed & Cancelled</h3>${records(completed)}</section>` : ''}`;
   }
 
@@ -584,7 +617,7 @@
       messages: unreadHostMessages(),
       archive: hostArchivedOpportunities().length + state.host.applications.filter(item => item.archived_at).length
     };
-    const tabs = [['dashboard', 'Dashboard'], ['opportunities', 'Posted Opportunities'], ['locations', 'Locations'], ['post', 'Post Opportunity'], ['applications', 'Applications'], ['bookings', 'Approved Food Trucks'], ['messages', 'Messages'], ['archive', 'Archive'], ['payments', 'Payments'], ['reviews', 'Reviews'], ['contact', 'Contact']];
+    const tabs = [['dashboard', 'Dashboard'], ['opportunities', 'Posted Opportunities'], ['locations', 'Locations'], ['post', 'Post Opportunity'], ['applications', 'Applications'], ['bookings', 'Approved Food Trucks'], ['logistics', 'Event Logistics'], ['messages', 'Messages'], ['archive', 'Archive'], ['payments', 'Payments'], ['reviews', 'Reviews'], ['contact', 'Contact']];
     return `<div class="marketplace-tabs host-tabs" role="tablist">${tabs.map(([key, label]) => `<button class="${state.host.tab === key ? 'active' : ''}" data-host-marketplace-tab="${key}" type="button">${label}${Object.hasOwn(counts, key) ? `<span class="marketplace-count-badge ${key === 'messages' && counts[key] ? 'unread' : ''}" aria-label="${counts[key]} ${escapeHtml(label.toLowerCase())}">${counts[key]}</span>` : ''}</button>`).join('')}</div>`;
   }
 
@@ -651,6 +684,20 @@
     return `<div class="marketplace-record-list">${bookings.map(item => { const ended = new Date(item.opportunities?.ends_at) < new Date(); const reviewed = state.host.reviews.some(review => review.booking_id === item.id && review.reviewer_role === 'host'); const unread = item.application_id ? unreadHostMessages(item.application_id) : 0; return `<article class="${unread ? 'marketplace-record-unread' : ''}"><div><span class="status-pill ${item.status}">${escapeHtml(item.status.replaceAll('_', ' '))}</span>${truckProfileLink(item.trucks)}<div class="marketplace-record-title"><p>${escapeHtml(item.opportunities?.title || '')} · ${escapeHtml(dateTime(item.opportunities?.starts_at))}</p>${unread ? `<span class="marketplace-unread-badge" aria-label="${unread} unread message${unread === 1 ? '' : 's'}">${unread}</span>` : ''}</div>${eventPaymentSummary(item, 'host')}</div><div class="stacked-actions">${item.status === 'confirmed' ? `<button class="danger-button" data-cancel-host-booking="${item.id}" type="button">Cancel Food Truck</button>` : ''}${item.application_id ? `<button class="secondary-button" data-marketplace-message="${item.application_id}" type="button">View Messages</button>` : ''}${ended && !reviewed ? `<button class="primary-button" data-review-booking="${item.id}" type="button">Rate Vendor</button>` : ''}</div></article>`; }).join('')}</div>`;
   }
 
+  function assignmentForm(booking, index) {
+    const defaultCode = booking.space_code || `FT-${String(index + 1).padStart(2, '0')}`;
+    return `<form class="vendor-space-assignment-form marketplace-form" data-booking-id="${escapeHtml(booking.id)}"><div class="vendor-assignment-heading">${truckProfileLink(booking.trucks)}<span class="status-pill ${escapeHtml(booking.check_in_status || 'not_arrived')}">${escapeHtml((booking.check_in_status || 'not arrived').replaceAll('_', ' '))}</span></div><div class="marketplace-form-grid"><label>Space code<input name="spaceCode" required maxlength="30" value="${escapeHtml(defaultCode)}" placeholder="FT-03"></label><label>Space label<input name="spaceLabel" maxlength="100" value="${escapeHtml(booking.space_label || '')}" placeholder="Taco row near seating"></label><label>Map position X (0–100)<input name="mapX" type="number" min="0" max="100" step="0.1" value="${escapeHtml(booking.map_x ?? '')}" required></label><label>Map position Y (0–100)<input name="mapY" type="number" min="0" max="100" step="0.1" value="${escapeHtml(booking.map_y ?? '')}" required></label><label>Arrival window begins<input name="arrivalStart" type="datetime-local" value="${escapeHtml(localDateTimeValue(booking.arrival_window_start))}"></label><label>Arrival window ends<input name="arrivalEnd" type="datetime-local" value="${escapeHtml(localDateTimeValue(booking.arrival_window_end))}"></label><label>Electrical access<input name="electricalAccess" maxlength="120" value="${escapeHtml(booking.electrical_access || '')}" placeholder="30A outlet at rear"></label><label>Water access<input name="waterAccess" maxlength="120" value="${escapeHtml(booking.water_access || '')}" placeholder="No connection"></label><label class="check-row"><input name="generatorPermitted" type="checkbox" ${booking.generator_permitted ? 'checked' : ''}> Generator permitted</label></div><button class="primary-button" type="submit">Save Vendor Space</button><p class="form-message"></p></form>`;
+  }
+
+  function hostLogisticsMarkup() {
+    const events = hostActiveOpportunities().filter(item => ['published', 'filled'].includes(item.status));
+    if (!events.length) return empty('🗺️', 'No active event logistics yet', 'Publish an opportunity, approve trucks, then build the on-site vendor map here.');
+    return `<div class="event-logistics-list">${events.map(opportunity => {
+      const bookings = state.host.bookings.filter(item => item.opportunity_id === opportunity.id && item.status === 'confirmed');
+      return `<section class="event-logistics-card"><div class="event-logistics-header"><div><p class="eyebrow">On-Site Operations</p><h2>${escapeHtml(opportunity.title)}</h2><p>${escapeHtml(dateTime(opportunity.starts_at))} · ${bookings.length} approved truck${bookings.length === 1 ? '' : 's'}</p></div><button class="secondary-button" data-smart-place-event="${escapeHtml(opportunity.id)}" type="button" ${bookings.length ? '' : 'disabled'}>✨ Smart Placement</button></div><form class="event-logistics-form marketplace-form" data-opportunity-id="${escapeHtml(opportunity.id)}"><div class="marketplace-form-grid"><label>Event site-map image URL<input name="siteMapImageUrl" type="url" value="${escapeHtml(opportunity.site_map_image_url || '')}" placeholder="https://…/event-map.jpg"></label><label>Vendor zone name<input name="vendorZoneName" value="${escapeHtml(opportunity.vendor_zone_name || '')}" placeholder="Food Vendor Zone A"></label><label>Vendor entrance<input name="vendorEntrance" value="${escapeHtml(opportunity.vendor_entrance || '')}" placeholder="Gate B"></label><label>Placement method<select name="placementStrategy"><option value="manual" ${opportunity.placement_strategy !== 'smart' ? 'selected' : ''}>Manual placement</option><option value="smart" ${opportunity.placement_strategy === 'smart' ? 'selected' : ''}>Smart placement</option></select></label><label class="full">Arrival and logistics notes<textarea name="eventLogisticsNotes" rows="3" placeholder="Fire lanes, service opening, staging, queue, and traffic instructions">${escapeHtml(opportunity.event_logistics_notes || '')}</textarea></label><label class="check-row full"><input name="customerMapEnabled" type="checkbox" ${opportunity.customer_map_enabled ? 'checked' : ''}> Show assigned truck spaces on the customer event map</label></div><button class="primary-button" type="submit">Save Event Map &amp; Instructions</button><p class="form-message"></p></form>${eventSpaceMap(opportunity, bookings)}<div class="vendor-space-assignments"><h3>Assign Approved Food Trucks</h3>${bookings.length ? bookings.map(assignmentForm).join('') : '<p class="muted">Approve food trucks to assign their precise event spaces.</p>'}</div></section>`;
+    }).join('')}</div>`;
+  }
+
   function hostPaymentsMarkup() {
     const status = state.host.stripe?.status || 'not_connected';
     const copy = {
@@ -697,6 +744,7 @@
     if (state.host.tab === 'post') return `<section><p class="eyebrow">New Opening</p><h2>Post a food truck opportunity</h2><p>All fees and requirements are shown to vendors before they request or book.</p>${opportunityForm()}</section>`;
     if (state.host.tab === 'applications') return hostApplicationsMarkup();
     if (state.host.tab === 'bookings') return hostBookingsMarkup();
+    if (state.host.tab === 'logistics') return hostLogisticsMarkup();
     if (state.host.tab === 'messages') return hostMessagesMarkup();
     if (state.host.tab === 'archive') return hostArchiveMarkup();
     if (state.host.tab === 'payments') return hostPaymentsMarkup();
@@ -1058,6 +1106,23 @@
       if (message === null) return;
       await act(apply, async () => { await rpc('apply_to_opportunity', { p_opportunity_id: item.id, p_truck_id: state.vendor.context.truck.id, p_vendor_message: message, p_action: item.booking_mode === 'instant' ? 'book' : 'request' }); await loadVendorData(); renderVendorRoot(); document.getElementById('customerAccountModal')?.classList.add('hidden'); document.getElementById('marketplaceModal')?.classList.add('hidden'); }, item.booking_mode === 'instant' ? 'Booking confirmed.' : 'Spot requested.'); return;
     }
+    const vendorSpaceMapButton = event.target.closest('[data-vendor-space-map]');
+    if (vendorSpaceMapButton) {
+      const booking = state.vendor.bookings.find(item => item.id === vendorSpaceMapButton.dataset.vendorSpaceMap);
+      if (!booking) return;
+      const eventBookings = state.vendor.bookings.filter(item => item.opportunity_id === booking.opportunity_id && item.status === 'confirmed');
+      openMarketplaceModal(`<p class="eyebrow">Navigate to Vendor Space</p><h2 id="customerModalTitle">${escapeHtml(booking.opportunities?.title || 'Event Map')}</h2>${vendorSpaceSummary(booking)}${eventSpaceMap(booking.opportunities, eventBookings, { highlightBookingId: booking.id })}<p class="estimate-disclaimer">Your assigned pin is highlighted. Use Navigate to Event for turn-by-turn directions to the venue, then follow the event entrance and space instructions shown above.</p>`);
+      return;
+    }
+    const vendorCheckIn = event.target.closest('[data-vendor-check-in]');
+    if (vendorCheckIn) {
+      if (vendorCheckIn.textContent.trim() === 'Departed') return;
+      await act(vendorCheckIn, async () => {
+        await rpc('vendor_event_check_in', { p_booking_id: vendorCheckIn.dataset.vendorCheckIn, p_status: vendorCheckIn.dataset.checkInStatus });
+        await loadVendorData(); renderVendorRoot();
+      }, 'Your event arrival status was sent to the Host.');
+      return;
+    }
     if (event.target.closest('[data-marketplace-location]')) {
       if (!navigator.geolocation) { toast('Location is not supported on this device.', true); return; }
       navigator.geolocation.getCurrentPosition(position => { state.vendor.location = { latitude: position.coords.latitude, longitude: position.coords.longitude }; renderVendorRoot(); toast('Distances updated using your current location.'); }, error => toast(error.message || 'Location permission was not granted.', true), { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }); return;
@@ -1118,6 +1183,28 @@
     }
     const decision = event.target.closest('[data-host-decision]');
     if (decision) { await act(decision, async () => { await rpc('decide_opportunity_application', { p_application_id: decision.dataset.applicationId, p_decision: decision.dataset.hostDecision, p_host_response: '' }); await loadHostData(); if (decision.dataset.hostDecision === 'approved') state.host.tab = 'bookings'; renderHostRoot(); }, decision.dataset.hostDecision === 'approved' ? 'Food truck approved and moved to Approved Food Trucks.' : `Application ${decision.dataset.hostDecision}.`); return; }
+    const smartPlace = event.target.closest('[data-smart-place-event]');
+    if (smartPlace) {
+      const opportunity = state.host.opportunities.find(item => item.id === smartPlace.dataset.smartPlaceEvent);
+      const bookings = state.host.bookings.filter(item => item.opportunity_id === opportunity?.id && item.status === 'confirmed');
+      if (!opportunity || !bookings.length) return;
+      if (!window.confirm(`Create evenly distributed starting positions for ${bookings.length} approved food truck${bookings.length === 1 ? '' : 's'}? You can fine-tune every position afterward.`)) return;
+      await act(smartPlace, async () => {
+        const columns = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(bookings.length))));
+        const rows = Math.ceil(bookings.length / columns);
+        for (let index = 0; index < bookings.length; index += 1) {
+          const column = index % columns;
+          const row = Math.floor(index / columns);
+          const mapX = columns === 1 ? 50 : 15 + column * (70 / (columns - 1));
+          const mapY = rows === 1 ? 50 : 20 + row * (60 / (rows - 1));
+          const booking = bookings[index];
+          await rpc('assign_vendor_space', { p_booking_id: booking.id, p_space_code: booking.space_code || `FT-${String(index + 1).padStart(2, '0')}`, p_space_label: booking.space_label || booking.trucks?.cuisine || '', p_map_x: Number(mapX.toFixed(1)), p_map_y: Number(mapY.toFixed(1)), p_arrival_window_start: booking.arrival_window_start, p_arrival_window_end: booking.arrival_window_end, p_electrical_access: booking.electrical_access || '', p_water_access: booking.water_access || '', p_generator_permitted: Boolean(booking.generator_permitted) });
+        }
+        await rpc('save_event_logistics', { p_opportunity_id: opportunity.id, p_site_map_image_url: opportunity.site_map_image_url || '', p_vendor_zone_name: opportunity.vendor_zone_name || '', p_vendor_entrance: opportunity.vendor_entrance || '', p_customer_map_enabled: Boolean(opportunity.customer_map_enabled), p_event_logistics_notes: opportunity.event_logistics_notes || '', p_placement_strategy: 'smart' });
+        await loadHostData(); state.host.tab = 'logistics'; renderHostRoot();
+      }, 'Smart Placement created. Review and fine-tune the assigned spaces.');
+      return;
+    }
     const conversationCard = event.target.closest('[data-vendor-conversation-card]');
     if (conversationCard && !event.target.closest('button, a, input, select, textarea, label')) {
       conversationCard.querySelector('[data-marketplace-message]')?.click();
@@ -1300,6 +1387,28 @@
   document.addEventListener('submit', async event => {
     if (event.target.id === 'marketplaceFilters') {
       event.preventDefault(); const form = new FormData(event.target); state.vendor.filters = Object.fromEntries(form.entries()); ['noFee', 'power', 'water'].forEach(key => state.vendor.filters[key] = event.target.elements[key].checked); renderVendorRoot(); return;
+    }
+    if (event.target.matches('.event-logistics-form')) {
+      event.preventDefault();
+      const form = event.target;
+      const button = form.querySelector('button[type="submit"]');
+      const data = new FormData(form);
+      await act(button, async () => {
+        await rpc('save_event_logistics', { p_opportunity_id: form.dataset.opportunityId, p_site_map_image_url: data.get('siteMapImageUrl'), p_vendor_zone_name: data.get('vendorZoneName'), p_vendor_entrance: data.get('vendorEntrance'), p_customer_map_enabled: form.elements.customerMapEnabled.checked, p_event_logistics_notes: data.get('eventLogisticsNotes'), p_placement_strategy: data.get('placementStrategy') });
+        await loadHostData(); state.host.tab = 'logistics'; renderHostRoot();
+      }, 'Event map and logistics instructions saved.');
+      return;
+    }
+    if (event.target.matches('.vendor-space-assignment-form')) {
+      event.preventDefault();
+      const form = event.target;
+      const button = form.querySelector('button[type="submit"]');
+      const data = new FormData(form);
+      await act(button, async () => {
+        await rpc('assign_vendor_space', { p_booking_id: form.dataset.bookingId, p_space_code: data.get('spaceCode'), p_space_label: data.get('spaceLabel'), p_map_x: Number(data.get('mapX')), p_map_y: Number(data.get('mapY')), p_arrival_window_start: data.get('arrivalStart') ? new Date(data.get('arrivalStart')).toISOString() : null, p_arrival_window_end: data.get('arrivalEnd') ? new Date(data.get('arrivalEnd')).toISOString() : null, p_electrical_access: data.get('electricalAccess'), p_water_access: data.get('waterAccess'), p_generator_permitted: form.elements.generatorPermitted.checked });
+        await loadHostData(); state.host.tab = 'logistics'; renderHostRoot();
+      }, 'Vendor space assigned and the food truck was notified.');
+      return;
     }
     if (event.target.id === 'hostProfileForm') {
       event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); const data = new FormData(event.target);
