@@ -76,7 +76,23 @@ test('vendor and Host UIs show payment, receipts, status, and full refunds', asy
   assert.match(webhook, /foodtreknow_event_fee/);
   assert.match(webhook, /finalize_event_fee_payment/);
   assert.match(webhook, /complete_event_fee_refund/);
-  assert.match(html, /opportunity-marketplace\.js\?v=event-logistics-1/);
+  assert.match(html, /opportunity-marketplace\.js\?v=vendor-event-alerts-test-fees-1/);
+});
+
+test('test builds provide a secure no-charge food-truck-to-host event payment', async () => {
+  const [browser, testFunction, migration] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('supabase/functions/test-event-fee-checkout-start/index.ts'),
+    read('supabase/migrations/202609270001_vendor_event_alerts_and_test_fees.sql')
+  ]);
+  assert.match(browser, /paymentMode === 'test'/);
+  assert.match(browser, /Place Test Payment - No Charge/);
+  assert.match(browser, /test-event-fee-checkout-start/);
+  assert.match(browser, /Test Paid - No Charge/);
+  assert.match(testFunction, /allowedTesterEmails\(\)\.has\(testerEmail\)/);
+  assert.match(testFunction, /vendor_profile_id.*vendor\.id/);
+  assert.doesNotMatch(testFunction, /api\.stripe\.com|STRIPE_SECRET_KEY/);
+  assert.match(migration, /is_test_payment boolean not null default false/);
 });
 
 test('event-fee payment sources contain no Stripe secrets or card data', async () => {

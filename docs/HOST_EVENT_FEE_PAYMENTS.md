@@ -17,16 +17,21 @@ Percentage-of-sales fees are displayed as a separate post-event settlement becau
 
 ## Production deployment order
 
-1. Apply `supabase/migrations/202609040001_host_event_fee_payments.sql` in the Supabase SQL Editor.
+1. Apply `supabase/migrations/202609040001_host_event_fee_payments.sql`, followed by `supabase/migrations/202609270001_vendor_event_alerts_and_test_fees.sql`, in the Supabase SQL Editor.
 2. Deploy these Edge Functions with JWT verification enabled:
    - `stripe-host-connect-start`
    - `stripe-host-connect-status`
    - `stripe-event-fee-checkout-start`
    - `stripe-event-fee-checkout-complete`
    - `stripe-event-fee-refund`
+   - `test-event-fee-checkout-start`
 3. Redeploy the updated `stripe-webhook` function with JWT verification disabled because Stripe signs webhook requests instead.
-4. Confirm each function has access to the existing `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `APP_BASE_URL`, and `APP_ORIGINS` secrets.
+4. Confirm each function has access to the existing `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `APP_BASE_URL`, and `APP_ORIGINS` secrets. The test-payment function also uses `GOOGLE_PLAY_TESTER_EMAILS` to restrict no-charge payments to approved testers.
 5. Confirm the existing Stripe webhook destination receives Connect events for connected accounts, including Checkout Session completion/expiration and refund updates.
 6. Deploy the web application, connect a test Host Stripe account, approve a paid opportunity, and complete one Stripe test payment and refund before accepting live event fees.
+
+## Mobile test builds
+
+Android closed-test and iOS TestFlight builds use `paymentMode: test`. In these builds, an approved food truck sees **Place Test Payment - No Charge** in Bookings. The test payment is restricted to configured tester accounts, is recorded as `is_test_payment`, notifies both the Host and food truck, and never contacts Stripe or transfers money. The Host sees the result under **Payments** and **Approved Food Trucks**. Production builds continue to use Stripe Connect without changes.
 
 Never place a Stripe secret key, Supabase service-role key, card number, or webhook signing secret in browser code or this repository.

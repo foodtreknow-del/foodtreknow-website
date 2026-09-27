@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=event-logistics-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=vendor-event-alerts-test-fees-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -666,4 +666,16 @@ test('profitability scoring explains estimates without guaranteeing revenue', as
   assert.ok(result.positive.some(reason => /No vendor fee/i.test(reason)));
   assert.match(source, /does not guarantee sales or income/i);
   assert.doesNotMatch(source, /api[_-]?key\s*[:=]\s*['"][^'"]+/i);
+});
+
+test('published host events alert every active food-truck owner and surface an unread alert count', async () => {
+  const [browser, migration] = await Promise.all([
+    read('js/opportunity-marketplace.js'),
+    read('supabase/migrations/202609270001_vendor_event_alerts_and_test_fees.sql')
+  ]);
+  assert.match(migration, /A Host is looking for food trucks/);
+  assert.match(migration, /from public\.vendor_profiles vendor/);
+  assert.match(migration, /truck\.is_active/);
+  assert.doesNotMatch(migration, /truck_live_locations/);
+  assert.match(browser, /state\.vendor\.notifications\.filter\(item => !item\.is_read\)\.length/);
 });
