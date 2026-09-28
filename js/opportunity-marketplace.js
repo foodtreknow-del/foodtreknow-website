@@ -1503,7 +1503,7 @@
           && clean(reloadedLocation.state) === expected.locationState
           && clean(reloadedLocation.postal_code) === expected.locationPostalCode;
         if (!verified) throw new Error('The edited event was not returned with the new information. Your edit page remains open so you can try again.');
-        state.host.editingOpportunityId = null; state.host.tab = 'opportunities'; renderHostRoot();
+        state.host.editingOpportunityId = null; state.host.tab = 'opportunities'; renderHostRoot(); window.FoodTrekNowKeepHostPortal?.();
       }, editing ? 'Changes saved. Connected food trucks were notified.' : 'Opportunity published successfully.'); return;
     }
     if (event.target.id === 'opportunityMessageForm') {

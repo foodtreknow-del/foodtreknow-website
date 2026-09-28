@@ -53,6 +53,7 @@
     selectedQuantities = new Map();
     form.reset();
     field('cashSaleCustomer').value = 'Walk-up Customer';
+    field('cashSaleMobile').value = '';
     field('cashSaleError').textContent = '';
     renderItems();
     renderTotals();
@@ -108,6 +109,7 @@
         truckId: activeVendorContext.truck.id,
         items,
         customerName: field('cashSaleCustomer').value,
+        customerMobile: field('cashSaleMobile').value,
         orderNotes: field('cashSaleNotes').value,
         cashReceived: values.received
       });

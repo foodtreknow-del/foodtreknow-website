@@ -11,10 +11,12 @@ const productionWorkflow = read('.github/workflows/android-release-build.yml');
 const migration = read('supabase/migrations/202609130001_google_play_test_orders.sql');
 const cancellationFunction = read('supabase/functions/stripe-order-cancel/index.ts');
 
-test('no-charge checkout is restricted to server-side allowlisted tester emails', () => {
-  assert.match(testFunction, /GOOGLE_PLAY_TESTER_EMAILS/);
+test('no-charge checkout accepts authenticated closed-test users with an abuse limit', () => {
   assert.match(testFunction, /auth\.getUser\(\)/);
-  assert.match(testFunction, /allowedTesterEmails\(\)\.has\(testerEmail\)/);
+  assert.match(testFunction, /is_test_order/);
+  assert.match(testFunction, /dailyTestOrders/);
+  assert.match(testFunction, />= 25/);
+  assert.doesNotMatch(testFunction, /GOOGLE_PLAY_TESTER_EMAILS/);
   assert.doesNotMatch(testFunction, /api\.stripe\.com|STRIPE_SECRET_KEY/);
 });
 

@@ -6,6 +6,10 @@
   let vendorChannel = null;
   let customerCommunicationChannel = null;
   let vendorCommunicationChannel = null;
+  let customerChannelKey = '';
+  let vendorChannelKey = '';
+  let customerOrderCallback = null;
+  let vendorOrderCallback = null;
   const orderSelection = '*, order_items(*), trucks(name,estimated_prep_minutes,pickup_instructions)';
 
   async function placeOrder(payload) {
@@ -39,6 +43,7 @@
         quantity: Number(item.quantity)
       })),
       p_customer_name: payload.customerName || 'Walk-up Customer',
+      p_customer_mobile: payload.customerMobile || null,
       p_order_notes: payload.orderNotes || null,
       p_cash_received: Number(payload.cashReceived)
     });
@@ -124,19 +129,25 @@
 
   function subscribeCustomer(customerId, callback) {
     if (!client || !customerId || typeof client.channel !== 'function') return null;
+    customerOrderCallback = callback;
+    if (customerChannel && customerChannelKey === customerId) return customerChannel;
     if (customerChannel) client.removeChannel(customerChannel);
+    customerChannelKey = customerId;
     customerChannel = client.channel(`customer-orders-${customerId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `customer_id=eq.${customerId}` }, callback)
-      .subscribe();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `customer_id=eq.${customerId}` }, payload => customerOrderCallback?.(payload))
+      .subscribe(status => { if (status === 'SUBSCRIBED') customerOrderCallback?.({ eventType: 'SYNC' }); });
     return customerChannel;
   }
 
   function subscribeVendor(truckId, callback) {
     if (!client || !truckId || typeof client.channel !== 'function') return null;
+    vendorOrderCallback = callback;
+    if (vendorChannel && vendorChannelKey === truckId) return vendorChannel;
     if (vendorChannel) client.removeChannel(vendorChannel);
+    vendorChannelKey = truckId;
     vendorChannel = client.channel(`vendor-orders-${truckId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `truck_id=eq.${truckId}` }, callback)
-      .subscribe();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `truck_id=eq.${truckId}` }, payload => vendorOrderCallback?.(payload))
+      .subscribe(status => { if (status === 'SUBSCRIBED') vendorOrderCallback?.({ eventType: 'SYNC' }); });
     return vendorChannel;
   }
 

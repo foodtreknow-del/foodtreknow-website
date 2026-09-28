@@ -1041,12 +1041,39 @@
   let customerMarketplaceSubscribed = false;
   let customerMarketplaceRefreshTimer = null;
   let hostStorefrontPreview = false;
+  let customerAudioContext = null;
+  let lastCustomerAlertAt = 0;
   const PORTAL_DESTINATION_KEY = 'ftnPortalDestinationV1';
   let authDestination = localStorage.getItem(PORTAL_DESTINATION_KEY) === 'host' ? 'host' : 'customer';
 
   function setPortalDestination(destination) {
     authDestination = destination === 'host' ? 'host' : 'customer';
     localStorage.setItem(PORTAL_DESTINATION_KEY, authDestination);
+  }
+
+  function customerNotificationTone(kind = 'update') {
+    const now = Date.now();
+    if (now - lastCustomerAlertAt < 1500) return;
+    lastCustomerAlertAt = now;
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) {
+        customerAudioContext ||= new AudioContext();
+        const start = customerAudioContext.currentTime;
+        const notes = kind === 'ready' ? [659, 784, 988] : [659, 784];
+        notes.forEach((frequency, index) => {
+          const oscillator = customerAudioContext.createOscillator();
+          const gain = customerAudioContext.createGain();
+          oscillator.frequency.value = frequency;
+          gain.gain.setValueAtTime(0.0001, start + index * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.16, start + index * 0.12 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + index * 0.12 + 0.18);
+          oscillator.connect(gain); gain.connect(customerAudioContext.destination);
+          oscillator.start(start + index * 0.12); oscillator.stop(start + index * 0.12 + 0.2);
+        });
+      }
+      navigator.vibrate?.(kind === 'ready' ? [160, 80, 240] : 160);
+    } catch { /* Notification banners still work when device audio is unavailable. */ }
   }
 
   function updateAccountAuthCopy() {
@@ -1159,6 +1186,16 @@
     window.FoodTrekNowOpportunityMarketplace?.mountHost();
     window.scrollTo(0, 0);
   }
+
+  function keepHostPortalVisible() {
+    setPortalDestination('host');
+    if (!currentAccount) return;
+    hostStorefrontPreview = false;
+    hidePrimaryViews();
+    hostPortalView.classList.remove('hidden-view');
+    document.body.classList.remove('login-page');
+  }
+  window.FoodTrekNowKeepHostPortal = keepHostPortalVisible;
 
   function openSelectedPortal(account) {
     if (authDestination === 'host') openHostPortal(account);
@@ -1456,7 +1493,12 @@
         renderCustomerShell();
         renderCustomerPage(currentPage);
       }
-      if (announce && remoteOrders.some(order => previousStatuses.has(order.supabaseOrderId) && previousStatuses.get(order.supabaseOrderId) !== order.status)) customerToast('Your order status was updated.');
+      const changedOrders = remoteOrders.filter(order => previousStatuses.has(order.supabaseOrderId) && previousStatuses.get(order.supabaseOrderId) !== order.status);
+      if (announce && changedOrders.length) {
+        const ready = changedOrders.some(order => order.status === 'ready');
+        customerNotificationTone(ready ? 'ready' : 'update');
+        customerToast(ready ? 'Your order is ready for pickup!' : 'Your order status was updated.');
+      }
       service.subscribeCustomer(currentAccount.id, () => hydrateLiveCustomerOrders(true));
     } catch (error) {
       customerToast(`Order updates could not be loaded: ${error.message}`);
@@ -1479,7 +1521,10 @@
       customerNotifications = await service.loadCustomerNotifications();
       updateCustomerNotificationBadge();
       if (currentPage === 'notifications' && !accountView.classList.contains('hidden-view')) renderCustomerPage('notifications');
-      if (announce && customerNotifications.some(notification => !previousIds.has(notification.id))) customerToast('You have a new order update.');
+      if (announce && customerNotifications.some(notification => !previousIds.has(notification.id))) {
+        customerNotificationTone(customerNotifications.some(notification => !previousIds.has(notification.id) && /ready/i.test(`${notification.title} ${notification.body}`)) ? 'ready' : 'update');
+        customerToast('You have a new order update.');
+      }
       if (!customerCommunicationsSubscribed) {
         service.subscribeCustomerCommunications(currentAccount.id, () => hydrateCustomerCommunications(true));
         customerCommunicationsSubscribed = true;

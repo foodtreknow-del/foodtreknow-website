@@ -27,11 +27,6 @@ function requiredEnvironment(name: string) {
   return value;
 }
 
-function allowedTesterEmails() {
-  return new Set(requiredEnvironment('GOOGLE_PLAY_TESTER_EMAILS')
-    .split(',').map(value => value.trim().toLowerCase()).filter(Boolean));
-}
-
 Deno.serve(async request => {
   if (request.method === 'OPTIONS') return json(request, { ok: true });
   if (request.method !== 'POST') return json(request, { error: 'Method not allowed.' }, 405);
@@ -48,13 +43,21 @@ Deno.serve(async request => {
     });
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData.user) throw new Error('Your tester session has expired. Please sign in again.');
-    const testerEmail = String(userData.user.email || '').trim().toLowerCase();
-    if (!testerEmail || !allowedTesterEmails().has(testerEmail)) {
-      throw new Error('This FoodTrekNow account is not approved for no-charge test orders.');
-    }
     serviceClient = createClient(url, requiredEnvironment('SUPABASE_SERVICE_ROLE_KEY'), {
       auth: { persistSession: false, autoRefreshToken: false }
     });
+    const dailyWindow = new Date();
+    dailyWindow.setUTCHours(0, 0, 0, 0);
+    const { count: dailyTestOrders, error: dailyLimitError } = await serviceClient
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('customer_id', userData.user.id)
+      .eq('is_test_order', true)
+      .gte('created_at', dailyWindow.toISOString());
+    if (dailyLimitError) throw dailyLimitError;
+    if (Number(dailyTestOrders || 0) >= 25) {
+      throw new Error('This tester account reached today’s no-charge order limit. Try again tomorrow.');
+    }
     const body = await request.json();
     const { data, error } = await userClient.rpc('create_payment_checkout_draft_with_credit', {
       p_truck_id: body.truckId,

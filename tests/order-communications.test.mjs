@@ -41,8 +41,19 @@ test('customer notification center includes unread state and live order messages
   assert.match(customerSource, /data-mark-notifications-read/);
   assert.match(customerSource, /customerOrderMessageForm/);
   assert.match(customerSource, /sendOrderMessage/);
+  assert.match(customerSource, /customerNotificationTone/);
+  assert.match(customerSource, /Your order is ready for pickup!/);
+  assert.match(customerSource, /navigator\.vibrate/);
   assert.match(css, /\.communication-notification\.unread/);
   assert.match(css, /\.message-bubble\.mine/);
+});
+
+test('order subscriptions remain attached and vendor order polling backs up realtime', () => {
+  const liveOrders = fs.readFileSync(new URL('../js/live-orders.js', import.meta.url), 'utf8');
+  assert.match(liveOrders, /vendorChannelKey === truckId/);
+  assert.match(liveOrders, /status === 'SUBSCRIBED'/);
+  assert.match(vendorSource, /vendorOrderRefreshTimer=setInterval/);
+  assert.match(vendorSource, /5000/);
 });
 
 test('vendor order details include unread badges and two-way messaging', () => {

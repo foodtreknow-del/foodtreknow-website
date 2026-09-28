@@ -679,3 +679,13 @@ test('published host events alert every active food-truck owner and surface an u
   assert.doesNotMatch(migration, /truck_live_locations/);
   assert.match(browser, /state\.vendor\.notifications\.filter\(item => !item\.is_read\)\.length/);
 });
+
+test('publishing an event keeps the signed-in user in the host portal', async () => {
+  const [customer, marketplace] = await Promise.all([
+    read('js/customer-account.js'),
+    read('js/opportunity-marketplace.js')
+  ]);
+  assert.match(customer, /FoodTrekNowKeepHostPortal/);
+  assert.match(customer, /setPortalDestination\('host'\)/);
+  assert.match(marketplace, /renderHostRoot\(\); window\.FoodTrekNowKeepHostPortal\?\.\(\)/);
+});
