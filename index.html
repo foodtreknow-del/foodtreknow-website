@@ -13,10 +13,10 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" type="image/png" href="assets/foodtreknow-logo.png" />
 <link rel="apple-touch-icon" href="assets/foodtreknow-logo.png" />
-<link rel="stylesheet" href="css/vendor.css?v=logo-home-1" />
+<link rel="stylesheet" href="css/vendor.css?v=mobile-form-fixes-1" />
 <link rel="stylesheet" href="css/vendor-reports.css?v=print-fix-1" />
 <link rel="stylesheet" href="css/vendor-settings.css?v=vendor-trial-1" />
-<link rel="stylesheet" href="css/opportunity-marketplace.css?v=event-logistics-1" />
+<link rel="stylesheet" href="css/opportunity-marketplace.css?v=host-date-labels-1" />
 <link rel="stylesheet" href="css/customer-account.css?v=event-logistics-1" />
 <link rel="stylesheet" href="css/customer-ordering.css" />
 <link rel="stylesheet" href="css/beta-banner.css" />
@@ -78,7 +78,7 @@
         <p class="muted">Access your orders, menu, sales reports, settings, and live truck controls.</p>
         <form id="loginForm" novalidate>
           <label for="email">Email Address</label><input id="email" type="email" autocomplete="username" placeholder="vendor@example.com" required />
-          <label for="password">Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+          <label for="password">Password</label><div class="password-input-wrap"><input id="password" type="password" autocomplete="current-password" placeholder="Enter your password" required /><button class="password-visibility-button" type="button" data-password-toggle="password" aria-pressed="false" aria-label="Show password">Show</button></div>
           <div class="form-row"><label class="check-row"><input id="remember" type="checkbox" /> Remember me</label><button id="vendorForgotPasswordButton" class="text-button" type="button">Forgot Password?</button></div>
           <p id="loginMessage" class="form-message" aria-live="polite"></p>
           <button class="vendor-login-button full" type="submit">Sign In</button>
@@ -134,7 +134,7 @@
         <label for="customerSignInIdentifier">Email Address</label>
         <input id="customerSignInIdentifier" class="customer-input" type="email" autocomplete="username" required placeholder="you@example.com" />
         <label for="customerSignInPassword">Password</label>
-        <input id="customerSignInPassword" class="customer-input" type="password" autocomplete="current-password" required placeholder="Enter your password" />
+        <div class="password-input-wrap"><input id="customerSignInPassword" class="customer-input" type="password" autocomplete="current-password" required placeholder="Enter your password" /><button class="password-visibility-button" type="button" data-password-toggle="customerSignInPassword" aria-pressed="false" aria-label="Show password">Show</button></div>
         <div class="customer-form-row">
           <label class="customer-check-row"><input id="customerRememberMe" type="checkbox" /> Remember me</label>
           <button id="showForgotPasswordButton" class="customer-text-link compact" type="button">Forgot Password?</button>
@@ -601,10 +601,10 @@
 <script src="js/vendor-auth.js?v=vendor-login-1"></script>
 <script src="js/vendor-data.js?v=vendor-data-2"></script>
 <script src="js/customer-marketplace.js?v=event-logistics-1"></script>
-<script src="js/opportunity-marketplace.js?v=vendor-event-alerts-test-fees-1"></script>
+<script src="js/opportunity-marketplace.js?v=host-date-labels-1"></script>
 <script src="js/live-orders.js?v=communications-1"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=pickup-lookup-alerts-1"></script>
+<script src="js/app.js?v=password-menu-scroll-1"></script>
 <script src="js/vendor-cash-sales.js?v=walk-up-cash-1"></script>
 <script src="js/vendor-reports.js?v=print-fix-1"></script>
 <script src="js/vendor-settings.js?v=vendor-data-2"></script>

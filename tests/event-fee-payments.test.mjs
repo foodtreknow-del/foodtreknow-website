@@ -76,7 +76,7 @@ test('vendor and Host UIs show payment, receipts, status, and full refunds', asy
   assert.match(webhook, /foodtreknow_event_fee/);
   assert.match(webhook, /finalize_event_fee_payment/);
   assert.match(webhook, /complete_event_fee_refund/);
-  assert.match(html, /opportunity-marketplace\.js\?v=vendor-event-alerts-test-fees-1/);
+  assert.match(html, /opportunity-marketplace\.js\?v=host-date-labels-1/);
 });
 
 test('test builds provide a secure no-charge food-truck-to-host event payment', async () => {
