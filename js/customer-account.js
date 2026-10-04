@@ -575,6 +575,9 @@
   const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
   const customerMoney = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value) || 0);
   const formatDate = value => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const formatOrderDateTime = value => value
+    ? new Date(value).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : '';
   const normalizePhone = value => String(value || '').replace(/\D/g, '');
   const orderNumberValue = value => {
     const match = String(value ?? '').match(/(\d+)$/);
@@ -1443,6 +1446,7 @@
         ? row.cancellation_resolution === 'vendor_credit' ? 'Cancelled · Food Truck Credit' : row.refund_status === 'succeeded' ? 'Cancelled · Refunded' : 'Cancelled · Refund Pending'
         : mappedStatus.statusLabel,
       createdAt: Date.parse(row.created_at),
+      receivedAt: Date.parse(row.received_at || row.created_at),
       estimatedReadyAt: Date.parse(row.created_at) + prepMinutes * 60 * 1000,
       pickupInstructions: row.trucks?.pickup_instructions || `Show Order #${row.order_number} at the truck window.`,
       items: (row.order_items || []).map(item => ({
@@ -2143,19 +2147,25 @@
   }
 
   function trackingStatusIndex(status) {
-    return ({ received: 0, new: 0, preparing: 1, ready: 2, pickedup: 3, completed: 3 })[status] ?? 0;
+    return ({ received: 1, new: 1, preparing: 2, ready: 3, pickedup: 4, completed: 4 })[status] ?? 0;
   }
 
   function renderLiveTracking() {
     const order = confirmationOrder();
     if (!order) return renderOrders();
     const activeIndex = trackingStatusIndex(order.status);
-    const statuses = [['Order Received', 'We sent your order to the truck.'], ['Preparing', 'The kitchen is making your meal.'], ['Ready for Pickup', 'Head to the pickup window.'], ['Picked Up', 'Enjoy your FoodTrekNow order!']];
+    const statuses = [
+      ['Order Placed', 'Your order was submitted.', order.createdAt],
+      ['Order Received', 'We sent your order to the truck.', order.receivedAt || order.createdAt],
+      ['Preparing', 'The kitchen is making your meal.', order.acceptedAt],
+      ['Ready for Pickup', 'Head to the pickup window.', order.readyAt],
+      ['Picked Up', 'Enjoy your FoodTrekNow order!', order.completedAt]
+    ];
     const readyTime = new Date(order.estimatedReadyAt || Date.now()).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     return `<div class="ordering-page tracking-page">
       <button class="ordering-back-button" data-home-page="overview" type="button">← Customer Home</button>
       <section class="tracking-hero"><div><p class="eyebrow">Live Order Tracking</p><h1>${escapeHtml(order.truckName)}</h1><p>${orderNumberLabel(order.id)}</p></div><div><small>Estimated Ready</small><strong>${readyTime}</strong></div><div><small>Order Number</small><strong>#${orderNumberValue(order.id)}</strong></div></section>
-      <section class="tracking-timeline">${statuses.map(([title, copy], index) => `<article class="${index < activeIndex ? 'complete' : index === activeIndex ? 'active' : ''}"><span>${index < activeIndex ? '✓' : index + 1}</span><div><small>${index === activeIndex ? 'Current Status' : index < activeIndex ? 'Complete' : 'Up Next'}</small><h2>${title}</h2><p>${copy}</p></div></article>`).join('')}</section>
+      <section class="tracking-timeline">${statuses.map(([title, copy, stamp], index) => `<article class="${index < activeIndex ? 'complete' : index === activeIndex ? 'active' : ''}"><span>${index < activeIndex ? '✓' : index + 1}</span><div><small>${index === activeIndex ? 'Current Status' : index < activeIndex ? 'Complete' : 'Up Next'}</small><h2>${title}</h2><p>${copy}</p>${stamp && index <= activeIndex ? `<time datetime="${new Date(stamp).toISOString()}">${formatOrderDateTime(stamp)}</time>` : ''}</div></article>`).join('')}</section>
       <section class="tracking-pickup-card"><span>📍</span><div><p class="eyebrow">Pickup Instructions</p><h2>Meet us at the truck window</h2><p>Bring <strong>${orderNumberLabel(order.id)}</strong>. We’ll call your order number when it is ready.</p></div><button class="secondary-button" data-ordering-action="directions" type="button">Directions</button></section>
       ${isOrderCancellable(order) ? `<section class="tracking-cancel-card"><div><p class="eyebrow">Changed your mind?</p><h2>Cancel before preparation starts</h2><p>Cancel now to receive a full refund of ${customerMoney(order.total)}.</p></div><button class="customer-small-button danger" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button></section>` : ''}
     </div>`;
@@ -2607,7 +2617,8 @@
         : `<div class="receipt-line refund-line"><strong>Stripe refund ${order.refundStatus === 'succeeded' ? '' : 'pending'}</strong><strong>−${customerMoney(order.refund?.amount || 0)}</strong></div>`
       : '';
     const communication = !receiptOnly && order.supabaseOrderId ? `<section class="order-conversation"><div class="communication-section-heading"><div><p class="eyebrow">Pickup Communication</p><h3>Message ${escapeHtml(order.truckName)}</h3></div><span>Live</span></div><div class="message-thread" data-customer-conversation><p class="muted">Loading messages…</p></div><form id="customerOrderMessageForm" data-order-message-id="${order.supabaseOrderId}"><label for="customerOrderMessage">Message</label><div class="message-composer"><textarea id="customerOrderMessage" class="customer-textarea" maxlength="500" rows="2" required placeholder="Ask a pickup question or share an update"></textarea><button class="primary-button" type="submit">Send</button></div><p class="form-message" data-message-error></p></form></section>` : '';
-    openModal(`<div class="customer-receipt"><div class="receipt-brand"><p class="eyebrow">${receiptOnly ? 'Receipt' : 'Order Details'}</p><h2 id="customerModalTitle">${escapeHtml(order.truckName)}</h2><p>${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><span class="status-pill ${['completed', 'cancelled'].includes(order.status) ? 'past' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span></div><h3>Items</h3>${itemLines}<div class="receipt-line"><span>Subtotal</span><strong>${customerMoney(order.subtotal)}</strong></div><div class="receipt-line"><span>Tax</span><strong>${customerMoney(order.tax)}</strong></div>${creditPaymentLine}<div class="receipt-line receipt-total"><strong>Total</strong><strong>${customerMoney(order.total)}</strong></div>${cancellationLine}<p class="muted">${order.status === 'cancelled' ? !order.supabaseOrderId ? 'Demo refund recorded on this device.' : order.cancellationResolution === 'vendor_credit' ? `Credit is available only at ${escapeHtml(order.truckName)}.` : 'Stripe refund timing depends on the customer’s bank.' : receiptOnly ? 'Paid · Customer receipt view' : 'Pickup status updates appear in your account and notification preferences.'}</p>${communication}${isOrderCancellable(order) ? `<button class="customer-small-button danger full" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button>` : ''}${order.status === 'completed' ? `<button class="primary-button full" data-reorder="${escapeHtml(order.id)}" type="button">Reorder This Meal</button>` : ''}</div>`);
+    const milestoneLines = `<h3>Order Timeline</h3><div class="receipt-line"><span>Order Placed</span><strong>${formatOrderDateTime(order.createdAt)}</strong></div><div class="receipt-line"><span>Order Received</span><strong>${formatOrderDateTime(order.receivedAt || order.createdAt)}</strong></div>${order.completedAt ? `<div class="receipt-line"><span>Picked Up</span><strong>${formatOrderDateTime(order.completedAt)}</strong></div>` : ''}`;
+    openModal(`<div class="customer-receipt"><div class="receipt-brand"><p class="eyebrow">${receiptOnly ? 'Receipt' : 'Order Details'}</p><h2 id="customerModalTitle">${escapeHtml(order.truckName)}</h2><p>${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><span class="status-pill ${['completed', 'cancelled'].includes(order.status) ? 'past' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span></div>${milestoneLines}<h3>Items</h3>${itemLines}<div class="receipt-line"><span>Subtotal</span><strong>${customerMoney(order.subtotal)}</strong></div><div class="receipt-line"><span>Tax</span><strong>${customerMoney(order.tax)}</strong></div>${creditPaymentLine}<div class="receipt-line receipt-total"><strong>Total</strong><strong>${customerMoney(order.total)}</strong></div>${cancellationLine}<p class="muted">${order.status === 'cancelled' ? !order.supabaseOrderId ? 'Demo refund recorded on this device.' : order.cancellationResolution === 'vendor_credit' ? `Credit is available only at ${escapeHtml(order.truckName)}.` : 'Stripe refund timing depends on the customer’s bank.' : receiptOnly ? 'Paid · Customer receipt view' : 'Pickup status updates appear in your account and notification preferences.'}</p>${communication}${isOrderCancellable(order) ? `<button class="customer-small-button danger full" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button>` : ''}${order.status === 'completed' ? `<button class="primary-button full" data-reorder="${escapeHtml(order.id)}" type="button">Reorder This Meal</button>` : ''}</div>`);
     if (communication) loadCustomerConversation(order);
   }
 
