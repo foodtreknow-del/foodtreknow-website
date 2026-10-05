@@ -86,7 +86,7 @@ function customerStatusForVendorStatus(status){
  if(status==='new')return {status:'received',statusLabel:'Order Received'};
  if(status==='preparing')return {status:'preparing',statusLabel:'Preparing'};
  if(status==='ready')return {status:'ready',statusLabel:'Ready for Pickup'};
- if(status==='pickedup'||status==='completed')return {status:'completed',statusLabel:'Picked Up'};
+ if(status==='pickedup'||status==='completed')return {status:'completed',statusLabel:'Order Picked Up'};
  if(status==='cancelled')return {status:'cancelled',statusLabel:'Cancelled · Full Refund'};
  return {status,statusLabel:statusLabel(status)};
 }
@@ -114,6 +114,8 @@ function syncVendorOrderStatusToCustomers(vendorOrder){
 }
 function refreshVendorOrders(){orders=loadOrders();if(!dashboardView.classList.contains('hidden-view'))render();}
 function money(v){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(v)}
+function todaySalesTotal(source,now=Date.now()){const start=new Date(now);start.setHours(0,0,0,0);const end=new Date(start);end.setDate(end.getDate()+1);return (Array.isArray(source)?source:[]).filter(o=>{const numeric=Number(o.createdAt),createdAt=Number.isFinite(numeric)?numeric:new Date(o.createdAt||0).getTime();return o.paid!==false&&!o.isTest&&o.status!=='cancelled'&&createdAt>=start.getTime()&&createdAt<end.getTime();}).reduce((sum,o)=>sum+(Number(o.total)||0),0);}
+window.FoodTrekNowVendorDashboard={...(window.FoodTrekNowVendorDashboard||{}),todaySalesTotal};
 function orderDateStamp(value){return value?new Date(value).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}):'';}
 function orderMilestoneMarkup(o){return `<h3>Order Timeline</h3><div class="detail-line"><span>Order Placed</span><strong>${orderDateStamp(o.createdAt)}</strong></div><div class="detail-line"><span>Order Received</span><strong>${orderDateStamp(o.receivedAt||o.createdAt)}</strong></div>${o.pickedUpAt?`<div class="detail-line"><span>Picked Up</span><strong>${orderDateStamp(o.pickedUpAt)}</strong></div>`:''}`;}
 function itemCount(o){return o.items.reduce((s,i)=>s+Number(i.qty||0),0)}
@@ -130,7 +132,7 @@ function render(){
  Object.entries(lists).forEach(([s,el])=>{const f=s==='completed'?orders.filter(o=>o.status==='ready'||o.status==='pickedup'):orders.filter(o=>o.status===s);el.innerHTML=f.length?f.map(card).join(''):'<div class="empty-state">No orders in this section.</div>';});
  const counts={new:orders.filter(o=>o.status==='new').length,preparing:orders.filter(o=>o.status==='preparing').length,ready:orders.filter(o=>o.status==='ready').length,pickedup:orders.filter(o=>o.status==='pickedup').length,completed:orders.filter(o=>o.status==='ready'||o.status==='pickedup').length};
  document.getElementById('newOrderCount').textContent=counts.new;document.getElementById('newSummaryCount').textContent=counts.new;document.getElementById('preparingCount').textContent=counts.preparing;document.getElementById('readyCount').textContent=counts.ready;document.getElementById('pickedUpCount').textContent=counts.pickedup;document.getElementById('completedCount').textContent=counts.completed;
- document.getElementById('salesTotal').textContent=money(orders.filter(o=>o.paid&&!o.isTest).reduce((s,o)=>s+o.total,0));
+ document.getElementById('salesTotal').textContent=money(todaySalesTotal(orders));
  document.getElementById('allCount').textContent=orders.length;document.getElementById('tabNewCount').textContent=counts.new;document.getElementById('tabPreparingCount').textContent=counts.preparing;document.getElementById('tabReadyCount').textContent=counts.ready;document.getElementById('tabPickedUpCount').textContent=counts.pickedup;document.getElementById('tabCompletedCount').textContent=counts.completed;
  renderOrdersPage();saveOrders();updateSoundButton();
 }
