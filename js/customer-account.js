@@ -1738,6 +1738,44 @@
     return { Appetizers: '🥨', Entrees: '🍽️', Sides: '🍟', Desserts: '🍰', Drinks: '🥤' }[category] || '🍽️';
   }
 
+  const STANDARD_CONDIMENT_OPTIONS = [
+    'Ketchup',
+    'Yellow Mustard',
+    'Brown Mustard',
+    'Mayonnaise',
+    'Pickles',
+    'Onions',
+    'Relish',
+    'Salt',
+    'Pepper'
+  ].map(name => ({
+    id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    name,
+    price: 0
+  }));
+
+  function withCustomerItemChoices(item) {
+    const itemName = String(item?.name || '').trim().toLowerCase();
+    const isHotDog = /\bhot\s*dogs?\b/.test(itemName);
+    const isCheeseburger = /\bcheese\s*burgers?\b/.test(itemName);
+    if (!isHotDog && !isCheeseburger) return item;
+    return {
+      ...item,
+      optionalChoices: [
+        {
+          id: 'condiments',
+          name: 'Choose Condiments',
+          options: STANDARD_CONDIMENT_OPTIONS
+        },
+        ...(isCheeseburger ? [{
+          id: 'cheese',
+          name: 'Cheese',
+          options: [{ id: 'no-cheese', name: 'No Cheese', price: 0 }]
+        }] : [])
+      ]
+    };
+  }
+
   function ensureMinimumDrinkOptions(menu, truckId) {
     const completeMenu = menu.map(item => ({ ...item, truckId }));
     const existingDrinkNames = new Set(
@@ -1771,7 +1809,7 @@
 
   function menuForTruck(truckId = selectedTruck().id) {
     const liveTruck = TRUCKS.find(truck => truck.id === truckId && truck.supabase);
-    if (liveTruck) return (TRUCK_MENUS[truckId] || []).map(item => ({ ...item }));
+    if (liveTruck) return (TRUCK_MENUS[truckId] || []).map(item => withCustomerItemChoices({ ...item }));
     const baseMenu = ORDERING_MENU_ITEMS.map(item => ({ ...item, truckId }));
     if (truckId !== TRUCK.id) {
       const cuisineMenu = [
@@ -1780,7 +1818,7 @@
         ...(TRUCK_ADDITIONAL_ENTREES[truckId] || []),
         ...(TRUCK_MENU_EXTRAS[truckId] || [])
       ];
-      return ensureMinimumDrinkOptions(cuisineMenu.length ? cuisineMenu : ORDERING_MENU_ITEMS, truckId);
+      return ensureMinimumDrinkOptions(cuisineMenu.length ? cuisineMenu : ORDERING_MENU_ITEMS, truckId).map(withCustomerItemChoices);
     }
 
     const vendorMenu = readVendorMenu();
@@ -1825,7 +1863,7 @@
           popular: false
         };
       });
-    return ensureMinimumDrinkOptions([...connectedMenu, ...vendorOnlyItems], truckId);
+    return ensureMinimumDrinkOptions([...connectedMenu, ...vendorOnlyItems], truckId).map(withCustomerItemChoices);
   }
 
   function truckExperienceDetails(truck) {
@@ -1899,8 +1937,12 @@
     return `<fieldset class="required-choice-group"><legend>${escapeHtml(choice.name)} <span>Required</span></legend>${choice.options.map((option, index) => `<label><input type="radio" name="required-choice-${choice.id}" value="${option.id}" data-required-choice data-choice-group="${escapeHtml(choice.name)}" data-choice-name="${escapeHtml(option.name)}" data-choice-price="${option.price}" ${index === 0 ? 'checked' : ''}><span><strong>${escapeHtml(option.name)}</strong><small>${option.price ? `+${customerMoney(option.price)}` : 'Included'}</small></span></label>`).join('')}</fieldset>`;
   }
 
+  function optionalChoiceMarkup(choice) {
+    return `<fieldset class="required-choice-group optional-choice-group"><legend>${escapeHtml(choice.name)} <small>Optional · Select all that apply</small></legend>${choice.options.map(option => `<label><input type="checkbox" name="optional-choice-${choice.id}" value="${option.id}" data-optional-choice data-choice-group="${escapeHtml(choice.name)}" data-choice-name="${escapeHtml(option.name)}" data-choice-price="${option.price}"><span><strong>${escapeHtml(option.name)}</strong><small>${option.price ? `+${customerMoney(option.price)}` : 'Included'}</small></span></label>`).join('')}</fieldset>`;
+  }
+
   function requiredOptionsModal(item) {
-    openModal(`<form id="requiredMenuItemForm" class="required-options-modal"><input id="requiredMenuItemId" type="hidden" value="${item.id}"><div class="required-options-heading"><span>${item.icon}</span><div><p class="eyebrow">One quick choice</p><h2 id="customerModalTitle">${escapeHtml(item.name)}</h2><p>${escapeHtml(item.description)}</p></div></div>${item.requiredChoices.map(requiredChoiceMarkup).join('')}<div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" type="submit">Add to Cart · ${customerMoney(item.price)}</button></div></form>`);
+    openModal(`<form id="requiredMenuItemForm" class="required-options-modal"><input id="requiredMenuItemId" type="hidden" value="${item.id}"><div class="required-options-heading"><span>${item.icon}</span><div><p class="eyebrow">Customize your item</p><h2 id="customerModalTitle">${escapeHtml(item.name)}</h2><p>${escapeHtml(item.description)}</p></div></div>${item.requiredChoices?.map(requiredChoiceMarkup).join('') || ''}${item.optionalChoices?.map(optionalChoiceMarkup).join('') || ''}<div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" type="submit">Add to Cart · ${customerMoney(item.price)}</button></div></form>`);
   }
 
   function menuItemDetailModal(item) {
@@ -1916,6 +1958,7 @@
         <strong class="menu-item-detail-price">${customerMoney(item.price)}</strong>
       </div>
       ${item.requiredChoices?.map(requiredChoiceMarkup).join('') || ''}
+      ${item.optionalChoices?.map(optionalChoiceMarkup).join('') || ''}
       <label class="item-instructions" for="menuItemDetailInstructions"><strong>Special Instructions</strong><textarea id="menuItemDetailInstructions" class="customer-textarea" rows="3" maxlength="240" placeholder="No onions · Extra sauce · Cut in half"></textarea></label>
       <div class="item-add-bar menu-item-detail-actions">
         <div class="ordering-quantity" aria-label="Quantity">
@@ -1930,6 +1973,14 @@
 
   function selectedRequiredChoices() {
     return [...modalContent.querySelectorAll('[data-required-choice]:checked')].map(input => ({
+      group: input.dataset.choiceGroup,
+      name: input.dataset.choiceName,
+      price: Number(input.dataset.choicePrice || 0)
+    }));
+  }
+
+  function selectedOptionalChoices() {
+    return [...modalContent.querySelectorAll('[data-optional-choice]:checked')].map(input => ({
       group: input.dataset.choiceGroup,
       name: input.dataset.choiceName,
       price: Number(input.dataset.choicePrice || 0)
@@ -1976,7 +2027,7 @@
     const matches = currentAccount.cart.truckId === selectedTruckId
       ? currentAccount.cart.items.filter(cartItem => cartItem.menuItemId === item.id)
       : [];
-    if (item.requiredChoices?.length && matches.length !== 1) {
+    if (item.optionalChoices?.length || (item.requiredChoices?.length && matches.length !== 1)) {
       requiredOptionsModal(item);
       return;
     }
@@ -3524,14 +3575,16 @@
     }
     if (event.target.id === 'requiredMenuItemForm') {
       const item = menuForTruck().find(menuItem => menuItem.id === document.getElementById('requiredMenuItemId').value);
-      const choices = selectedRequiredChoices();
-      if (item && choices.length === item.requiredChoices.length && addMenuItem(item, choices)) closeModal();
+      const requiredChoices = selectedRequiredChoices();
+      const choices = [...requiredChoices, ...selectedOptionalChoices()];
+      if (item && requiredChoices.length === (item.requiredChoices?.length || 0) && addMenuItem(item, choices)) closeModal();
       return;
     }
     if (event.target.id === 'customerMenuItemDetailForm') {
       const item = menuForTruck().find(menuItem => menuItem.id === document.getElementById('menuItemDetailId').value);
-      const choices = selectedRequiredChoices();
-      if (!item || choices.length !== (item.requiredChoices?.length || 0)) return;
+      const requiredChoices = selectedRequiredChoices();
+      const choices = [...requiredChoices, ...selectedOptionalChoices()];
+      if (!item || requiredChoices.length !== (item.requiredChoices?.length || 0)) return;
       const quantity = document.getElementById('menuItemDetailQuantity').value;
       const instructions = document.getElementById('menuItemDetailInstructions').value;
       if (addMenuItem(item, choices, instructions, quantity)) closeModal();
