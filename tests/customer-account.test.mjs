@@ -123,6 +123,8 @@ test('customer account UI includes every required area and has unique static IDs
     'Drive time', 'Hours today', 'Estimated pickup', 'Order Now', 'Directions',
     'Appetizers', 'Entrees', 'Sides', 'Desserts', 'Drinks',
     'Tap an item to add it', 'Add to Cart', 'Item Notes',
+    'Choose Condiments', 'Ketchup', 'Yellow Mustard', 'Brown Mustard',
+    'Mayonnaise', 'Pickles', 'Onions', 'Relish', 'Salt', 'Pepper', 'No Cheese',
     'No onions', 'Extra pickles', 'Well done', 'Cut in half',
     'Shopping Cart', 'Service Fee', 'Proceed to Checkout', 'Pickup Information',
     'Schedule Later', 'Promo Code', 'Place Order', 'Order Successfully Placed',
@@ -147,6 +149,8 @@ test('customer account UI includes every required area and has unique static IDs
   assert.match(source, /getElementById\('customerNotificationButton'\)\.addEventListener\('click', \(\) => renderCustomerPage\('notifications'\)\)/);
   assert.equal((html.match(/data-customer-cart-count/g) || []).length, 3);
   assert.match(source, /cancelOrder\(account, orderId\)/);
+  assert.match(source, /const isHotDog = \/\\bhot\\s\*dogs\?\\b\//);
+  assert.match(source, /const isCheeseburger = \/\\bcheese\\s\*burgers\?\\b\//);
 });
 
 test('every shared portal modal has a visible close button', () => {
@@ -572,17 +576,40 @@ test('customer ordering journey persists cart, places an order, and opens live t
   assert.match(element('customerAccountModalContent').innerHTML, /Special Instructions/);
   assert.match(element('customerAccountModalContent').innerHTML, /menuItemDetailQuantity/);
   assert.match(element('customerAccountModalContent').innerHTML, /Add to Cart/);
-  await emit(element('customerAccountModalContent'), 'click', { target: actionTarget({ closeCustomerModal: '' }) });
-  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
-  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
+  assert.match(element('customerAccountModalContent').innerHTML, /Choose Condiments/);
+  assert.match(element('customerAccountModalContent').innerHTML, /Yellow Mustard/);
+  assert.match(element('customerAccountModalContent').innerHTML, /Brown Mustard/);
+  assert.match(element('customerAccountModalContent').innerHTML, /No Cheese/);
+  const customerModal = element('customerAccountModalContent');
+  const defaultModalQuerySelectorAll = customerModal.querySelectorAll;
+  customerModal.querySelectorAll = selector => selector === '[data-optional-choice]:checked' ? [
+    { dataset: { choiceGroup: 'Choose Condiments', choiceName: 'Ketchup', choicePrice: '0' } },
+    { dataset: { choiceGroup: 'Choose Condiments', choiceName: 'Pickles', choicePrice: '0' } },
+    { dataset: { choiceGroup: 'Cheese', choiceName: 'No Cheese', choicePrice: '0' } }
+  ] : [];
+  element('menuItemDetailId').value = 'capital-smash-burger';
+  element('menuItemDetailQuantity').value = '2';
+  element('menuItemDetailInstructions').value = '';
+  await emit(customerModal, 'submit', { preventDefault() {}, target: { id: 'customerMenuItemDetailForm' } });
+  customerModal.querySelectorAll = defaultModalQuerySelectorAll;
 
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items.length, 1);
   assert.equal(account.cart.items[0].quantity, 2);
+  assert.deepEqual(account.cart.items[0].modifiers.map(modifier => modifier.name), ['Ketchup', 'Pickles', 'No Cheese']);
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ menuItemDecrease: 'capital-smash-burger' }) });
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items[0].quantity, 1);
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
+  assert.match(customerModal.innerHTML, /Customize your item/);
+  customerModal.querySelectorAll = selector => selector === '[data-optional-choice]:checked' ? [
+    { dataset: { choiceGroup: 'Choose Condiments', choiceName: 'Ketchup', choicePrice: '0' } },
+    { dataset: { choiceGroup: 'Choose Condiments', choiceName: 'Pickles', choicePrice: '0' } },
+    { dataset: { choiceGroup: 'Cheese', choiceName: 'No Cheese', choicePrice: '0' } }
+  ] : [];
+  element('requiredMenuItemId').value = 'capital-smash-burger';
+  await emit(customerModal, 'submit', { preventDefault() {}, target: { id: 'requiredMenuItemForm' } });
+  customerModal.querySelectorAll = defaultModalQuerySelectorAll;
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items[0].quantity, 2);
   assert.equal(account.cart.items.some(item => item.menuItemId === 'fresh-lemonade'), false);
@@ -696,6 +723,9 @@ test('vendor saved availability controls the signed-in customer menu and checkou
   localStorage.setItem('ftnVendorMenuV0400', JSON.stringify(vendorMenu));
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'open-menu' }) });
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'capital-smash-burger' }) });
+  assert.match(element('customerAccountModalContent').innerHTML, /Choose Condiments/);
+  element('requiredMenuItemId').value = 'capital-smash-burger';
+  await emit(element('customerAccountModalContent'), 'submit', { preventDefault() {}, target: { id: 'requiredMenuItemForm' } });
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items.length, 1);
 

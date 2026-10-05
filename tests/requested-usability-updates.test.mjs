@@ -40,3 +40,17 @@ test('BCS test menu migration is idempotent and references the supplied menu ima
   }
   assert.match(migration, /on conflict \(truck_id, client_key\) do update/);
 });
+
+test('customer and vendor order details show placed, received, and picked-up date stamps', async () => {
+  const [customer, vendor] = await Promise.all([read('js/customer-account.js'), read('js/app.js')]);
+  assert.match(customer, /receivedAt: Date\.parse\(row\.received_at \|\| row\.created_at\)/);
+  assert.match(customer, /\['Order Placed',[\s\S]*\['Order Received',[\s\S]*\['Picked Up'/);
+  assert.match(customer, /<span>Order Placed<\/span>/);
+  assert.match(customer, /<span>Order Received<\/span>/);
+  assert.match(customer, /<span>Picked Up<\/span>/);
+  assert.match(vendor, /receivedAt:Date\.parse\(row\.received_at\|\|row\.created_at\)/);
+  assert.match(vendor, /function orderMilestoneMarkup/);
+  assert.match(vendor, /<span>Order Placed<\/span>/);
+  assert.match(vendor, /<span>Order Received<\/span>/);
+  assert.match(vendor, /<span>Picked Up<\/span>/);
+});
