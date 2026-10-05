@@ -837,7 +837,7 @@ test('vendor actions update customer tracking and picked-up orders can be ordere
   account = JSON.parse(localStorage.getItem('ftnCustomerAccountsV1')).find(item => item.id === account.id);
   const pickedUpOrder = account.orders.find(order => order.id === connectedOrderId);
   assert.equal(pickedUpOrder.status, 'completed');
-  assert.equal(pickedUpOrder.statusLabel, 'Picked Up');
+  assert.equal(pickedUpOrder.statusLabel, 'Order Picked Up');
   assert.ok(pickedUpOrder.completedAt);
 
   await emit(element('openCustomerPortalButton'), 'click');
@@ -847,6 +847,18 @@ test('vendor actions update customer tracking and picked-up orders can be ordere
   assert.equal(account.orders.length, orderCount + 1);
   assert.equal(account.orders[0].statusLabel, 'Order Received');
   assert.ok(JSON.parse(localStorage.getItem('ftnVendorOrdersV0231')).some(order => String(order.id) === String(account.orders[0].id)));
+});
+
+test('vendor dashboard Today\'s Sales includes only today\'s paid non-test, non-cancelled orders', () => {
+  const now = new Date('2026-10-05T15:00:00-04:00').getTime();
+  const sales = window.FoodTrekNowVendorDashboard.todaySalesTotal([
+    { createdAt: now - 60_000, paid: true, total: 18.25, status: 'pickedup' },
+    { createdAt: now - 120_000, paid: true, total: 7.5, status: 'new', isWalkUp: true },
+    { createdAt: now - 180_000, paid: true, total: 99, status: 'cancelled' },
+    { createdAt: now - 240_000, paid: true, total: 10, status: 'pickedup', isTest: true },
+    { createdAt: now - 24 * 60 * 60 * 1000, paid: true, total: 50, status: 'pickedup' }
+  ], now);
+  assert.equal(sales, 25.75);
 });
 
 test('roadmap marks Phase 3.2 complete and names live communication as Phase 4', () => {
