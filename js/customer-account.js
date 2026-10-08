@@ -944,18 +944,11 @@
     ensureState(account) {
       if (!account.cart || !Array.isArray(account.cart.items)) account.cart = { truckId: null, items: [] };
       if (account.cart.truckId && account.cart.items.length) {
-        const drinkItemIds = new Set(
-          menuForTruck(account.cart.truckId)
-            .filter(item => item.category === 'Drinks')
-            .map(item => item.id)
-        );
         const migratedItems = new Map();
         account.cart.items.forEach(item => {
           const migratedItem = {
             ...item,
-            modifiers: drinkItemIds.has(item.menuItemId)
-              ? (item.modifiers || []).filter(modifier => !String(modifier.group || '').toLowerCase().includes('size'))
-              : (item.modifiers || [])
+            modifiers: item.modifiers || []
           };
           const signature = [
             migratedItem.menuItemId,
@@ -1729,13 +1722,15 @@
     const value = String(category || '').toLowerCase();
     if (value.includes('side')) return 'Sides';
     if (value.includes('drink') || value.includes('beverage')) return 'Drinks';
+    if (value.includes('dessert') && value.includes('snack')) return 'Dessert/Snacks';
+    if (value.includes('snack')) return 'Dessert/Snacks';
     if (value.includes('dessert') || value.includes('sweet')) return 'Desserts';
     if (value.includes('app') || value.includes('nacho')) return 'Appetizers';
     return 'Entrees';
   }
 
   function customerMenuIcon(category) {
-    return { Appetizers: '🥨', Entrees: '🍽️', Sides: '🍟', Desserts: '🍰', Drinks: '🥤' }[category] || '🍽️';
+    return { Appetizers: '🥨', Entrees: '🍽️', Sides: '🍟', Desserts: '🍰', 'Dessert/Snacks': '🍰', Drinks: '🥤' }[category] || '🍽️';
   }
 
   const STANDARD_CONDIMENT_OPTIONS = [
@@ -1754,8 +1749,33 @@
     price: 0
   }));
 
+  const STANDARD_DRINK_SIZE_OPTIONS = ['Small', 'Medium', 'Large'].map(name => ({
+    id: name.toLowerCase(),
+    name,
+    price: 0
+  }));
+
+  const STANDARD_DRINK_FLAVOR_OPTIONS = ['Vanilla', 'Strawberry', 'Chocolate'].map(name => ({
+    id: name.toLowerCase(),
+    name,
+    price: 0
+  }));
+
   function withCustomerItemChoices(item) {
     const itemName = String(item?.name || '').trim().toLowerCase();
+    if (/\bpound\s*cake\b/.test(itemName)) {
+      return { ...item, requiredChoices: [], optionalChoices: [], allowSpecialInstructions: false };
+    }
+    if (customerMenuCategory(item?.category) === 'Drinks') {
+      return {
+        ...item,
+        requiredChoices: [
+          { id: 'drink-size', name: 'Choose a Size', options: STANDARD_DRINK_SIZE_OPTIONS },
+          { id: 'drink-flavor', name: 'Choose a Flavor', options: STANDARD_DRINK_FLAVOR_OPTIONS }
+        ],
+        optionalChoices: []
+      };
+    }
     const isHotDog = /\bhot\s*dogs?\b/.test(itemName);
     const isCheeseburger = /\bcheese\s*burgers?\b/.test(itemName);
     if (!isHotDog && !isCheeseburger) return item;
@@ -1959,7 +1979,7 @@
       </div>
       ${item.requiredChoices?.map(requiredChoiceMarkup).join('') || ''}
       ${item.optionalChoices?.map(optionalChoiceMarkup).join('') || ''}
-      <label class="item-instructions" for="menuItemDetailInstructions"><strong>Special Instructions</strong><textarea id="menuItemDetailInstructions" class="customer-textarea" rows="3" maxlength="240" placeholder="No onions · Extra sauce · Cut in half"></textarea></label>
+      ${item.allowSpecialInstructions === false ? '' : '<label class="item-instructions" for="menuItemDetailInstructions"><strong>Special Instructions</strong><textarea id="menuItemDetailInstructions" class="customer-textarea" rows="3" maxlength="240" placeholder="No onions · Extra sauce · Cut in half"></textarea></label>'}
       <div class="item-add-bar menu-item-detail-actions">
         <div class="ordering-quantity" aria-label="Quantity">
           <button data-menu-detail-quantity="-1" type="button" aria-label="Decrease quantity">−</button>
@@ -2198,7 +2218,12 @@
   }
 
   function trackingStatusIndex(status) {
-    return ({ received: 1, new: 1, preparing: 2, ready: 3, pickedup: 4, completed: 4 })[status] ?? 0;
+    const normalizedStatus = String(status || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+    return ({ received: 1, new: 1, preparing: 2, ready: 3, pickedup: 4, picked_up: 4, completed: 4 })[normalizedStatus] ?? 0;
+  }
+
+  function isPickedUpTrackingStatus(status) {
+    return ['pickedup', 'picked_up', 'completed'].includes(String(status || '').trim().toLowerCase().replace(/[\s-]+/g, '_'));
   }
 
   function renderLiveTracking() {
@@ -2216,7 +2241,7 @@
     return `<div class="ordering-page tracking-page">
       <button class="ordering-back-button" data-home-page="overview" type="button">← Customer Home</button>
       <section class="tracking-hero"><div><p class="eyebrow">Live Order Tracking</p><h1>${escapeHtml(order.truckName)}</h1><p>${orderNumberLabel(order.id)}</p></div><div><small>Estimated Ready</small><strong>${readyTime}</strong></div><div><small>Order Number</small><strong>#${orderNumberValue(order.id)}</strong></div></section>
-      <section class="tracking-timeline">${statuses.map(([title, copy, stamp], index) => { const finalComplete = activeIndex === statuses.length - 1 && index === activeIndex; const complete = index < activeIndex || finalComplete; return `<article class="${complete ? 'complete' : index === activeIndex ? 'active' : ''}"><span>${complete ? '✓' : index + 1}</span><div><small>${complete ? 'Complete' : index === activeIndex ? 'Current Status' : 'Up Next'}</small><h2>${title}</h2><p>${copy}</p>${stamp && index <= activeIndex ? `<time datetime="${new Date(stamp).toISOString()}">${formatOrderDateTime(stamp)}</time>` : ''}</div></article>`; }).join('')}</section>
+      <section class="tracking-timeline">${statuses.map(([title, copy, stamp], index) => { const complete = index < activeIndex || (isPickedUpTrackingStatus(order.status) && index === activeIndex); return `<article class="${complete ? 'complete' : index === activeIndex ? 'active' : ''}"><span>${complete ? '✓' : index + 1}</span><div><small>${complete ? 'Complete' : index === activeIndex ? 'Current Status' : 'Up Next'}</small><h2>${title}</h2><p>${copy}</p>${stamp && index <= activeIndex ? `<time datetime="${new Date(stamp).toISOString()}">${formatOrderDateTime(stamp)}</time>` : ''}</div></article>`; }).join('')}</section>
       <section class="tracking-pickup-card"><span>📍</span><div><p class="eyebrow">Pickup Instructions</p><h2>Meet us at the truck window</h2><p>Bring <strong>${orderNumberLabel(order.id)}</strong>. We’ll call your order number when it is ready.</p></div><button class="secondary-button" data-ordering-action="directions" type="button">Directions</button></section>
       ${isOrderCancellable(order) ? `<section class="tracking-cancel-card"><div><p class="eyebrow">Changed your mind?</p><h2>Cancel before preparation starts</h2><p>Cancel now to receive a full refund of ${customerMoney(order.total)}.</p></div><button class="customer-small-button danger" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button></section>` : ''}
     </div>`;
@@ -3586,7 +3611,7 @@
       const choices = [...requiredChoices, ...selectedOptionalChoices()];
       if (!item || requiredChoices.length !== (item.requiredChoices?.length || 0)) return;
       const quantity = document.getElementById('menuItemDetailQuantity').value;
-      const instructions = document.getElementById('menuItemDetailInstructions').value;
+      const instructions = document.getElementById('menuItemDetailInstructions')?.value || '';
       if (addMenuItem(item, choices, instructions, quantity)) closeModal();
       return;
     }
