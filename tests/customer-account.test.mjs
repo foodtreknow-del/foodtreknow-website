@@ -192,7 +192,7 @@ test("production I'm Hungry entry always opens customer sign-in and account crea
   assert.match(html, /id="showCustomerSignInButton"[^>]*>Sign In<\/button>/);
   assert.match(html, /id="showCreateAccountButton"[^>]*>Create Account<\/button>/);
   assert.match(html, /id="guestCheckoutButton"/);
-  assert.match(html, /js\/customer-account\.js\?v=event-logistics-1/);
+  assert.match(html, /js\/customer-account\.js\?v=tracking-complete-3/);
 });
 
 test('mobile host account menu has a visible internal close control', () => {
@@ -619,18 +619,25 @@ test('customer ordering journey persists cart, places an order, and opens live t
 
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'fresh-lemonade' }) });
 
+  assert.match(customerModal.innerHTML, /Choose a Size/);
+  assert.match(customerModal.innerHTML, /Small/);
+  assert.match(customerModal.innerHTML, /Medium/);
+  assert.match(customerModal.innerHTML, /Large/);
+  assert.match(customerModal.innerHTML, /Choose a Flavor/);
+  assert.match(customerModal.innerHTML, /Vanilla/);
+  assert.match(customerModal.innerHTML, /Strawberry/);
+  assert.match(customerModal.innerHTML, /Chocolate/);
+  customerModal.querySelectorAll = selector => selector === '[data-required-choice]:checked' ? [
+    { dataset: { choiceGroup: 'Choose a Size', choiceName: 'Medium', choicePrice: '0' } },
+    { dataset: { choiceGroup: 'Choose a Flavor', choiceName: 'Vanilla', choicePrice: '0' } }
+  ] : [];
+  element('requiredMenuItemId').value = 'fresh-lemonade';
+  await emit(customerModal, 'submit', { preventDefault() {}, target: { id: 'requiredMenuItemForm' } });
+  customerModal.querySelectorAll = defaultModalQuerySelectorAll;
+
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items.length, 2);
-  assert.deepEqual(account.cart.items.find(item => item.menuItemId === 'fresh-lemonade').modifiers, []);
-  assert.doesNotMatch(element('customerAccountModalContent').innerHTML, /Choose a size/);
-
-  const storedAccounts = JSON.parse(localStorage.getItem('ftnCustomerAccountsV1'));
-  const storedAccount = storedAccounts.find(item => item.id === account.id);
-  storedAccount.cart.items.find(item => item.menuItemId === 'fresh-lemonade').modifiers = [{ group: 'Choose a size', name: 'Regular', price: 0 }];
-  localStorage.setItem('ftnCustomerAccountsV1', JSON.stringify(storedAccounts));
-  await emit(element('openCustomerPortalButton'), 'click');
-  account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
-  assert.deepEqual(account.cart.items.find(item => item.menuItemId === 'fresh-lemonade').modifiers, []);
+  assert.deepEqual(account.cart.items.find(item => item.menuItemId === 'fresh-lemonade').modifiers.map(modifier => modifier.name), ['Medium', 'Vanilla']);
   assert.ok(Number.isInteger(account.cart.orderNumber));
   const cartOrderNumber = account.cart.orderNumber;
 
@@ -849,7 +856,7 @@ test('vendor actions update customer tracking and picked-up orders can be ordere
   assert.ok(JSON.parse(localStorage.getItem('ftnVendorOrdersV0231')).some(order => String(order.id) === String(account.orders[0].id)));
 });
 
-test('vendor dashboard Today\'s Sales includes only paid non-test orders picked up today', () => {
+test('vendor dashboard Today\'s Sales includes every paid non-test sale placed today', () => {
   const now = new Date('2026-10-05T15:00:00-04:00').getTime();
   const sales = window.FoodTrekNowVendorDashboard.todaySalesTotal([
     { createdAt: now - 24 * 60 * 60 * 1000, pickedUpAt: now - 60_000, paid: true, total: 18.25, status: 'pickedup' },
@@ -860,7 +867,7 @@ test('vendor dashboard Today\'s Sales includes only paid non-test orders picked 
     { createdAt: now - 300_000, completedAt: now - 240_000, paid: true, total: 6.75, status: 'completed' },
     { createdAt: now - 360_000, pickedUpAt: now - 300_000, total: 12, status: 'pickedup' }
   ], now);
-  assert.equal(sales, 25);
+  assert.equal(sales, 14.25);
 });
 
 test('roadmap marks Phase 3.2 complete and names live communication as Phase 4', () => {
