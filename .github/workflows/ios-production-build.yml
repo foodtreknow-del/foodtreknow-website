@@ -1,6 +1,10 @@
 name: iOS Production Package
 
 on:
+  push:
+    branches: ["main"]
+    paths:
+      - "release-builds/production-1.0.14.md"
   workflow_dispatch:
     inputs:
       version_name:
@@ -21,6 +25,9 @@ jobs:
   build-signed-ipa:
     runs-on: macos-latest
     timeout-minutes: 45
+    env:
+      RELEASE_VERSION_NAME: ${{ inputs.version_name || '1.0.14' }}
+      RELEASE_BUILD_NUMBER: ${{ inputs.build_number || '12' }}
     steps:
       - name: Check out FoodTrekNow
         uses: actions/checkout@v6
@@ -57,9 +64,6 @@ jobs:
           pnpm exec cap sync ios
 
       - name: Validate production mode and release version
-        env:
-          RELEASE_VERSION_NAME: ${{ inputs.version_name }}
-          RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
           grep -q '"paymentMode":"live"' www/js/build-config.js
           grep -q '"distribution":"production"' www/js/build-config.js
@@ -132,9 +136,6 @@ jobs:
           PLIST
 
       - name: Archive FoodTrekNow production build
-        env:
-          RELEASE_VERSION_NAME: ${{ inputs.version_name }}
-          RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
           xcodebuild \
             -project ios/App/App.xcodeproj \
@@ -160,7 +161,7 @@ jobs:
       - name: Upload signed production package
         uses: actions/upload-artifact@v4
         with:
-          name: FoodTrekNow-iOS-${{ inputs.version_name }}-${{ inputs.build_number }}
+          name: FoodTrekNow-iOS-${{ env.RELEASE_VERSION_NAME }}-${{ env.RELEASE_BUILD_NUMBER }}
           path: ${{ runner.temp }}/Production/*.ipa
           if-no-files-found: error
           retention-days: 30
