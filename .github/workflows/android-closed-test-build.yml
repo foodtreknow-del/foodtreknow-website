@@ -1,6 +1,10 @@
 name: Android Closed Testing Bundle
 
 on:
+  push:
+    branches: ["main"]
+    paths:
+      - "release-builds/testing-1.0.14.md"
   workflow_dispatch:
     inputs:
       version_name:
@@ -53,8 +57,8 @@ jobs:
         run: npm run mobile:sync:android
       - name: Validate testing mode and release version
         env:
-          RELEASE_VERSION_NAME: ${{ inputs.version_name }}
-          RELEASE_VERSION_CODE: ${{ inputs.version_code }}
+          RELEASE_VERSION_NAME: ${{ inputs.version_name || '1.0.14' }}
+          RELEASE_VERSION_CODE: ${{ inputs.version_code || '16' }}
         run: |
           grep -q '"paymentMode":"test"' www/js/build-config.js
           [[ "$RELEASE_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { echo "Version code must be a positive integer."; exit 1; }
@@ -79,8 +83,8 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          RELEASE_VERSION_NAME: ${{ inputs.version_name }}
-          RELEASE_VERSION_CODE: ${{ inputs.version_code }}
+          RELEASE_VERSION_NAME: ${{ inputs.version_name || '1.0.14' }}
+          RELEASE_VERSION_CODE: ${{ inputs.version_code || '16' }}
         run: >-
           ./android/gradlew -p android bundleRelease --no-daemon
           -PFOODTREKNOW_VERSION_NAME="$RELEASE_VERSION_NAME"
@@ -92,7 +96,7 @@ jobs:
       - name: Upload signed no-charge testing bundle
         uses: actions/upload-artifact@v4
         with:
-          name: FoodTrekNow-Android-TEST-${{ inputs.version_name }}-${{ inputs.version_code }}
+          name: FoodTrekNow-Android-TEST-${{ inputs.version_name || '1.0.14' }}-${{ inputs.version_code || '16' }}
           path: |
             android/app/build/outputs/bundle/release/app-release.aab
             android/app/build/outputs/bundle/release/app-release.aab.sha256
