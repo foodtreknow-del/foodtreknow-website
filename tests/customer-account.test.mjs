@@ -556,6 +556,15 @@ test('twenty sample trucks open distinct cuisine-specific menus', async () => {
 });
 
 test('customer ordering journey persists cart, places an order, and opens live tracking', async () => {
+  const existingVendorMenu = JSON.parse(localStorage.getItem('ftnVendorMenuV0400') || '[]');
+  const orderingVendorMenu = existingVendorMenu.some(item => Number(item.id) === 1) ? existingVendorMenu : [
+    { id: 1, name: 'Classic Cheeseburger', category: 'Burgers', price: 11.5, description: 'Seasoned beef patty with classic toppings.', available: true, image: '' },
+    ...existingVendorMenu
+  ];
+  localStorage.setItem('ftnVendorMenuV0400', JSON.stringify([...orderingVendorMenu,
+    { id: 'test-milkshake', name: 'Milkshake', category: 'Drinks', price: 5.5, description: 'Classic hand-spun milkshake.', available: true, image: '' },
+    { id: 'test-coke', name: 'Coke', category: 'Drinks', price: 3.5, description: 'Ice-cold Coke.', available: true, image: '' }
+  ]));
   let account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   localStorage.setItem('ftnCustomerSessionV1', JSON.stringify({ accountId: account.id }));
   await emit(element('openCustomerPortalButton'), 'click');
@@ -617,7 +626,13 @@ test('customer ordering journey persists cart, places an order, and opens live t
   assert.match(element('customerAccountContent').innerHTML, /Capital City Eats Menu/);
   assert.doesNotMatch(element('customerAccountContent').innerHTML, /Shopping Cart/);
 
-  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'fresh-lemonade' }) });
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ openMenuItem: 'bottled-spring-water' }) });
+  assert.doesNotMatch(customerModal.innerHTML, /Choose a Size|Choose a Flavor|Vanilla|Strawberry|Chocolate/);
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ openMenuItem: 'vendor-test-coke' }) });
+  assert.doesNotMatch(customerModal.innerHTML, /Choose a Size|Choose a Flavor|Vanilla|Strawberry|Chocolate/);
+
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ addMenuItem: 'vendor-test-milkshake' }) });
 
   assert.match(customerModal.innerHTML, /Choose a Size/);
   assert.match(customerModal.innerHTML, /Small/);
@@ -631,13 +646,13 @@ test('customer ordering journey persists cart, places an order, and opens live t
     { dataset: { choiceGroup: 'Choose a Size', choiceName: 'Medium', choicePrice: '0' } },
     { dataset: { choiceGroup: 'Choose a Flavor', choiceName: 'Vanilla', choicePrice: '0' } }
   ] : [];
-  element('requiredMenuItemId').value = 'fresh-lemonade';
+  element('requiredMenuItemId').value = 'vendor-test-milkshake';
   await emit(customerModal, 'submit', { preventDefault() {}, target: { id: 'requiredMenuItemForm' } });
   customerModal.querySelectorAll = defaultModalQuerySelectorAll;
 
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items.length, 2);
-  assert.deepEqual(account.cart.items.find(item => item.menuItemId === 'fresh-lemonade').modifiers.map(modifier => modifier.name), ['Medium', 'Vanilla']);
+  assert.deepEqual(account.cart.items.find(item => item.menuItemId === 'vendor-test-milkshake').modifiers.map(modifier => modifier.name), ['Medium', 'Vanilla']);
   assert.ok(Number.isInteger(account.cart.orderNumber));
   const cartOrderNumber = account.cart.orderNumber;
 
@@ -651,11 +666,11 @@ test('customer ordering journey persists cart, places an order, and opens live t
   await emit(element('customerAccountModalContent'), 'submit', { preventDefault() {}, target: { id: 'customerCartItemNoteForm' } });
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items.find(item => item.id === burger.id).instructions, 'No onions, cut in half');
-  const lemonade = account.cart.items.find(item => item.menuItemId === 'fresh-lemonade');
-  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ cartQuantity: lemonade.id, quantityChange: '-1' }) });
+  const milkshake = account.cart.items.find(item => item.menuItemId === 'vendor-test-milkshake');
+  await emit(element('customerAccountContent'), 'click', { target: actionTarget({ cartQuantity: milkshake.id, quantityChange: '-1' }) });
   account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
   assert.equal(account.cart.items.length, 1);
-  assert.equal(account.cart.items.some(item => item.menuItemId === 'fresh-lemonade'), false);
+  assert.equal(account.cart.items.some(item => item.menuItemId === 'vendor-test-milkshake'), false);
 
   await emit(element('customerAccountContent'), 'click', { target: actionTarget({ orderingAction: 'checkout' }) });
   assert.match(element('customerAccountContent').innerHTML, /Review and Place Your Order/);
@@ -883,3 +898,4 @@ test('account deletion removes the local account', async () => {
   await window.FoodTrekNowCustomerAuth.deleteAccount(account.id);
   await assert.rejects(() => window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password'), /incorrect/);
 });
+

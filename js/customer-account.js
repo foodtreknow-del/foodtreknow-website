@@ -1766,7 +1766,7 @@
     if (/\bpound\s*cake\b/.test(itemName)) {
       return { ...item, requiredChoices: [], optionalChoices: [], allowSpecialInstructions: false };
     }
-    if (customerMenuCategory(item?.category) === 'Drinks') {
+    if (/\bmilk\s*shakes?\b/.test(itemName)) {
       return {
         ...item,
         requiredChoices: [
@@ -3822,3 +3822,4 @@
   if (window.FoodTrekNowSupabaseRecoveryPending) handlePasswordRecovery();
   else restoreCustomerSession();
 })();
+
