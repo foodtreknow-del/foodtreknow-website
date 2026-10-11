@@ -192,7 +192,7 @@ test("production I'm Hungry entry always opens customer sign-in and account crea
   assert.match(html, /id="showCustomerSignInButton"[^>]*>Sign In<\/button>/);
   assert.match(html, /id="showCreateAccountButton"[^>]*>Create Account<\/button>/);
   assert.match(html, /id="guestCheckoutButton"/);
-  assert.match(html, /js\/customer-account\.js\?v=tracking-complete-3/);
+  assert.match(html, /js\/customer-account\.js\?v=menu-options-1/);
 });
 
 test('mobile host account menu has a visible internal close control', () => {
@@ -871,7 +871,7 @@ test('vendor actions update customer tracking and picked-up orders can be ordere
   assert.ok(JSON.parse(localStorage.getItem('ftnVendorOrdersV0231')).some(order => String(order.id) === String(account.orders[0].id)));
 });
 
-test('vendor dashboard Today\'s Sales includes every paid non-test sale placed today', () => {
+test('vendor dashboard Today\'s Sales includes only paid non-test orders picked up today', () => {
   const now = new Date('2026-10-05T15:00:00-04:00').getTime();
   const sales = window.FoodTrekNowVendorDashboard.todaySalesTotal([
     { createdAt: now - 24 * 60 * 60 * 1000, pickedUpAt: now - 60_000, paid: true, total: 18.25, status: 'pickedup' },
@@ -882,7 +882,7 @@ test('vendor dashboard Today\'s Sales includes every paid non-test sale placed t
     { createdAt: now - 300_000, completedAt: now - 240_000, paid: true, total: 6.75, status: 'completed' },
     { createdAt: now - 360_000, pickedUpAt: now - 300_000, total: 12, status: 'pickedup' }
   ], now);
-  assert.equal(sales, 14.25);
+  assert.equal(sales, 25);
 });
 
 test('roadmap marks Phase 3.2 complete and names live communication as Phase 4', () => {

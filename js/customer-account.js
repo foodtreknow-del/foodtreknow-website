@@ -1399,6 +1399,8 @@
           available: !item.is_sold_out,
           icon: customerMenuIcon(item.category_name),
           image: item.photo_url || '',
+          sizeOptions: Array.isArray(item.size_options) ? item.size_options : [],
+          addOns: Array.isArray(item.add_ons) ? item.add_ons : [],
           featured: Boolean(item.is_featured),
           special: false,
           popular: Boolean(item.is_featured)
@@ -1749,38 +1751,69 @@
     price: 0
   }));
 
-  const STANDARD_DRINK_SIZE_OPTIONS = ['Small', 'Medium', 'Large'].map(name => ({
+  const MILKSHAKE_SIZE_OPTIONS = ['Small', 'Medium', 'Large'].map(name => ({
     id: name.toLowerCase(),
     name,
     price: 0
   }));
 
-  const STANDARD_DRINK_FLAVOR_OPTIONS = ['Vanilla', 'Strawberry', 'Chocolate'].map(name => ({
+  const MILKSHAKE_FLAVOR_OPTIONS = ['Vanilla', 'Strawberry', 'Chocolate'].map(name => ({
     id: name.toLowerCase(),
     name,
     price: 0
   }));
+
+  function configuredPriceOptions(options) {
+    return (Array.isArray(options) ? options : [])
+      .map(option => ({ name: String(option?.name || '').trim(), price: Number(option?.price || 0) }))
+      .filter(option => option.name && Number.isFinite(option.price) && option.price >= 0);
+  }
+
+  function configuredItemChoices(item) {
+    const basePrice = Number(item?.price || 0);
+    const sizes = configuredPriceOptions(item?.sizeOptions).map(option => ({
+      id: `size-${option.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      name: option.name,
+      price: Math.max(0, option.price - basePrice),
+      absolutePrice: option.price
+    }));
+    const addOns = configuredPriceOptions(item?.addOns).map(option => ({
+      id: `addon-${option.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      name: option.name,
+      price: option.price
+    }));
+    return {
+      sizeChoice: sizes.length ? { id: 'vendor-size', name: 'Choose a Size', options: sizes } : null,
+      addOnChoice: addOns.length ? { id: 'vendor-add-ons', name: 'Add-ons', options: addOns } : null
+    };
+  }
 
   function withCustomerItemChoices(item) {
     const itemName = String(item?.name || '').trim().toLowerCase();
+    const configured = configuredItemChoices(item);
     if (/\bpound\s*cake\b/.test(itemName)) {
-      return { ...item, requiredChoices: [], optionalChoices: [], allowSpecialInstructions: false };
+      return { ...item, requiredChoices: configured.sizeChoice ? [configured.sizeChoice] : [], optionalChoices: configured.addOnChoice ? [configured.addOnChoice] : [], allowSpecialInstructions: false };
     }
     if (/\bmilk\s*shakes?\b/.test(itemName)) {
       return {
         ...item,
         requiredChoices: [
-          { id: 'drink-size', name: 'Choose a Size', options: STANDARD_DRINK_SIZE_OPTIONS },
-          { id: 'drink-flavor', name: 'Choose a Flavor', options: STANDARD_DRINK_FLAVOR_OPTIONS }
+          configured.sizeChoice || { id: 'milkshake-size', name: 'Choose a Size', options: MILKSHAKE_SIZE_OPTIONS },
+          { id: 'milkshake-flavor', name: 'Choose a Flavor', options: MILKSHAKE_FLAVOR_OPTIONS }
         ],
-        optionalChoices: []
+        optionalChoices: configured.addOnChoice ? [configured.addOnChoice] : []
       };
     }
     const isHotDog = /\bhot\s*dogs?\b/.test(itemName);
     const isCheeseburger = /\bcheese\s*burgers?\b/.test(itemName);
-    if (!isHotDog && !isCheeseburger) return item;
+    if (!isHotDog && !isCheeseburger) return {
+      ...item,
+      requiredChoices: configured.sizeChoice ? [configured.sizeChoice] : (item.requiredChoices || []),
+      optionalChoices: configured.addOnChoice ? [...(item.optionalChoices || []), configured.addOnChoice] : (item.optionalChoices || [])
+    };
     return {
       ...item,
+      requiredChoices: configured.sizeChoice ? [configured.sizeChoice] : (item.requiredChoices || []),
       optionalChoices: [
         {
           id: 'condiments',
@@ -1791,7 +1824,8 @@
           id: 'cheese',
           name: 'Cheese',
           options: [{ id: 'no-cheese', name: 'No Cheese', price: 0 }]
-        }] : [])
+        }] : []),
+        ...(configured.addOnChoice ? [configured.addOnChoice] : [])
       ]
     };
   }
@@ -1858,7 +1892,9 @@
         available: vendorItem.available !== false,
         price: Number(vendorItem.price ?? item.price),
         description: vendorItem.description || item.description,
-        image: vendorItem.image || item.image || ''
+        image: vendorItem.image || item.image || '',
+        sizeOptions: vendorItem.sizeOptions || [],
+        addOns: vendorItem.addOns || []
       };
     });
     const mappedVendorIds = new Set(VENDOR_MENU_ITEM_MAP.keys());
@@ -1878,6 +1914,8 @@
           available: item.available !== false,
           icon: customerMenuIcon(category),
           image: item.image || '',
+          sizeOptions: item.sizeOptions || [],
+          addOns: item.addOns || [],
           featured: Boolean(item.featured),
           special: false,
           popular: false
@@ -1954,7 +1992,7 @@
   }
 
   function requiredChoiceMarkup(choice) {
-    return `<fieldset class="required-choice-group"><legend>${escapeHtml(choice.name)} <span>Required</span></legend>${choice.options.map((option, index) => `<label><input type="radio" name="required-choice-${choice.id}" value="${option.id}" data-required-choice data-choice-group="${escapeHtml(choice.name)}" data-choice-name="${escapeHtml(option.name)}" data-choice-price="${option.price}" ${index === 0 ? 'checked' : ''}><span><strong>${escapeHtml(option.name)}</strong><small>${option.price ? `+${customerMoney(option.price)}` : 'Included'}</small></span></label>`).join('')}</fieldset>`;
+    return `<fieldset class="required-choice-group"><legend>${escapeHtml(choice.name)} <span>Required</span></legend>${choice.options.map((option, index) => `<label><input type="radio" name="required-choice-${choice.id}" value="${option.id}" data-required-choice data-choice-group="${escapeHtml(choice.name)}" data-choice-name="${escapeHtml(option.name)}" data-choice-price="${option.price}" ${index === 0 ? 'checked' : ''}><span><strong>${escapeHtml(option.name)}</strong><small>${Number.isFinite(Number(option.absolutePrice)) ? customerMoney(option.absolutePrice) : option.price ? `+${customerMoney(option.price)}` : 'Included'}</small></span></label>`).join('')}</fieldset>`;
   }
 
   function optionalChoiceMarkup(choice) {

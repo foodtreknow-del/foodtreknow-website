@@ -564,6 +564,8 @@
           <div class="menu-form-field"><label for="menuItemCategory">Category</label><select id="menuItemCategory" class="menu-select" required></select></div>
           <div class="menu-form-field"><label for="menuItemPrice">Price</label><input id="menuItemPrice" type="number" required min="0" step="0.01" placeholder="0.00" /></div>
           <div class="menu-form-field full-row"><label for="menuItemDescription">Description</label><textarea id="menuItemDescription" rows="3" maxlength="240" placeholder="Describe the item for customers"></textarea></div>
+          <div class="menu-form-field full-row menu-option-editor"><div class="menu-option-editor-heading"><div><strong>Sizes and Pricing</strong><p class="field-help">Add sizes such as Small, Medium, and Large. Enter the full customer price for each size.</p></div><button id="addMenuSizeOption" class="secondary-button" type="button">+ Add Size</button></div><div id="menuSizeOptions" class="menu-option-rows"></div></div>
+          <div class="menu-form-field full-row menu-option-editor"><div class="menu-option-editor-heading"><div><strong>Item Add-ons</strong><p class="field-help">Create optional additions for this item, such as “Add Crab,” and enter the additional cost.</p></div><button id="addMenuAddOn" class="secondary-button" type="button">+ Add Add-on</button></div><div id="menuAddOns" class="menu-option-rows"></div></div>
           <div class="menu-form-field full-row"><label for="menuItemImage">Photo</label><input id="menuItemImage" type="file" accept="image/*" /><p class="field-help">Upload JPG, PNG, or WEBP. Approved vendor menus sync securely across devices.</p></div>
           <div class="menu-form-field"><label class="availability-check"><input id="menuItemAvailable" type="checkbox" checked /> Available for customers to order</label></div><div class="menu-form-field"><label class="availability-check"><input id="menuItemFeatured" type="checkbox" /> Featured item</label></div>
         </div>
@@ -599,12 +601,12 @@
 <script src="js/supabase-auth.js?v=host-auth-1"></script>
 <script src="js/vendor-onboarding.js?v=vendor-onboarding-1"></script>
 <script src="js/vendor-auth.js?v=vendor-login-1"></script>
-<script src="js/vendor-data.js?v=vendor-data-2"></script>
+<script src="js/vendor-data.js?v=menu-options-1"></script>
 <script src="js/customer-marketplace.js?v=event-logistics-1"></script>
 <script src="js/opportunity-marketplace.js?v=host-date-labels-1"></script>
 <script src="js/live-orders.js?v=communications-1"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=vendor-timestamps-2"></script>
+<script src="js/app.js?v=menu-options-1"></script>
 <script src="js/vendor-cash-sales.js?v=walk-up-cash-1"></script>
 <script src="js/vendor-reports.js?v=print-fix-1"></script>
 <script src="js/vendor-settings.js?v=vendor-data-2"></script>
@@ -612,7 +614,7 @@
 <script src="js/vendor-subscription.js?v=vendor-trial-1"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>
-<script src="js/customer-account.js?v=tracking-complete-3"></script>
+<script src="js/customer-account.js?v=menu-options-1"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>

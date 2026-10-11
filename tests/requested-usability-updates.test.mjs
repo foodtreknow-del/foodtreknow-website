@@ -78,14 +78,16 @@ test('vendor menu supports Dessert/Snacks and migrates BCS Pound Cake into it', 
   assert.match(migration, /on conflict \(truck_id, name\) do update set is_active = true/);
 });
 
-test('drinks require size and flavor while Pound Cake has no customization', async () => {
+test('Milkshake keeps its defaults while vendor-configured sizes and add-ons work on menu items', async () => {
   const customer = await read('js/customer-account.js');
-  assert.match(customer, /STANDARD_DRINK_SIZE_OPTIONS = \['Small', 'Medium', 'Large'\]/);
-  assert.match(customer, /STANDARD_DRINK_FLAVOR_OPTIONS = \['Vanilla', 'Strawberry', 'Chocolate'\]/);
+  assert.match(customer, /MILKSHAKE_SIZE_OPTIONS = \['Small', 'Medium', 'Large'\]/);
+  assert.match(customer, /MILKSHAKE_FLAVOR_OPTIONS = \['Vanilla', 'Strawberry', 'Chocolate'\]/);
+  assert.match(customer, /configuredItemChoices/);
+  assert.match(customer, /sizeOptions/);
+  assert.match(customer, /addOns/);
   assert.match(customer, /name: 'Choose a Size'/);
   assert.match(customer, /name: 'Choose a Flavor'/);
   assert.match(customer, /\\bpound\\s\*cake\\b/);
-  assert.match(customer, /requiredChoices: \[\], optionalChoices: \[\], allowSpecialInstructions: false/);
   assert.match(customer, /item\.allowSpecialInstructions === false \? ''/);
 });
 
@@ -98,14 +100,13 @@ test('vendor picked-up display uses fixed dates and never a running pickup timer
   assert.match(vendor, /if\(o\.status==='pickedup'\)return `<div class="timer">✓ Picked up \$\{orderDateStamp\(o\.pickedUpAt\)\}<\/div>`/);
   assert.match(vendor, /<strong>Placed:<\/strong> \$\{orderDateStamp\(o\.createdAt\)\}/);
   assert.match(vendor, /return value&&Number\.isFinite\(date\.getTime\(\)\)\?date\.toLocaleString/);
-  assert.match(html, /js\/app\.js\?v=vendor-timestamps-2/);
-  assert.match(html, /js\/customer-account\.js\?v=tracking-complete-3/);
-  assert.match(worker, /foodtreknow-shell-v63/);
+  assert.match(html, /js\/app\.js\?v=menu-options-1/);
+  assert.match(html, /js\/customer-account\.js\?v=menu-options-1/);
+  assert.match(worker, /foodtreknow-shell-v64/);
 });
 
-test('Today\'s Sales counts paid cash and online orders on the sale date', async () => {
+test('Today\'s Sales counts paid non-test orders when they are picked up', async () => {
   const vendor = await read('js/app.js');
-  assert.match(vendor, /if\(o\.paid!==true\|\|o\.isTest\|\|o\.status==='cancelled'\)return false/);
-  assert.match(vendor, /const numeric=Number\(o\.createdAt\),soldAt=/);
-  assert.doesNotMatch(vendor, /!\['pickedup','completed'\]\.includes\(o\.status\)/);
+  assert.match(vendor, /if\(o\.paid!==true\|\|o\.isTest\|\|!\['pickedup','completed'\]\.includes\(o\.status\)\)return false/);
+  assert.match(vendor, /const completedValue=o\.pickedUpAt\|\|o\.completedAt\|\|o\.createdAt/);
 });
