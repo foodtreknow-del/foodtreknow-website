@@ -2,6 +2,8 @@
 
 This marker triggers the signed no-charge Android closed-testing bundle (version code 17) and the signed iOS TestFlight upload (build 13) from the current main branch.
 
+Build retry: cache-version validation corrected on 2026-10-14.
+
 Included corrections:
 
 - Per-item editable condiment and option groups with optional prices and renameable labels.
