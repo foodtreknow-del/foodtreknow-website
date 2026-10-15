@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "release-builds/testing-1.0.14.md"
+      - "release-builds/testing-1.0.15.md"
   workflow_dispatch:
     inputs:
       version_name:
@@ -55,8 +55,8 @@ jobs:
 
       - name: Validate testing mode and release version
         env:
-          RELEASE_VERSION_NAME: ${{ inputs.version_name || '1.0.14' }}
-          RELEASE_BUILD_NUMBER: ${{ inputs.build_number || '12' }}
+          RELEASE_VERSION_NAME: ${{ inputs.version_name || '1.0.15' }}
+          RELEASE_BUILD_NUMBER: ${{ inputs.build_number || '13' }}
         run: |
           grep -q '"paymentMode":"test"' www/js/build-config.js
           [[ "$RELEASE_BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "Build number must be a positive integer."; exit 1; }
@@ -137,8 +137,8 @@ jobs:
 
       - name: Archive FoodTrekNow for TestFlight
         env:
-          RELEASE_VERSION_NAME: ${{ inputs.version_name || '1.0.14' }}
-          RELEASE_BUILD_NUMBER: ${{ inputs.build_number || '12' }}
+          RELEASE_VERSION_NAME: ${{ inputs.version_name || '1.0.15' }}
+          RELEASE_BUILD_NUMBER: ${{ inputs.build_number || '13' }}
         run: |
           xcodebuild \
             -project ios/App/App.xcodeproj \
@@ -174,7 +174,7 @@ jobs:
       - name: Upload signed TestFlight package
         uses: actions/upload-artifact@v4
         with:
-          name: FoodTrekNow-iOS-TEST-${{ inputs.version_name || '1.0.14' }}-${{ inputs.build_number || '12' }}
+          name: FoodTrekNow-iOS-TEST-${{ inputs.version_name || '1.0.15' }}-${{ inputs.build_number || '13' }}
           path: ${{ runner.temp }}/TestFlight/*.ipa
           if-no-files-found: error
           retention-days: 30
@@ -186,3 +186,4 @@ jobs:
           rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/${PROFILE_UUID:-missing}.mobileprovision"
           rm -rf "$HOME/.appstoreconnect/private_keys"
           rm -f "$RUNNER_TEMP/distribution.p12" "$RUNNER_TEMP/FoodTrekNow_App_Store.mobileprovision" "$RUNNER_TEMP/profile.plist"
+

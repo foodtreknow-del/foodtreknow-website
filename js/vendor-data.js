@@ -33,6 +33,7 @@
         image: item.photo_url || '',
         sizeOptions: Array.isArray(item.size_options) ? item.size_options : [],
         addOns: Array.isArray(item.add_ons) ? item.add_ons : [],
+        addOnLabel: item.add_on_label || 'Add-ons',
         order: Number(item.sort_order) || 0
       }))
     };
@@ -52,6 +53,7 @@
       is_sold_out: item.available === false,
       size_options: Array.isArray(item.sizeOptions) ? item.sizeOptions : [],
       add_ons: Array.isArray(item.addOns) ? item.addOns : [],
+      add_on_label: String(item.addOnLabel || 'Add-ons').trim() || 'Add-ons',
       sort_order: Number(item.order) || index + 1
     }));
     const { error } = await client.rpc('sync_vendor_menu', { p_truck_id: truckId, p_categories: categoryPayload, p_items: itemPayload });
@@ -122,3 +124,4 @@
     getLastError() { return lastError; }
   });
 })();
+

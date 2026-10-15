@@ -286,7 +286,7 @@
 
       <section id="dashboardPage" class="app-page">
         <section class="summary-grid">
-          <article class="summary-card sales-summary"><span>Today's Sales</span><strong id="salesTotal">$0.00</strong></article>
+          <article class="summary-card sales-summary"><span>Today's Sales</span><strong id="salesTotal">$0.00</strong><small id="salesTotalNote">Paid orders picked up today</small></article>
           <article class="summary-card new-summary"><span>New Orders</span><strong id="newSummaryCount">0</strong></article>
           <article class="summary-card preparing-summary"><span>Preparing</span><strong id="preparingCount">0</strong></article>
           <article class="summary-card ready-summary"><span>Ready</span><strong id="readyCount">0</strong></article>
@@ -325,6 +325,7 @@
               <button class="filter-tab" data-filter="ready">Ready <span id="tabReadyCount">0</span></button>
               <button class="filter-tab" data-filter="pickedup">Picked Up <span id="tabPickedUpCount">0</span></button>
               <button class="filter-tab" data-filter="completed">Completed <span id="tabCompletedCount">0</span></button>
+              <button class="filter-tab" data-filter="archived">Archive <span id="tabArchivedCount">0</span></button>
             </div>
             <input id="orderSearch" class="search-input" type="search" placeholder="Search order number or customer" />
           </div>
@@ -561,11 +562,11 @@
         <input id="menuItemId" type="hidden" />
         <div class="menu-form-grid">
           <div class="menu-form-field full-row"><label for="menuItemName">Item Name</label><input id="menuItemName" type="text" required maxlength="80" placeholder="Example: Classic Cheeseburger" /></div>
-          <div class="menu-form-field"><label for="menuItemCategory">Category</label><select id="menuItemCategory" class="menu-select" required></select></div>
+          <div class="menu-form-field"><label for="menuItemCategory">Category</label><div class="menu-category-picker"><select id="menuItemCategory" class="menu-select" required></select><button id="createCategoryFromItem" class="secondary-button" type="button">+ New</button></div></div>
           <div class="menu-form-field"><label for="menuItemPrice">Price</label><input id="menuItemPrice" type="number" required min="0" step="0.01" placeholder="0.00" /></div>
           <div class="menu-form-field full-row"><label for="menuItemDescription">Description</label><textarea id="menuItemDescription" rows="3" maxlength="240" placeholder="Describe the item for customers"></textarea></div>
           <div class="menu-form-field full-row menu-option-editor"><div class="menu-option-editor-heading"><div><strong>Sizes and Pricing</strong><p class="field-help">Add sizes such as Small, Medium, and Large. Enter the full customer price for each size.</p></div><button id="addMenuSizeOption" class="secondary-button" type="button">+ Add Size</button></div><div id="menuSizeOptions" class="menu-option-rows"></div></div>
-          <div class="menu-form-field full-row menu-option-editor"><div class="menu-option-editor-heading"><div><strong>Item Add-ons</strong><p class="field-help">Create optional additions for this item, such as “Add Crab,” and enter the additional cost.</p></div><button id="addMenuAddOn" class="secondary-button" type="button">+ Add Add-on</button></div><div id="menuAddOns" class="menu-option-rows"></div></div>
+          <div class="menu-form-field full-row menu-option-editor"><div class="menu-option-editor-heading"><div><strong>Condiments and Item Options</strong><p class="field-help">Rename this group for each item, then add or remove choices. A price of $0.00 makes a choice free.</p></div><button id="addMenuAddOn" class="secondary-button" type="button">+ Add Option</button></div><label for="menuAddOnLabel">Customer-facing label</label><input id="menuAddOnLabel" type="text" maxlength="60" placeholder="Example: Choose Condiments" /><div id="menuAddOns" class="menu-option-rows"></div></div>
           <div class="menu-form-field full-row"><label for="menuItemImage">Photo</label><input id="menuItemImage" type="file" accept="image/*" /><p class="field-help">Upload JPG, PNG, or WEBP. Approved vendor menus sync securely across devices.</p></div>
           <div class="menu-form-field"><label class="availability-check"><input id="menuItemAvailable" type="checkbox" checked /> Available for customers to order</label></div><div class="menu-form-field"><label class="availability-check"><input id="menuItemFeatured" type="checkbox" /> Featured item</label></div>
         </div>
@@ -618,3 +619,4 @@
 <script src="js/beta-banner.js"></script>
 </body>
 </html>
+

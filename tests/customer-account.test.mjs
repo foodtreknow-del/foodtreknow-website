@@ -871,7 +871,7 @@ test('vendor actions update customer tracking and picked-up orders can be ordere
   assert.ok(JSON.parse(localStorage.getItem('ftnVendorOrdersV0231')).some(order => String(order.id) === String(account.orders[0].id)));
 });
 
-test('vendor dashboard Today\'s Sales includes only paid non-test orders picked up today', () => {
+test('vendor dashboard Today\'s Sales includes paid live and no-charge test orders picked up today', () => {
   const now = new Date('2026-10-05T15:00:00-04:00').getTime();
   const sales = window.FoodTrekNowVendorDashboard.todaySalesTotal([
     { createdAt: now - 24 * 60 * 60 * 1000, pickedUpAt: now - 60_000, paid: true, total: 18.25, status: 'pickedup' },
@@ -882,7 +882,7 @@ test('vendor dashboard Today\'s Sales includes only paid non-test orders picked 
     { createdAt: now - 300_000, completedAt: now - 240_000, paid: true, total: 6.75, status: 'completed' },
     { createdAt: now - 360_000, pickedUpAt: now - 300_000, total: 12, status: 'pickedup' }
   ], now);
-  assert.equal(sales, 25);
+  assert.equal(sales, 35);
 });
 
 test('roadmap marks Phase 3.2 complete and names live communication as Phase 4', () => {
@@ -898,4 +898,5 @@ test('account deletion removes the local account', async () => {
   await window.FoodTrekNowCustomerAuth.deleteAccount(account.id);
   await assert.rejects(() => window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password'), /incorrect/);
 });
+
 

@@ -1401,6 +1401,7 @@
           image: item.photo_url || '',
           sizeOptions: Array.isArray(item.size_options) ? item.size_options : [],
           addOns: Array.isArray(item.add_ons) ? item.add_ons : [],
+          addOnLabel: item.add_on_label || 'Add-ons',
           featured: Boolean(item.is_featured),
           special: false,
           popular: Boolean(item.is_featured)
@@ -1784,7 +1785,7 @@
     }));
     return {
       sizeChoice: sizes.length ? { id: 'vendor-size', name: 'Choose a Size', options: sizes } : null,
-      addOnChoice: addOns.length ? { id: 'vendor-add-ons', name: 'Add-ons', options: addOns } : null
+      addOnChoice: addOns.length ? { id: 'vendor-add-ons', name: String(item?.addOnLabel || 'Add-ons').trim() || 'Add-ons', options: addOns } : null
     };
   }
 
@@ -1811,21 +1812,16 @@
       requiredChoices: configured.sizeChoice ? [configured.sizeChoice] : (item.requiredChoices || []),
       optionalChoices: configured.addOnChoice ? [...(item.optionalChoices || []), configured.addOnChoice] : (item.optionalChoices || [])
     };
+    const fallbackOptions = [...STANDARD_CONDIMENT_OPTIONS,...(isCheeseburger?[{ id: 'no-cheese', name: 'No Cheese', price: 0 }]:[])];
     return {
       ...item,
       requiredChoices: configured.sizeChoice ? [configured.sizeChoice] : (item.requiredChoices || []),
       optionalChoices: [
-        {
+        configured.addOnChoice || {
           id: 'condiments',
           name: 'Choose Condiments',
-          options: STANDARD_CONDIMENT_OPTIONS
-        },
-        ...(isCheeseburger ? [{
-          id: 'cheese',
-          name: 'Cheese',
-          options: [{ id: 'no-cheese', name: 'No Cheese', price: 0 }]
-        }] : []),
-        ...(configured.addOnChoice ? [configured.addOnChoice] : [])
+          options: fallbackOptions
+        }
       ]
     };
   }
@@ -1894,7 +1890,8 @@
         description: vendorItem.description || item.description,
         image: vendorItem.image || item.image || '',
         sizeOptions: vendorItem.sizeOptions || [],
-        addOns: vendorItem.addOns || []
+        addOns: vendorItem.addOns || [],
+        addOnLabel: vendorItem.addOnLabel || 'Add-ons'
       };
     });
     const mappedVendorIds = new Set(VENDOR_MENU_ITEM_MAP.keys());
@@ -1916,6 +1913,7 @@
           image: item.image || '',
           sizeOptions: item.sizeOptions || [],
           addOns: item.addOns || [],
+          addOnLabel: item.addOnLabel || 'Add-ons',
           featured: Boolean(item.featured),
           special: false,
           popular: false
@@ -3860,4 +3858,5 @@
   if (window.FoodTrekNowSupabaseRecoveryPending) handlePasswordRecovery();
   else restoreCustomerSession();
 })();
+
 

@@ -74,6 +74,13 @@
     return data;
   }
 
+  async function setVendorOrderArchived(orderId, archived) {
+    if (!client || !orderId) throw new Error('The secure order could not be identified.');
+    const { data, error } = await client.rpc('set_vendor_order_archived', { p_order_id: orderId, p_archived: Boolean(archived) });
+    if (error) throw error;
+    return data;
+  }
+
   async function cancelCustomerOrder(orderId) {
     if (!client || !orderId) throw new Error('The secure order could not be identified.');
     const { data, error } = await client.rpc('cancel_my_order', { p_order_id: orderId });
@@ -177,6 +184,7 @@
     loadCustomerOrders,
     loadVendorOrders,
     updateVendorStatus,
+    setVendorOrderArchived,
     cancelCustomerOrder,
     loadOrderConversation,
     loadVendorMessages,
@@ -190,3 +198,4 @@
     subscribeVendorCommunications
   });
 })();
+
