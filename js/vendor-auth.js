@@ -8,6 +8,7 @@
     const message = clean(error?.message).toLowerCase();
     if (message.includes('invalid login credentials')) return new Error('Vendor email or password is incorrect.');
     if (message.includes('email not confirmed')) return new Error('Verify your email before signing in.');
+    if (message.includes('cannot coerce') || error?.code === 'PGRST116') return new Error('Your vendor account setup is incomplete. Ask the FoodTrekNow administrator to verify your approval.');
     return new Error(clean(error?.message) || 'Vendor sign-in is temporarily unavailable.');
   };
 
