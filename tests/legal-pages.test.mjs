@@ -57,8 +57,9 @@ test('mobile build and offline shell include the public legal pages', async () =
   for (const asset of ['terms.html', 'privacy.html', 'css/legal.css']) {
     assert.match(`${buildScript}\n${serviceWorker}`, new RegExp(asset.replace('.', '\\.')));
   }
-  assert.match(serviceWorker, /foodtreknow-shell-v64/);
+  assert.match(serviceWorker, /foodtreknow-shell-v65/);
   assert.match(serviceWorker, /offlinePage/);
   assert.match(styles, /@media\(max-width:480px\)/);
   assert.match(styles, /prefers-reduced-motion/);
 });
+
