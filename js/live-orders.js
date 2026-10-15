@@ -40,7 +40,9 @@
       p_truck_id: payload.truckId,
       p_items: payload.items.map(item => ({
         menu_item_id: item.menuItemId,
-        quantity: Number(item.quantity)
+        quantity: Number(item.quantity),
+        modifiers: item.modifiers || [],
+        special_instructions: item.instructions || ''
       })),
       p_customer_name: payload.customerName || 'Walk-up Customer',
       p_customer_mobile: payload.customerMobile || null,
@@ -198,4 +200,3 @@
     subscribeVendorCommunications
   });
 })();
-

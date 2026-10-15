@@ -5,6 +5,7 @@ import fs from 'node:fs';
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const migration = read('supabase/migrations/202609160001_vendor_walk_up_cash_sales.sql');
 const liveWorkflowMigration = read('supabase/migrations/202609280001_live_orders_cash_mobile.sql');
+const fullMenuMigration = read('supabase/migrations/202610150003_walk_up_cash_full_menu.sql');
 const service = read('js/live-orders.js');
 const browser = read('js/vendor-cash-sales.js');
 const html = read('index.html');
@@ -38,6 +39,21 @@ test('browser calls the protected RPC and refreshes vendor orders', () => {
   assert.match(browser, /FoodTrekNowLiveOrders\.placeVendorCashSale/);
   assert.match(browser, /hydrateVendorOrders\(activeVendorContext\)/);
   assert.match(browser, /cashSaleReceived/);
+});
+
+test('walk-up menu includes customer-equivalent sizes, add-ons, pricing, and item notes', () => {
+  assert.match(browser, /item\.sizeOptions/);
+  assert.match(browser, /item\.addOns/);
+  assert.match(browser, /item\.addOnLabel/);
+  assert.match(browser, /Choose a Size/);
+  assert.match(browser, /Special instructions/);
+  assert.match(browser, /modifiers, instructions/);
+  assert.match(service, /modifiers: item\.modifiers \|\| \[\]/);
+  assert.match(service, /special_instructions: item\.instructions \|\| ''/);
+  assert.match(fullMenuMigration, /public\.menu_item_unit_price/);
+  assert.match(fullMenuMigration, /item_payload -> 'modifiers'/);
+  assert.match(fullMenuMigration, /special_instructions/);
+  assert.match(fullMenuMigration, /item_unit_price,\s*item_quantity/);
 });
 
 test('cash sales enter the received queue with an order number and optional customer cell', () => {
