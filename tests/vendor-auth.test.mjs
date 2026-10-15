@@ -16,7 +16,7 @@ class StorageMock {
   removeItem(key) { this.values.delete(key); }
 }
 
-function harness(role = 'vendor') {
+function harness(role = 'vendor', missingTable = '') {
   const calls = [];
   const user = { id: 'vendor-user-1', email: 'vendor@example.com' };
   const rows = {
@@ -34,7 +34,7 @@ function harness(role = 'vendor') {
     from(table) {
       return {
         select() { return this; }, eq() { return this; }, order() { return this; }, limit() { return this; },
-        async single() { return { data: rows[table], error: null }; }
+        async maybeSingle() { return { data: table === missingTable ? null : rows[table], error: null }; }
       };
     }
   };
@@ -59,6 +59,12 @@ test('customer and administrator accounts cannot enter the vendor dashboard', as
   }
 });
 
+test('incomplete approved vendor data produces clear repair guidance', async () => {
+  await assert.rejects(() => harness('vendor', 'vendor_profiles').api.signIn('vendor@example.com', 'safe-password'), /approval is incomplete/i);
+  await assert.rejects(() => harness('vendor', 'trucks').api.signIn('vendor@example.com', 'safe-password'), /does not have a food truck/i);
+  assert.doesNotMatch(source, /\.single\(\)/);
+});
+
 test('vendor browser persistence is namespaced by approved truck id', async () => {
   const { api, context } = harness();
   await api.signIn('vendor@example.com', 'safe-password');
@@ -77,7 +83,7 @@ test('vendor password recovery validates the email and uses the secure Supabase 
 });
 
 test('secure vendor auth loads before the existing dashboard application', () => {
-  const authPosition = html.indexOf('js/vendor-auth.js?v=vendor-login-1');
+  const authPosition = html.indexOf('js/vendor-auth.js?v=vendor-login-2');
   const appPosition = html.indexOf('js/app.js');
   assert.ok(authPosition >= 0 && authPosition < appPosition);
   assert.match(appSource, /FoodTrekNowVendorAuth\.signIn/);
