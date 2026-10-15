@@ -31,6 +31,10 @@ function harness(role = 'vendor', missingTable = '') {
       async resetPasswordForEmail(email, options) { calls.push(['resetPassword', email, options]); return { error: null }; },
       async signOut() { calls.push(['signOut']); return { error: null }; }
     },
+    async rpc(name) {
+      calls.push(['rpc', name]);
+      return { data: { access_allowed: true, admin_frozen: false, freeze_reason: null }, error: null };
+    },
     from(table) {
       return {
         select() { return this; }, eq() { return this; }, order() { return this; }, limit() { return this; },
@@ -83,7 +87,7 @@ test('vendor password recovery validates the email and uses the secure Supabase 
 });
 
 test('secure vendor auth loads before the existing dashboard application', () => {
-  const authPosition = html.indexOf('js/vendor-auth.js?v=vendor-login-2');
+  const authPosition = html.indexOf('js/vendor-auth.js?v=admin-freeze-1');
   const appPosition = html.indexOf('js/app.js');
   assert.ok(authPosition >= 0 && authPosition < appPosition);
   assert.match(appSource, /FoodTrekNowVendorAuth\.signIn/);
@@ -91,3 +95,4 @@ test('secure vendor auth loads before the existing dashboard application', () =>
   assert.match(appSource, /FoodTrekNowVendorAuth\.signOut/);
   assert.match(appSource, /FoodTrekNowVendorAuth\.requestPasswordReset/);
 });
+

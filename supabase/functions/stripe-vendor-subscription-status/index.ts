@@ -51,12 +51,15 @@ function subscriptionState(subscription: Record<string, any>, existing: Record<s
   };
 }
 
-function responseState(row: Record<string, any> | null) {
+function responseState(row: Record<string, any> | null, adminControl: Record<string, any> | null = null) {
   const status = row?.status || 'not_started';
   const graceActive = status === 'past_due' && row?.grace_period_ends_at && Date.parse(row.grace_period_ends_at) > Date.now();
+  const adminFrozen = Boolean(adminControl?.is_frozen);
   return {
     status,
-    access_allowed: ['active', 'trialing'].includes(status) || Boolean(graceActive),
+    access_allowed: !adminFrozen && (['active', 'trialing'].includes(status) || Boolean(graceActive)),
+    admin_frozen: adminFrozen,
+    freeze_reason: adminFrozen ? adminControl?.freeze_reason || null : null,
     current_period_end: row?.current_period_end || null,
     cancel_at_period_end: Boolean(row?.cancel_at_period_end),
     grace_period_ends_at: row?.grace_period_ends_at || null,
@@ -74,18 +77,21 @@ Deno.serve(async request => {
     const { serviceClient, vendor } = await vendorContext(request);
     const { data: existing, error } = await serviceClient.from('vendor_subscriptions').select('*').eq('vendor_profile_id', vendor.id).maybeSingle();
     if (error) throw error;
-    if (!existing?.stripe_subscription_id) return json(request, responseState(existing));
+    const { data: adminControl, error: controlError } = await serviceClient.from('vendor_admin_controls').select('is_frozen,freeze_reason').eq('vendor_profile_id', vendor.id).maybeSingle();
+    if (controlError) throw controlError;
+    if (!existing?.stripe_subscription_id) return json(request, responseState(existing, adminControl));
     const subscription = await stripeSubscription(existing.stripe_subscription_id);
     const state = subscriptionState(subscription, existing);
     const { data: updated, error: updateError } = await serviceClient.from('vendor_subscriptions').update(state).eq('vendor_profile_id', vendor.id).select('*').single();
     if (updateError) throw updateError;
-    const accessAllowed = responseState(updated).access_allowed;
+    const accessAllowed = responseState(updated, adminControl).access_allowed;
     const { error: truckError } = await serviceClient.from('trucks').update({ is_active: accessAllowed }).eq('vendor_id', vendor.id);
     if (truckError) throw truckError;
-    return json(request, responseState(updated));
+    return json(request, responseState(updated, adminControl));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Subscription status could not be loaded.';
     console.error('Vendor subscription status failed:', message);
     return json(request, { error: message }, 400);
   }
 });
+

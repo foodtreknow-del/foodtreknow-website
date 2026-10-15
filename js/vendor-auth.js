@@ -13,14 +13,20 @@
   };
 
   async function loadContext(user) {
-    const { data: profile, error: profileError } = await client.from('profiles').select('id, role, first_name, last_name').eq('id', user.id).single();
+    const { data: profile, error: profileError } = await client.from('profiles').select('id, role, first_name, last_name').eq('id', user.id).maybeSingle();
     if (profileError) throw friendly(profileError);
+    if (!profile) throw new Error('This account does not have a FoodTrekNow profile yet. Sign in through the customer portal first, then submit a Vendor Application.');
     if (profile.role !== 'vendor') throw new Error('This account has not been approved for vendor access.');
 
-    const { data: vendor, error: vendorError } = await client.from('vendor_profiles').select('*').eq('owner_id', user.id).single();
+    const { data: vendor, error: vendorError } = await client.from('vendor_profiles').select('*').eq('owner_id', user.id).maybeSingle();
     if (vendorError) throw friendly(vendorError);
-    const { data: truck, error: truckError } = await client.from('trucks').select('*').eq('vendor_id', vendor.id).order('created_at', { ascending: true }).limit(1).single();
+    if (!vendor) throw new Error('Your vendor approval is incomplete. Ask the FoodTrekNow administrator to repair your vendor profile.');
+    const { data: accessState, error: accessError } = await client.rpc('current_vendor_access_state');
+    if (accessError) throw friendly(accessError);
+    if (accessState?.admin_frozen) throw new Error(`Vendor access is temporarily frozen. ${clean(accessState.freeze_reason) || 'Contact the FoodTrekNow administrator for assistance.'}`);
+    const { data: truck, error: truckError } = await client.from('trucks').select('*').eq('vendor_id', vendor.id).order('created_at', { ascending: true }).limit(1).maybeSingle();
     if (truckError) throw friendly(truckError);
+    if (!truck) throw new Error('Your vendor profile does not have a food truck yet. Ask the FoodTrekNow administrator to complete the setup.');
     return { user: { id: user.id, email: user.email }, profile, vendor, truck };
   }
 
@@ -74,3 +80,4 @@
     clearTruck() { localStorage.removeItem(ACTIVE_TRUCK_KEY); }
   });
 })();
+

@@ -48,9 +48,12 @@
   function renderState(rawState = {}) {
     const status = normalizeStatus(rawState.status);
     currentState = { ...rawState, status, access_allowed: Boolean(rawState.access_allowed), has_customer: Boolean(rawState.has_customer), trial_eligible: Boolean(rawState.trial_eligible) };
-    const copy = states[status];
+    const adminFrozen = Boolean(rawState.admin_frozen);
+    const copy = adminFrozen
+      ? { badge: 'Access frozen', title: 'Contact FoodTrekNow support', message: rawState.freeze_reason || 'An administrator has temporarily frozen this vendor account.' }
+      : states[status];
     const badge = field('vendorSubscriptionBadge');
-    if (badge) { badge.textContent = copy.badge; badge.className = `stripe-status-badge subscription-${status.replaceAll('_', '-')}`; }
+    if (badge) { badge.textContent = copy.badge; badge.className = `stripe-status-badge ${adminFrozen ? 'subscription-unpaid' : `subscription-${status.replaceAll('_', '-')}`}`; }
     if (field('vendorSubscriptionTitle')) field('vendorSubscriptionTitle').textContent = copy.title;
     if (field('vendorSubscriptionMessage')) field('vendorSubscriptionMessage').textContent = copy.message;
     const detail = field('vendorSubscriptionDetail');
@@ -106,7 +109,16 @@
     if (errorNode) errorNode.textContent = '';
     if (!secureVendorSignedIn()) return renderState({ status: 'not_started', access_allowed: false, has_customer: false });
     setBusy(true, 'Checking…');
-    try { return renderState(await invoke('stripe-vendor-subscription-status')); }
+    try {
+      const billingState = await invoke('stripe-vendor-subscription-status');
+      const { data: platformState, error: platformError } = await client.rpc('current_vendor_access_state');
+      if (platformError) throw platformError;
+      return renderState({
+        ...billingState,
+        ...platformState,
+        access_allowed: Boolean(billingState.access_allowed && platformState?.access_allowed)
+      });
+    }
     catch (error) { if (errorNode) errorNode.textContent = error.message; throw error; }
     finally { setBusy(false); }
   }
@@ -154,3 +166,4 @@
   window.FoodTrekNowVendorSubscription = Object.freeze({ normalizeStatus, renderState, refreshStatus, startSubscription, manageBilling });
   if (secureVendorSignedIn()) window.setTimeout(() => refreshStatus().catch(() => {}), 750);
 })();
+

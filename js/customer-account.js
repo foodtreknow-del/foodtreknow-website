@@ -1612,6 +1612,7 @@
     document.getElementById('customerSignOutButton').textContent = currentAccount.isGuest ? 'Exit Guest Checkout' : 'Sign Out';
     document.getElementById('vendorApplicationNav').classList.toggle('hidden-view', Boolean(currentAccount.isGuest) || currentAccount.role === 'admin');
     document.getElementById('adminVendorReviewNav').classList.toggle('hidden-view', currentAccount.role !== 'admin');
+    document.getElementById('adminVendorManagementNav').classList.toggle('hidden-view', currentAccount.role !== 'admin');
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === currentPage));
     updateCartBadge();
     updateCustomerNotificationBadge();
@@ -2403,11 +2404,13 @@
       notifications: renderNotifications,
       settings: renderSettings,
       vendorApplication: renderVendorApplication,
-      vendorReviews: renderVendorReviews
+      vendorReviews: renderVendorReviews,
+      vendorManagement: renderVendorManagement
     };
     accountContent.innerHTML = (renderers[page] || renderers.overview)();
     if (page === 'vendorApplication') loadVendorApplication();
     if (page === 'vendorReviews' && currentAccount.role === 'admin') loadVendorReviews();
+    if (page === 'vendorManagement' && currentAccount.role === 'admin') loadVendorManagement();
     updateCartBadge();
     updateCustomerNotificationBadge();
     document.querySelector('.customer-sidebar')?.classList.remove('open');
@@ -2628,6 +2631,50 @@
       container.className = 'vendor-review-list';
       container.innerHTML = applications.map(application => `<article class="customer-card vendor-review-card" data-vendor-review-card="${application.id}"><div><span class="vendor-status-badge ${application.status}">${escapeHtml(application.status)}</span><h2>${escapeHtml(application.truck_name)}</h2><p><strong>${escapeHtml(application.business_name)}</strong> · ${escapeHtml(application.cuisine)}</p><p>${escapeHtml(application.description || 'No description provided.')}</p><div class="vendor-review-meta"><span>${escapeHtml(application.city)}, ${escapeHtml(application.state)}</span><span>${escapeHtml(application.business_email)}</span><span>${escapeHtml(application.business_mobile)}</span></div></div>${application.status === 'pending' ? `<div class="vendor-review-actions"><button class="customer-small-button primary" data-vendor-decision="approved" data-vendor-application-id="${application.id}" type="button">Approve Vendor</button><button class="customer-small-button danger" data-vendor-decision="rejected" data-vendor-application-id="${application.id}" type="button">Reject</button></div><label class="vendor-review-notes">Review Notes<textarea class="customer-textarea" data-vendor-review-notes rows="2" placeholder="Optional note for the applicant"></textarea></label>` : `<div><strong>Reviewed</strong><p>${escapeHtml(application.review_notes || 'No review note.')}</p></div>`}</article>`).join('');
     } catch (error) { container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`; }
+  }
+
+  function renderVendorManagement() {
+    return `${pageHeader('Administrator', 'Vendor Management', 'Review daily business performance and control platform access without viewing customer or financial-account details.')}
+      <section class="customer-card admin-vendor-privacy"><span aria-hidden="true">🔒</span><div><strong>Privacy-limited manager view</strong><p>This area contains aggregated sales totals only. Customer names, phone numbers, order contents, passwords, banking information, and card details are never shown.</p></div></section>
+      <section class="admin-vendor-toolbar customer-card"><label for="adminVendorReportDays">Daily sales period<select id="adminVendorReportDays" class="customer-input"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="60">Last 60 days</option><option value="90">Last 90 days</option></select></label><button class="secondary-button" data-refresh-vendor-management type="button">Refresh Reports</button></section>
+      <section id="adminVendorManagementContent" aria-live="polite"><div class="customer-card"><p class="muted">Loading secure vendor reports…</p></div></section>`;
+  }
+
+  function adminSubscriptionLabel(status) {
+    return ({ not_started: 'Not started', incomplete: 'Incomplete', incomplete_expired: 'Checkout expired', trialing: 'Trial active', active: 'Paid & active', past_due: 'Past due', unpaid: 'Unpaid', canceled: 'Canceled', paused: 'Paused' })[status] || 'Unknown';
+  }
+
+  function adminVendorSalesTable(days) {
+    if (!days.length) return '<div class="admin-vendor-empty-sales"><strong>No paid sales in this period</strong><p>Test orders are intentionally excluded.</p></div>';
+    return `<div class="admin-vendor-table-wrap"><table class="admin-vendor-sales-table"><thead><tr><th>Date</th><th>Orders</th><th>Gross</th><th>Refunds</th><th>Net</th><th>Cash</th><th>Online</th><th>Average</th></tr></thead><tbody>${days.map(day => `<tr><td>${escapeHtml(new Date(`${day.date}T12:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }))}</td><td>${Number(day.orderCount || 0)}</td><td>${customerMoney(day.grossSales)}</td><td>${customerMoney(day.refunds)}</td><td><strong>${customerMoney(day.netSales)}</strong></td><td>${customerMoney(day.cashSales)}</td><td>${customerMoney(day.onlineSales)}</td><td>${customerMoney(day.averageOrder)}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+
+  function adminVendorManagementCard(vendor) {
+    const daily = Array.isArray(vendor.dailySales) ? vendor.dailySales : [];
+    const totalSales = daily.reduce((sum, day) => sum + Number(day.netSales || 0), 0);
+    const totalOrders = daily.reduce((sum, day) => sum + Number(day.orderCount || 0), 0);
+    const statusClass = vendor.isFrozen ? 'frozen' : ['active', 'trialing'].includes(vendor.subscriptionStatus) ? 'active' : 'attention';
+    const accessLabel = vendor.isFrozen ? 'Administratively frozen' : vendor.isActive ? 'Platform active' : 'Platform inactive';
+    return `<article class="customer-card admin-vendor-card" data-admin-vendor-card="${escapeHtml(vendor.vendorProfileId)}">
+      <header><div><span class="admin-vendor-status ${statusClass}">${escapeHtml(accessLabel)}</span><h2>${escapeHtml(vendor.truckName)}</h2><p>${escapeHtml(vendor.businessName)} · ${escapeHtml(vendor.cuisine)} · ${escapeHtml(vendor.locationName)}</p></div><div class="admin-vendor-subscription"><small>Subscription</small><strong>${escapeHtml(adminSubscriptionLabel(vendor.subscriptionStatus))}</strong></div></header>
+      ${vendor.isFrozen ? `<div class="admin-vendor-freeze-notice"><strong>Access frozen</strong><p>${escapeHtml(vendor.freezeReason || 'No reason recorded.')}</p></div>` : ''}
+      <div class="admin-vendor-metrics"><span><small>Net sales</small><strong>${customerMoney(totalSales)}</strong></span><span><small>Paid orders</small><strong>${totalOrders}</strong></span><span><small>Average order</small><strong>${customerMoney(totalOrders ? totalSales / totalOrders : 0)}</strong></span><span><small>Taking orders</small><strong>${vendor.acceptingOrders ? 'Yes' : 'No'}</strong></span></div>
+      <details class="admin-vendor-daily" open><summary>Daily sales report</summary>${adminVendorSalesTable(daily)}</details>
+      <section class="admin-vendor-access"><div><strong>Administrative access control</strong><p>${vendor.isFrozen ? 'Restore access only after the account is cleared. Subscription rules still apply.' : 'Freezing immediately removes the truck from customer discovery and blocks vendor operations.'}</p></div>${vendor.isFrozen ? `<button class="customer-small-button primary" data-admin-vendor-freeze="false" data-vendor-profile-id="${escapeHtml(vendor.vendorProfileId)}" type="button">Restore Access</button>` : `<label>Reason for freeze<textarea class="customer-textarea" data-admin-freeze-reason rows="2" maxlength="500" placeholder="Example: Subscription payment is overdue"></textarea></label><button class="customer-small-button danger" data-admin-vendor-freeze="true" data-vendor-profile-id="${escapeHtml(vendor.vendorProfileId)}" type="button">Freeze Vendor</button>`}</section>
+    </article>`;
+  }
+
+  async function loadVendorManagement(days = Number(document.getElementById('adminVendorReportDays')?.value || 30)) {
+    const container = document.getElementById('adminVendorManagementContent');
+    if (!container) return;
+    container.innerHTML = '<div class="customer-card"><p class="muted">Loading secure vendor reports…</p></div>';
+    try {
+      const snapshot = await window.FoodTrekNowAdminVendorManagement.load(days);
+      const vendors = Array.isArray(snapshot.vendors) ? snapshot.vendors : [];
+      container.innerHTML = vendors.length ? `<div class="admin-vendor-list">${vendors.map(adminVendorManagementCard).join('')}</div>` : '<div class="customer-card empty-customer-state"><span>🚚</span><h2>No approved vendors yet</h2><p>Approved food trucks will appear here.</p></div>';
+    } catch (error) {
+      container.innerHTML = `<div class="customer-card"><p class="form-message">${escapeHtml(error.message)}</p></div>`;
+    }
   }
 
   function openModal(html) {
@@ -3006,6 +3053,37 @@
       } catch (error) { customerToast(error.message); }
       return;
     }
+    const refreshVendorManagement = event.target.closest('[data-refresh-vendor-management]');
+    if (refreshVendorManagement) {
+      refreshVendorManagement.disabled = true;
+      try { await loadVendorManagement(); }
+      finally { refreshVendorManagement.disabled = false; }
+      return;
+    }
+    const vendorFreeze = event.target.closest('[data-admin-vendor-freeze]');
+    if (vendorFreeze) {
+      const shouldFreeze = vendorFreeze.dataset.adminVendorFreeze === 'true';
+      const card = vendorFreeze.closest('[data-admin-vendor-card]');
+      const truckName = card?.querySelector('h2')?.textContent || 'this vendor';
+      const reason = card?.querySelector('[data-admin-freeze-reason]')?.value || '';
+      if (shouldFreeze && reason.trim().length < 3) {
+        customerToast('Enter a brief reason before freezing vendor access.');
+        card?.querySelector('[data-admin-freeze-reason]')?.focus();
+        return;
+      }
+      const action = shouldFreeze ? `freeze ${truckName} and remove it from customer ordering` : `restore ${truckName}'s access subject to its subscription status`;
+      if (!confirm(`Are you sure you want to ${action}?`)) return;
+      vendorFreeze.disabled = true;
+      try {
+        await window.FoodTrekNowAdminVendorManagement.setFrozen(vendorFreeze.dataset.vendorProfileId, shouldFreeze, reason);
+        customerToast(shouldFreeze ? `${truckName} has been frozen.` : `${truckName} access has been restored.`);
+        await loadVendorManagement();
+      } catch (error) {
+        customerToast(error.message);
+        vendorFreeze.disabled = false;
+      }
+      return;
+    }
     const actionButton = event.target.closest('[data-customer-action]');
     if (actionButton) {
       const actions = {
@@ -3280,6 +3358,10 @@
   }
 
   accountContent.addEventListener('change', event => {
+    if (event.target.id === 'adminVendorReportDays') {
+      loadVendorManagement(Number(event.target.value));
+      return;
+    }
     if (event.target.matches('[data-nearby-radius]')) {
       const radius = Number(event.target.value);
       currentAccount.nearbyRadiusMiles = NEARBY_RADIUS_OPTIONS.includes(radius) ? radius : 5;
