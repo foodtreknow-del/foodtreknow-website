@@ -1411,7 +1411,7 @@
         const savedTruck = JSON.parse(localStorage.getItem('ftnSelectedTruckV1') || 'null');
         if (savedTruck?.truckId && TRUCKS.some(truck => truck.id === savedTruck.truckId)) selectedTruckId = savedTruck.truckId;
       } catch {}
-      if (currentAccount && !accountView.classList.contains('hidden-view')) renderCustomerPage(currentPage);
+      if (currentAccount && !accountView.classList.contains('hidden-view') && !preserveActiveCustomerForm()) renderCustomerPage(currentPage);
     } catch (error) {
       marketplaceLoadPromise = null;
       customerEventLoadPromise = null;
@@ -1491,7 +1491,7 @@
       saveCustomerState(currentAccount);
       if (!accountView.classList.contains('hidden-view')) {
         renderCustomerShell();
-        renderCustomerPage(currentPage);
+        if (!preserveActiveCustomerForm()) renderCustomerPage(currentPage);
       }
       const changedOrders = remoteOrders.filter(order => previousStatuses.has(order.supabaseOrderId) && previousStatuses.get(order.supabaseOrderId) !== order.status);
       if (announce && changedOrders.length) {
@@ -1553,6 +1553,13 @@
     if (currentAccount) saveCustomerState(currentAccount);
   }
 
+  function preserveActiveCustomerForm() {
+    // Marketplace, order, and cross-tab updates can arrive while a customer is
+    // typing. The vendor application is intentionally rebuilt by
+    // renderCustomerPage(), so redrawing it would discard the unsaved draft.
+    return currentPage === 'vendorApplication';
+  }
+
   function refreshCustomerOrders() {
     if (!currentAccount) return;
     const refreshed = currentAccount.isGuest ? readGuestCustomer() : repository.findById(currentAccount.id);
@@ -1560,7 +1567,7 @@
     currentAccount = CustomerOrderingService.ensureState(refreshed);
     if (!accountView.classList.contains('hidden-view')) {
       renderCustomerShell();
-      renderCustomerPage(currentPage);
+      if (!preserveActiveCustomerForm()) renderCustomerPage(currentPage);
     }
   }
 
