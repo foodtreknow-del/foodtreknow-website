@@ -36,3 +36,11 @@ test('the browser service uses protected RPCs rather than direct application wri
   assert.doesNotMatch(service, /from\('vendor_applications'\)\.insert/);
   assert.doesNotMatch(service, /from\('vendor_applications'\)\.update/);
 });
+
+
+test('background customer updates preserve an in-progress vendor application', () => {
+  assert.match(ui, /function preserveActiveCustomerForm\(\)/);
+  assert.match(ui, /return currentPage === 'vendorApplication'/);
+  assert.match(ui, /if \(!preserveActiveCustomerForm\(\)\) renderCustomerPage\(currentPage\)/);
+  assert.match(ui, /!accountView\.classList\.contains\('hidden-view'\) && !preserveActiveCustomerForm\(\)/);
+});
