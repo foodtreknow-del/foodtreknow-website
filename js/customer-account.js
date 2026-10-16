@@ -1971,7 +1971,26 @@
   function renderTruckMenu() {
     const truck = selectedTruck();
     const menu = menuForTruck();
-    constde class="floating-cart-summary ${cartCount ? 'has-items' : ''}" aria-live="polite">
+    const saved = currentAccount.favoriteTrucks.includes(truck.id);
+    const categories = [...new Set(menu.map(item => item.category))];
+    const hasThisTruckCart = currentAccount.cart.truckId === truck.id;
+    const cartCount = hasThisTruckCart ? currentAccount.cart.items.reduce((total, item) => total + item.quantity, 0) : 0;
+    const cartSubtotal = hasThisTruckCart ? cartTotals().subtotal : 0;
+    return `<div class="ordering-page full-menu-page">
+      <header class="menu-experience-header">
+        ${hostStorefrontPreview ? '<button class="ordering-back-button" data-return-host-portal type="button">← Back to Host Portal</button>' : '<button class="ordering-back-button" data-customer-page-back="nearby" type="button">← Nearby Trucks</button>'}
+        <div><p class="eyebrow">${escapeHtml(truck.cuisine)}</p><h1>${escapeHtml(truck.name)} Menu</h1><p>Tap an item to add it · Keep scrolling while you build your order</p></div>
+        <button class="menu-cart-button" data-ordering-action="open-cart" type="button"><span>🛒</span> Cart <b data-live-cart-count>${cartCount}</b></button>
+        <div class="menu-truck-tools">
+          <button class="${saved ? 'saved' : ''}" data-toggle-truck-favorite="${truck.id}" type="button">${saved ? '♥ Favorited' : '♡ Favorite'}</button>
+          <button data-ordering-action="directions" type="button">Directions</button>
+          <button data-ordering-action="call" type="button">Call</button>
+          <button data-ordering-action="share" type="button">Share</button>
+        </div>
+      </header>
+      <nav class="menu-category-jump" aria-label="Menu categories">${categories.map(category => `<button data-menu-category="${escapeHtml(category)}" type="button">${escapeHtml(category)}</button>`).join('')}</nav>
+      <div class="full-menu-sections">${categories.map(category => `<section class="full-menu-category" data-menu-section="${escapeHtml(category)}"><div class="ordering-section-heading"><div><p class="eyebrow">Browse</p><h2>${escapeHtml(category)}</h2></div><span>${menu.filter(item => item.category === category).length} items</span></div><div class="full-menu-grid">${menu.filter(item => item.category === category).map(item => orderingItemCard(item)).join('')}</div></section>`).join('')}</div>
+      <aside class="floating-cart-summary ${cartCount ? 'has-items' : ''}" aria-live="polite">
         <button class="floating-cart-review" data-ordering-action="open-cart" type="button"><span>🛒</span><span><small>Your order</small><strong><b data-live-cart-count>${cartCount}</b> <span data-live-cart-noun>item${cartCount === 1 ? '' : 's'}</span> · <b data-live-cart-total>${customerMoney(cartSubtotal)}</b></strong></span></button>
         <button class="primary-button floating-checkout-button" data-ordering-action="checkout" type="button" ${cartCount ? '' : 'disabled'}>Checkout</button>
       </aside>
