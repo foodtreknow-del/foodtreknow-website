@@ -116,7 +116,7 @@
       return renderState({
         ...billingState,
         ...platformState,
-        access_allowed: Boolean(billingState.access_allowed && platformState?.access_allowed)
+        access_allowed: Boolean(platformState?.access_allowed)
       });
     }
     catch (error) { if (errorNode) errorNode.textContent = error.message; throw error; }
@@ -166,4 +166,3 @@
   window.FoodTrekNowVendorSubscription = Object.freeze({ normalizeStatus, renderState, refreshStatus, startSubscription, manageBilling });
   if (secureVendorSignedIn()) window.setTimeout(() => refreshStatus().catch(() => {}), 750);
 })();
-

@@ -1971,26 +1971,7 @@
   function renderTruckMenu() {
     const truck = selectedTruck();
     const menu = menuForTruck();
-    const saved = currentAccount.favoriteTrucks.includes(truck.id);
-    const categories = [...new Set(menu.map(item => item.category))];
-    const hasThisTruckCart = currentAccount.cart.truckId === truck.id;
-    const cartCount = hasThisTruckCart ? currentAccount.cart.items.reduce((total, item) => total + item.quantity, 0) : 0;
-    const cartSubtotal = hasThisTruckCart ? cartTotals().subtotal : 0;
-    return `<div class="ordering-page full-menu-page">
-      <header class="menu-experience-header">
-        ${hostStorefrontPreview ? '<button class="ordering-back-button" data-return-host-portal type="button">← Back to Host Portal</button>' : '<button class="ordering-back-button" data-customer-page-back="nearby" type="button">← Nearby Trucks</button>'}
-        <div><p class="eyebrow">${escapeHtml(truck.cuisine)}</p><h1>${escapeHtml(truck.name)} Menu</h1><p>Tap an item to add it · Keep scrolling while you build your order</p></div>
-        <button class="menu-cart-button" data-ordering-action="open-cart" type="button"><span>🛒</span> Cart <b data-live-cart-count>${cartCount}</b></button>
-        <div class="menu-truck-tools">
-          <button class="${saved ? 'saved' : ''}" data-toggle-truck-favorite="${truck.id}" type="button">${saved ? '♥ Favorited' : '♡ Favorite'}</button>
-          <button data-ordering-action="directions" type="button">Directions</button>
-          <button data-ordering-action="call" type="button">Call</button>
-          <button data-ordering-action="share" type="button">Share</button>
-        </div>
-      </header>
-      <nav class="menu-category-jump" aria-label="Menu categories">${categories.map(category => `<button data-menu-category="${escapeHtml(category)}" type="button">${escapeHtml(category)}</button>`).join('')}</nav>
-      <div class="full-menu-sections">${categories.map(category => `<section class="full-menu-category" data-menu-section="${escapeHtml(category)}"><div class="ordering-section-heading"><div><p class="eyebrow">Browse</p><h2>${escapeHtml(category)}</h2></div><span>${menu.filter(item => item.category === category).length} items</span></div><div class="full-menu-grid">${menu.filter(item => item.category === category).map(item => orderingItemCard(item)).join('')}</div></section>`).join('')}</div>
-      <aside class="floating-cart-summary ${cartCount ? 'has-items' : ''}" aria-live="polite">
+    constde class="floating-cart-summary ${cartCount ? 'has-items' : ''}" aria-live="polite">
         <button class="floating-cart-review" data-ordering-action="open-cart" type="button"><span>🛒</span><span><small>Your order</small><strong><b data-live-cart-count>${cartCount}</b> <span data-live-cart-noun>item${cartCount === 1 ? '' : 's'}</span> · <b data-live-cart-total>${customerMoney(cartSubtotal)}</b></strong></span></button>
         <button class="primary-button floating-checkout-button" data-ordering-action="checkout" type="button" ${cartCount ? '' : 'disabled'}>Checkout</button>
       </aside>
@@ -2612,10 +2593,26 @@
         container.outerHTML = `<div id="vendorApplicationContent"><section class="customer-card vendor-application-status"><span class="vendor-status-badge rejected">Rejected</span><h2>Application needs attention</h2><p>${escapeHtml(application.review_notes || 'Review the information below and resubmit when ready.')}</p></section><div style="height:16px"></div>${vendorApplicationForm(application)}</div>`;
         return;
       }
-      const descriptions = { pending: 'Your information is securely saved. A FoodTrekNow administrator will review it before vendor access is enabled.', approved: 'Your business is approved. Sign out and sign back in to load vendor access for your food truck.', withdrawn: 'This application was withdrawn. You may submit it again.' };
+      const descriptions = { pending: 'Your information is securely saved. A FoodTrekNow administrator will review it before vendor access is enabled.', approved: 'Your business is approved. Your Vendor Portal is ready and will open automatically.', withdrawn: 'This application was withdrawn. You may submit it again.' };
       container.className = 'customer-card vendor-application-status';
-      container.innerHTML = `<span class="vendor-status-badge ${application.status}">${escapeHtml(application.status)}</span><h2>${escapeHtml(application.truck_name)}</h2><p>${escapeHtml(descriptions[application.status] || '')}</p>${application.review_notes ? `<p><strong>Administrator note:</strong> ${escapeHtml(application.review_notes)}</p>` : ''}`;
+      container.innerHTML = `<span class="vendor-status-badge ${application.status}">${escapeHtml(application.status)}</span><h2>${escapeHtml(application.truck_name)}</h2><p>${escapeHtml(descriptions[application.status] || '')}</p>${application.review_notes ? `<p><strong>Administrator note:</strong> ${escapeHtml(application.review_notes)}</p>` : ''}${application.status === 'approved' ? '<p id="approvedVendorPortalMessage" class="form-message" aria-live="polite">Opening your Vendor Portal…</p><div class="customer-form-actions"><button class="primary-button" data-open-approved-vendor-portal type="button">Open Vendor Portal</button></div>' : ''}`;
+      if (application.status === 'approved') await activateApprovedVendorPortal(true);
     } catch (error) { container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`; }
+  }
+
+  async function activateApprovedVendorPortal(automatic = false) {
+    const message = document.getElementById('approvedVendorPortalMessage');
+    const button = document.querySelector('[data-open-approved-vendor-portal]');
+    if (button) button.disabled = true;
+    try {
+      const context = await window.FoodTrekNowVendorAuth?.restore();
+      if (!context) throw new Error('Your approval is active, but the Vendor Portal could not be loaded yet. Select Open Vendor Portal to try again.');
+      window.FoodTrekNowOpenApprovedVendorPortal(context);
+    } catch (error) {
+      if (message) message.textContent = error.message;
+      if (button) button.disabled = false;
+      if (!automatic) customerToast(error.message);
+    }
   }
 
   function renderVendorReviews() {
@@ -3051,6 +3048,11 @@
         customerToast(decision === 'approved' ? 'Vendor approved and food truck created.' : 'Vendor application rejected.');
         await loadVendorReviews();
       } catch (error) { customerToast(error.message); }
+      return;
+    }
+    const approvedVendorPortal = event.target.closest('[data-open-approved-vendor-portal]');
+    if (approvedVendorPortal) {
+      await activateApprovedVendorPortal(false);
       return;
     }
     const refreshVendorManagement = event.target.closest('[data-refresh-vendor-management]');
@@ -3947,5 +3949,4 @@
   if (window.FoodTrekNowSupabaseRecoveryPending) handlePasswordRecovery();
   else restoreCustomerSession();
 })();
-
 

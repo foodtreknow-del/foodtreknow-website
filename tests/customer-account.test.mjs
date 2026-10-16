@@ -192,7 +192,7 @@ test("production I'm Hungry entry always opens customer sign-in and account crea
   assert.match(html, /id="showCustomerSignInButton"[^>]*>Sign In<\/button>/);
   assert.match(html, /id="showCreateAccountButton"[^>]*>Create Account<\/button>/);
   assert.match(html, /id="guestCheckoutButton"/);
-  assert.match(html, /js\/customer-account\.js\?v=admin-vendor-management-1/);
+  assert.match(html, /js\/customer-account\.js\?v=approved-vendor-portal-1/);
 });
 
 test('mobile host account menu has a visible internal close control', () => {
@@ -898,5 +898,4 @@ test('account deletion removes the local account', async () => {
   await window.FoodTrekNowCustomerAuth.deleteAccount(account.id);
   await assert.rejects(() => window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password'), /incorrect/);
 });
-
 
