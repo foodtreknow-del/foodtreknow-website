@@ -27,6 +27,12 @@ test('Vendor menu item modal remains scrollable with sticky save actions', async
   assert.match(styles, /menu-item-modal-card \.menu-form-actions\{[^}]*position:sticky[^}]*bottom:0/);
 });
 
+test('Vendor logout is immediately below Settings in the sidebar menu', async () => {
+  const [html, styles] = await Promise.all([read('index.html'), read('css/vendor.css')]);
+  assert.match(html, /data-page="settings">Settings<\/button>\s*<button id="logoutButton" class="nav-link vendor-nav-logout"/);
+  assert.match(styles, /\.vendor-nav-logout\{[^}]*margin-top:4px/);
+});
+
 test('BCS test menu migration is idempotent and references the supplied menu images', async () => {
   const migration = await read('supabase/migrations/202610010001_bcs_test_menu_items.sql');
   for (const item of [
@@ -107,7 +113,7 @@ test('vendor picked-up display uses fixed dates and never a running pickup timer
   assert.match(vendor, /return value&&Number\.isFinite\(date\.getTime\(\)\)\?date\.toLocaleString/);
   assert.match(html, /js\/app\.js\?v=vendor-navigation-cache-fix-2/);
   assert.match(html, /js\/customer-account\.js\?v=menu-option-corrections-2/);
-  assert.match(worker, /foodtreknow-shell-v72/);
+  assert.match(worker, /foodtreknow-shell-v73/);
 });
 
 test('Today\'s Sales counts every paid, non-cancelled sale placed today', async () => {
