@@ -1,6 +1,6 @@
 # FoodTrekNow testing build 1.0.17
 
-This marker triggers the signed no-charge Android closed-testing bundle (version code 20) and the signed iOS TestFlight upload (build 15) from the current main branch.
+This marker triggers the signed no-charge Android closed-testing bundle (version code 20) and the signed iOS TestFlight upload (build 16) from the current main branch.
 
 Included corrections:
 
