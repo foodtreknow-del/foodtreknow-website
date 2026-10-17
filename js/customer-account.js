@@ -1777,11 +1777,45 @@
     return (Array.isArray(options) ? options : [])
       .map(option => ({ name: String(option?.name || '').trim(), price: Number(option?.price || 0) }))
       .filter(option => {
-        const key = option.name.toLocaleLowerCase();
+        const key = option.name.toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
         if (!option.name || !Number.isFinite(option.price) || option.price < 0 || seen.has(key)) return false;
         seen.add(key);
         return true;
       });
+  }
+
+  function configuredChoiceGroups(groups) {
+    const byName = new Map();
+    (Array.isArray(groups) ? groups : []).forEach(group => {
+      if (!group) return;
+      const name = String(group.name || 'Options').trim() || 'Options';
+      const key = name.toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      const existing = byName.get(key);
+      const optionSeen = new Set();
+      const options = (Array.isArray(group.options) ? group.options : []).map(option => ({
+        ...option,
+        name: String(option?.name || '').trim(),
+        price: Number(option?.price || 0),
+        id: String(option?.id || option?.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      })).filter(option => {
+        const optionKey = option.name.toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        if (!option.name || !Number.isFinite(option.price) || option.price < 0 || optionSeen.has(optionKey)) return false;
+        optionSeen.add(optionKey);
+        return true;
+      });
+      if (!existing) {
+        byName.set(key, { ...group, name, options });
+        return;
+      }
+      const mergedSeen = new Set();
+      existing.options = [...existing.options, ...options].filter(option => {
+        const optionKey = option.name.toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        if (mergedSeen.has(optionKey)) return false;
+        mergedSeen.add(optionKey);
+        return true;
+      });
+    });
+    return [...byName.values()].filter(group => group.options.length);
   }
 
   function configuredItemChoices(item) {
@@ -1823,20 +1857,20 @@
     const isCheeseburger = /\bcheese\s*burgers?\b/.test(itemName);
     if (!isHotDog && !isCheeseburger) return {
       ...item,
-      requiredChoices: configured.sizeChoice ? [configured.sizeChoice] : (item.requiredChoices || []),
-      optionalChoices: configured.addOnChoice ? [...(item.optionalChoices || []), configured.addOnChoice] : (item.optionalChoices || [])
+      requiredChoices: configuredChoiceGroups(configured.sizeChoice ? [configured.sizeChoice] : (item.requiredChoices || [])),
+      optionalChoices: configuredChoiceGroups(configured.addOnChoice ? [configured.addOnChoice] : (item.optionalChoices || []))
     };
     const fallbackOptions = [...STANDARD_CONDIMENT_OPTIONS,...(isCheeseburger?[{ id: 'no-cheese', name: 'No Cheese', price: 0 }]:[])];
     return {
       ...item,
       requiredChoices: configured.sizeChoice ? [configured.sizeChoice] : (item.requiredChoices || []),
-      optionalChoices: [
+      optionalChoices: configuredChoiceGroups([
         configured.addOnChoice || {
           id: 'condiments',
           name: 'Choose Condiments',
           options: fallbackOptions
         }
-      ]
+      ])
     };
   }
 
@@ -2012,14 +2046,14 @@
   }
 
   function requiredOptionsModal(item) {
-    openModal(`<form id="requiredMenuItemForm" class="required-options-modal"><input id="requiredMenuItemId" type="hidden" value="${item.id}"><div class="required-options-heading"><span>${item.icon}</span><div><p class="eyebrow">Customize your item</p><h2 id="customerModalTitle">${escapeHtml(item.name)}</h2><p>${escapeHtml(item.description)}</p></div></div>${item.requiredChoices?.map(requiredChoiceMarkup).join('') || ''}${item.optionalChoices?.map(optionalChoiceMarkup).join('') || ''}<div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" data-menu-modal-total type="submit">Add to Cart · ${customerMoney(item.price)}</button></div></form>`);
+    openModal(`<form id="requiredMenuItemForm" class="required-options-modal" data-menu-base-price="${Number(item.price || 0)}"><input id="requiredMenuItemId" type="hidden" value="${item.id}"><div class="required-options-heading"><span>${item.icon}</span><div><p class="eyebrow">Customize your item</p><h2 id="customerModalTitle">${escapeHtml(item.name)}</h2><p>${escapeHtml(item.description)}</p></div></div>${item.requiredChoices?.map(requiredChoiceMarkup).join('') || ''}${item.optionalChoices?.map(optionalChoiceMarkup).join('') || ''}<div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" data-menu-modal-total type="submit">Add to Cart · ${customerMoney(item.price)}</button></div></form>`);
     updateMenuModalPrice();
   }
 
   function menuItemDetailModal(item) {
     const canOrder = item.available && customerCanOrderTruck(selectedTruck());
     const status = item.available ? 'This truck is currently closed' : 'Sold Out';
-    openModal(`<form id="customerMenuItemDetailForm" class="menu-item-detail-modal">
+    openModal(`<form id="customerMenuItemDetailForm" class="menu-item-detail-modal" data-menu-base-price="${Number(item.price || 0)}">
       <input id="menuItemDetailId" type="hidden" value="${item.id}">
       <div class="menu-item-detail-photo">${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}">` : `<span aria-hidden="true">${item.icon}</span>`}${canOrder ? '' : `<b>${escapeHtml(status)}</b>`}</div>
       <div class="menu-item-detail-copy">
@@ -2060,12 +2094,11 @@
   }
 
   function updateMenuModalPrice() {
-    const itemId = document.getElementById('menuItemDetailId')?.value || document.getElementById('requiredMenuItemId')?.value;
-    const item = menuForTruck().find(menuItem => String(menuItem.id) === String(itemId));
+    const form = modalContent.querySelector('[data-menu-base-price]');
     const totalButton = modalContent.querySelector('[data-menu-modal-total]');
-    if (!item || !totalButton || totalButton.disabled) return;
+    if (!form || !totalButton || totalButton.disabled) return;
     const selectedChoices = [...selectedRequiredChoices(), ...selectedOptionalChoices()];
-    const unitPrice = Number(item.price || 0) + selectedChoices.reduce((total, choice) => total + Number(choice.price || 0), 0);
+    const unitPrice = Number(form.dataset.menuBasePrice || 0) + selectedChoices.reduce((total, choice) => total + Number(choice.price || 0), 0);
     const quantity = Math.max(1, Math.min(99, Number(document.getElementById('menuItemDetailQuantity')?.value || 1)));
     const unitPriceDisplay = modalContent.querySelector('[data-menu-modal-unit-price]');
     if (unitPriceDisplay) unitPriceDisplay.textContent = customerMoney(unitPrice);
@@ -3749,7 +3782,7 @@
   });
 
   modalContent.addEventListener('input', event => {
-    if (event.target.matches('#menuItemDetailQuantity')) updateMenuModalPrice();
+    if (event.target.matches('[data-required-choice], [data-optional-choice], #menuItemDetailQuantity')) updateMenuModalPrice();
   });
 
   modalContent.addEventListener('submit', async event => {

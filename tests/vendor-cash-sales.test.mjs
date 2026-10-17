@@ -47,6 +47,11 @@ test('walk-up menu includes customer-equivalent sizes, add-ons, pricing, and ite
   assert.match(browser, /item\.addOnLabel/);
   assert.match(browser, /Choose a Size/);
   assert.match(browser, /Special instructions/);
+  assert.match(browser, /MILKSHAKE_FLAVORS/);
+  assert.match(browser, /Choose a Flavor/);
+  assert.match(browser, /STANDARD_CONDIMENTS/);
+  assert.match(browser, /data-cash-category/);
+  assert.match(browser, /FoodTrekNowVendorData\.loadMenu/);
   assert.match(browser, /modifiers, instructions/);
   assert.match(service, /modifiers: item\.modifiers \|\| \[\]/);
   assert.match(service, /special_instructions: item\.instructions \|\| ''/);
