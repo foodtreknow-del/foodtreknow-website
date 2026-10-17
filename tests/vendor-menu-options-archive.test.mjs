@@ -30,10 +30,9 @@ test('vendors can archive completed orders and restore them from the Archive tab
   assert.match(migration, /function public\.set_vendor_order_archived/);
 });
 
-test('today sales visibly includes picked-up test-order value for demonstrations', async () => {
+test('today sales visibly includes all paid sales and test-order value for demonstrations', async () => {
   const [html, app] = await Promise.all([read('index.html'), read('js/app.js')]);
   assert.match(html, /id="salesTotalNote"/);
-  assert.doesNotMatch(app, /o\.isTest\|\|!\['pickedup','completed'\]/);
-  assert.match(app, /Includes no-charge test-order value for demonstration/);
+  assert.match(app, /o\?\.paid!==true\|\|o\.status==='cancelled'/);
+  assert.match(app, /All paid sales placed today, including no-charge test-order value/);
 });
-

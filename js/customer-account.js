@@ -1773,9 +1773,15 @@
   }));
 
   function configuredPriceOptions(options) {
+    const seen = new Set();
     return (Array.isArray(options) ? options : [])
       .map(option => ({ name: String(option?.name || '').trim(), price: Number(option?.price || 0) }))
-      .filter(option => option.name && Number.isFinite(option.price) && option.price >= 0);
+      .filter(option => {
+        const key = option.name.toLocaleLowerCase();
+        if (!option.name || !Number.isFinite(option.price) || option.price < 0 || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
   }
 
   function configuredItemChoices(item) {
@@ -2006,7 +2012,8 @@
   }
 
   function requiredOptionsModal(item) {
-    openModal(`<form id="requiredMenuItemForm" class="required-options-modal"><input id="requiredMenuItemId" type="hidden" value="${item.id}"><div class="required-options-heading"><span>${item.icon}</span><div><p class="eyebrow">Customize your item</p><h2 id="customerModalTitle">${escapeHtml(item.name)}</h2><p>${escapeHtml(item.description)}</p></div></div>${item.requiredChoices?.map(requiredChoiceMarkup).join('') || ''}${item.optionalChoices?.map(optionalChoiceMarkup).join('') || ''}<div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" type="submit">Add to Cart · ${customerMoney(item.price)}</button></div></form>`);
+    openModal(`<form id="requiredMenuItemForm" class="required-options-modal"><input id="requiredMenuItemId" type="hidden" value="${item.id}"><div class="required-options-heading"><span>${item.icon}</span><div><p class="eyebrow">Customize your item</p><h2 id="customerModalTitle">${escapeHtml(item.name)}</h2><p>${escapeHtml(item.description)}</p></div></div>${item.requiredChoices?.map(requiredChoiceMarkup).join('') || ''}${item.optionalChoices?.map(optionalChoiceMarkup).join('') || ''}<div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" data-menu-modal-total type="submit">Add to Cart · ${customerMoney(item.price)}</button></div></form>`);
+    updateMenuModalPrice();
   }
 
   function menuItemDetailModal(item) {
@@ -2019,7 +2026,7 @@
         <p class="eyebrow">${escapeHtml(item.category)}</p>
         <h2 id="customerModalTitle">${escapeHtml(item.name)}</h2>
         <p>${escapeHtml(item.description)}</p>
-        <strong class="menu-item-detail-price">${customerMoney(item.price)}</strong>
+        <strong class="menu-item-detail-price" data-menu-modal-unit-price>${customerMoney(item.price)}</strong>
       </div>
       ${item.requiredChoices?.map(requiredChoiceMarkup).join('') || ''}
       ${item.optionalChoices?.map(optionalChoiceMarkup).join('') || ''}
@@ -2030,9 +2037,10 @@
           <input id="menuItemDetailQuantity" type="number" min="1" max="99" value="1" aria-label="Quantity">
           <button data-menu-detail-quantity="1" type="button" aria-label="Increase quantity">+</button>
         </div>
-        <button class="primary-button item-add-button" type="submit" ${canOrder ? '' : 'disabled'}>${canOrder ? `Add to Cart · ${customerMoney(item.price)}` : escapeHtml(status)}</button>
+        <button class="primary-button item-add-button" type="submit" ${canOrder ? '' : 'disabled'} data-menu-modal-total>${canOrder ? `Add to Cart · ${customerMoney(item.price)}` : escapeHtml(status)}</button>
       </div>
     </form>`);
+    updateMenuModalPrice();
   }
 
   function selectedRequiredChoices() {
@@ -2049,6 +2057,19 @@
       name: input.dataset.choiceName,
       price: Number(input.dataset.choicePrice || 0)
     }));
+  }
+
+  function updateMenuModalPrice() {
+    const itemId = document.getElementById('menuItemDetailId')?.value || document.getElementById('requiredMenuItemId')?.value;
+    const item = menuForTruck().find(menuItem => String(menuItem.id) === String(itemId));
+    const totalButton = modalContent.querySelector('[data-menu-modal-total]');
+    if (!item || !totalButton || totalButton.disabled) return;
+    const selectedChoices = [...selectedRequiredChoices(), ...selectedOptionalChoices()];
+    const unitPrice = Number(item.price || 0) + selectedChoices.reduce((total, choice) => total + Number(choice.price || 0), 0);
+    const quantity = Math.max(1, Math.min(99, Number(document.getElementById('menuItemDetailQuantity')?.value || 1)));
+    const unitPriceDisplay = modalContent.querySelector('[data-menu-modal-unit-price]');
+    if (unitPriceDisplay) unitPriceDisplay.textContent = customerMoney(unitPrice);
+    totalButton.textContent = `Add to Cart · ${customerMoney(unitPrice * quantity)}`;
   }
 
   function addMenuItem(item, modifiers = [], instructions = '', quantity = 1) {
@@ -3637,6 +3658,7 @@
     if (detailQuantity) {
       const input = document.getElementById('menuItemDetailQuantity');
       input.value = String(Math.max(1, Math.min(99, Number(input.value || 1) + Number(detailQuantity.dataset.menuDetailQuantity || 0))));
+      updateMenuModalPrice();
       return;
     }
     const eventTruck = event.target.closest('[data-event-truck]');
@@ -3720,6 +3742,14 @@
       renderCustomerPage('orders');
       customerToast(`${orderNumberLabel(order.id)} cancelled. Full refund: ${customerMoney(order.refund.amount)}.`);
     }
+  });
+
+  modalContent.addEventListener('change', event => {
+    if (event.target.matches('[data-required-choice], [data-optional-choice], #menuItemDetailQuantity')) updateMenuModalPrice();
+  });
+
+  modalContent.addEventListener('input', event => {
+    if (event.target.matches('#menuItemDetailQuantity')) updateMenuModalPrice();
   });
 
   modalContent.addEventListener('submit', async event => {

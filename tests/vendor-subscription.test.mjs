@@ -154,6 +154,11 @@ test('browser subscription state renders active access without exposing secrets'
   assert.doesNotMatch(browserSource, /STRIPE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|sk_(?:test|live)_/);
 });
 
+test('approved vendor status response only locks access when an administrator freezes the vendor', () => {
+  assert.match(statusFunction, /access_allowed: !adminFrozen/);
+  assert.doesNotMatch(statusFunction, /access_allowed: !adminFrozen &&/);
+});
+
 test('subscription source contains no real Stripe keys or webhook secrets', () => {
   const allSource = [migration, startFunction, statusFunction, portalFunction, webhookFunction, browserSource].join('\n');
   assert.doesNotMatch(allSource, /\b(?:sk|rk)_(?:test|live)_[A-Za-z0-9]{12,}/);

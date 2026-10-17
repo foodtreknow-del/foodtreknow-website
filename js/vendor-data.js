@@ -6,6 +6,17 @@
   let settingsTimer = null;
   let lastError = '';
   const activeTruckId = () => localStorage.getItem('ftnActiveVendorTruckId');
+  const uniquePriceOptions = options => {
+    const seen = new Set();
+    return (Array.isArray(options) ? options : [])
+      .map(option => ({ name: String(option?.name || '').trim(), price: Number(option?.price || 0) }))
+      .filter(option => {
+        const key = option.name.toLocaleLowerCase();
+        if (!option.name || !Number.isFinite(option.price) || option.price < 0 || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  };
   const notifyError = error => {
     lastError = String(error?.message || 'Vendor data could not be synchronized.');
     console.error('FoodTrekNow vendor sync failed:', lastError);
@@ -31,8 +42,8 @@
         available: !item.is_sold_out,
         featured: Boolean(item.is_featured),
         image: item.photo_url || '',
-        sizeOptions: Array.isArray(item.size_options) ? item.size_options : [],
-        addOns: Array.isArray(item.add_ons) ? item.add_ons : [],
+        sizeOptions: uniquePriceOptions(item.size_options),
+        addOns: uniquePriceOptions(item.add_ons),
         addOnLabel: item.add_on_label || 'Add-ons',
         order: Number(item.sort_order) || 0
       }))
@@ -51,8 +62,8 @@
       photo_url: item.image || '',
       is_featured: Boolean(item.featured),
       is_sold_out: item.available === false,
-      size_options: Array.isArray(item.sizeOptions) ? item.sizeOptions : [],
-      add_ons: Array.isArray(item.addOns) ? item.addOns : [],
+      size_options: uniquePriceOptions(item.sizeOptions),
+      add_ons: uniquePriceOptions(item.addOns),
       add_on_label: String(item.addOnLabel || 'Add-ons').trim() || 'Add-ons',
       sort_order: Number(item.order) || index + 1
     }));
@@ -124,4 +135,3 @@
     getLastError() { return lastError; }
   });
 })();
-

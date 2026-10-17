@@ -6,6 +6,7 @@ const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const ui = fs.readFileSync(new URL('../js/customer-account.js', import.meta.url), 'utf8');
 const service = fs.readFileSync(new URL('../js/admin-vendor-management.js', import.meta.url), 'utf8');
 const auth = fs.readFileSync(new URL('../js/vendor-auth.js', import.meta.url), 'utf8');
+const vendorApp = fs.readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
 const migration = fs.readFileSync(new URL('../supabase/migrations/202610150002_admin_vendor_management.sql', import.meta.url), 'utf8');
 
 test('admin portal includes the privacy-limited Vendor Management section', () => {
@@ -32,6 +33,8 @@ test('freeze control is audited and enforced by subscription access checks', () 
   assert.match(migration, /not exists \([\s\S]*vendor_admin_controls[\s\S]*is_frozen/i);
   assert.match(migration, /update public\.trucks[\s\S]*when p_is_frozen then false/i);
   assert.match(auth, /accessState\?\.admin_frozen/);
+  assert.match(vendorApp, /vendorSubscriptionAccess=!secure\|\|!Boolean\(state\.admin_frozen\)/);
+  assert.doesNotMatch(vendorApp, /vendorSubscriptionAccess=!secure\|\|Boolean\(state\.access_allowed\)/);
 });
 
 test('admin tables are read-only through RLS and state changes require the protected RPC', () => {
@@ -41,4 +44,3 @@ test('admin tables are read-only through RLS and state changes require the prote
   assert.match(migration, /revoke all on public\.vendor_admin_control_events from public, anon, authenticated/i);
   assert.doesNotMatch(service, /\.from\('(?:vendor_admin_controls|vendor_admin_control_events)'\)\.(?:insert|update|delete)/);
 });
-

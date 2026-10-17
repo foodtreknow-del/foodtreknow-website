@@ -71,6 +71,6 @@ test('walk-up cash sales remain paid report transactions and expose a ready-text
   const reports = read('js/vendor-reports.js');
   assert.match(liveWorkflowMigration, /'Cash \(Walk-up\)', 'paid'/);
   assert.match(app, /Text Customer: Order Ready/);
-  assert.match(reports, /order\.paid !== false/);
-  assert.match(reports, /filter\(order => !order\.isTest\)/);
+  assert.match(reports, /order\.paid === true/);
+  assert.doesNotMatch(reports, /filter\(order => !order\.isTest\)/);
 });

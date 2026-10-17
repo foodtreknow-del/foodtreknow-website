@@ -63,6 +63,20 @@ test('today filter excludes older transactions', () => {
   assert.equal(report.netSales, 14.84);
 });
 
+test('today sales include paid cash and test orders before pickup and stop at local midnight', () => {
+  const tomorrow = new Date(now);
+  tomorrow.setHours(0, 0, 0, 0);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const report = window.FoodTrekNowVendorReports.calculateSalesReport([
+    { id: 4, createdAt: now - 1_000, status: 'new', paid: true, payment: 'Cash (Walk-up)', total: 8, items: [] },
+    { id: 5, createdAt: now - 2_000, status: 'preparing', paid: true, isTest: true, payment: 'No Charge Test', total: 11, items: [] },
+    { id: 6, createdAt: tomorrow.getTime() + 1_000, status: 'new', paid: true, total: 25, items: [] },
+    { id: 7, createdAt: now - 3_000, status: 'cancelled', paid: true, total: 30, items: [] }
+  ], 'today', now);
+  assert.deepEqual(report.salesOrders.map(order => order.id), [4, 5]);
+  assert.equal(report.netSales, 19);
+});
+
 test('CSV export contains transaction details and negative cancelled totals', () => {
   const report = window.FoodTrekNowVendorReports.calculateSalesReport(sampleOrders, '7', now);
   const csv = window.FoodTrekNowVendorReports.buildSalesCsv(report);

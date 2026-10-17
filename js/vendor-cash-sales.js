@@ -9,9 +9,17 @@
   const field = id => document.getElementById(id);
   const text = value => String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
   const cashMoney = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value) || 0);
-  const validOptions = options => (Array.isArray(options) ? options : [])
-    .map(option => ({ name: String(option?.name || '').trim(), price: Number(option?.price || 0) }))
-    .filter(option => option.name && Number.isFinite(option.price) && option.price >= 0);
+  const validOptions = options => {
+    const seen = new Set();
+    return (Array.isArray(options) ? options : [])
+      .map(option => ({ name: String(option?.name || '').trim(), price: Number(option?.price || 0) }))
+      .filter(option => {
+        const key = option.name.toLocaleLowerCase();
+        if (!option.name || !Number.isFinite(option.price) || option.price < 0 || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  };
   let selectedItems = new Map();
 
   function availableItems() {

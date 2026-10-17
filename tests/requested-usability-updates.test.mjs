@@ -87,6 +87,10 @@ test('Milkshake keeps its defaults while vendor-configured sizes and add-ons wor
   assert.match(customer, /addOns/);
   assert.match(customer, /name: 'Choose a Size'/);
   assert.match(customer, /name: 'Choose a Flavor'/);
+  assert.match(customer, /function updateMenuModalPrice\(\)/);
+  assert.match(customer, /data-menu-modal-total/);
+  assert.match(customer, /unitPrice \* quantity/);
+  assert.match(customer, /\[data-required-choice\], \[data-optional-choice\], #menuItemDetailQuantity/);
   assert.match(customer, /\\bpound\\s\*cake\\b/);
   assert.match(customer, /item\.allowSpecialInstructions === false \? ''/);
 });
@@ -100,13 +104,13 @@ test('vendor picked-up display uses fixed dates and never a running pickup timer
   assert.match(vendor, /if\(o\.status==='pickedup'\)return `<div class="timer">✓ Picked up \$\{orderDateStamp\(o\.pickedUpAt\)\}<\/div>`/);
   assert.match(vendor, /<strong>Placed:<\/strong> \$\{orderDateStamp\(o\.createdAt\)\}/);
   assert.match(vendor, /return value&&Number\.isFinite\(date\.getTime\(\)\)\?date\.toLocaleString/);
-  assert.match(html, /js\/app\.js\?v=approved-vendor-isolation-1/);
+  assert.match(html, /js\/app\.js\?v=vendor-navigation-cache-fix-2/);
   assert.match(html, /js\/customer-account\.js\?v=approved-vendor-portal-1/);
-  assert.match(worker, /foodtreknow-shell-v70/);
+  assert.match(worker, /foodtreknow-shell-v71/);
 });
 
-test('Today\'s Sales counts paid live and demonstration orders when they are picked up', async () => {
+test('Today\'s Sales counts every paid, non-cancelled sale placed today', async () => {
   const vendor = await read('js/app.js');
-  assert.match(vendor, /if\(o\.paid!==true\|\|!\['pickedup','completed'\]\.includes\(o\.status\)\)return false/);
-  assert.match(vendor, /const completedValue=o\.pickedUpAt\|\|o\.completedAt\|\|o\.createdAt/);
+  assert.match(vendor, /if\(o\?\.paid!==true\|\|o\.status==='cancelled'\)return false/);
+  assert.match(vendor, /const saleValue=o\.createdAt\|\|o\.receivedAt/);
 });

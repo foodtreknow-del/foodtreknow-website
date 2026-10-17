@@ -16,8 +16,8 @@ test('vendors can configure independently priced sizes and paid item add-ons', a
   assert.match(vendor, /sizeOptions=readMenuOptions\('menuSizeOptions'\)/);
   assert.match(vendor, /addOns=readMenuOptions\('menuAddOns'\)/);
   assert.match(vendor, /Math\.min\(\.\.\.sizeOptions\.map\(option=>option\.price\)\)/);
-  assert.match(data, /size_options: Array\.isArray\(item\.sizeOptions\)/);
-  assert.match(data, /add_ons: Array\.isArray\(item\.addOns\)/);
+  assert.match(data, /size_options: uniquePriceOptions\(item\.sizeOptions\)/);
+  assert.match(data, /add_ons: uniquePriceOptions\(item\.addOns\)/);
   assert.match(styles, /\.menu-option-row/);
 });
 
@@ -41,4 +41,3 @@ test('database validates configured options and calculates final item pricing', 
   assert.match(migration, /item_unit_price := public\.menu_item_unit_price/);
   assert.match(migration, /create or replace function public\.create_payment_checkout_draft/);
 });
-

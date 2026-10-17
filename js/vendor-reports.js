@@ -24,15 +24,24 @@
     return now - Number(range) * 24 * 60 * 60 * 1000;
   }
 
+  function getRangeEnd(range, now = Date.now()) {
+    if (range !== 'today') return Number.POSITIVE_INFINITY;
+    const end = new Date(now);
+    end.setHours(0, 0, 0, 0);
+    end.setDate(end.getDate() + 1);
+    return end.getTime();
+  }
+
   function filterOrdersByRange(source, range = activeRange, now = Date.now()) {
     const start = getRangeStart(range, now);
-    return (Array.isArray(source) ? source : []).filter(order => dateValue(order) >= start).sort((a, b) => dateValue(b) - dateValue(a));
+    const end = getRangeEnd(range, now);
+    return (Array.isArray(source) ? source : []).filter(order => dateValue(order) >= start && dateValue(order) < end).sort((a, b) => dateValue(b) - dateValue(a));
   }
 
   function calculateSalesReport(source, range = activeRange, now = Date.now()) {
-    const filteredOrders = filterOrdersByRange(source, range, now).filter(order => !order.isTest);
+    const filteredOrders = filterOrdersByRange(source, range, now);
     const cancelledOrders = filteredOrders.filter(order => order.status === 'cancelled');
-    const salesOrders = filteredOrders.filter(order => order.status !== 'cancelled' && order.paid !== false);
+    const salesOrders = filteredOrders.filter(order => order.status !== 'cancelled' && order.paid === true);
     const grossSales = [...salesOrders, ...cancelledOrders].reduce((sum, order) => sum + amount(order.total), 0);
     const refunds = cancelledOrders.reduce((sum, order) => sum + amount(order.total), 0);
     const netSales = grossSales - refunds;
@@ -187,5 +196,5 @@
     window.addEventListener('storage', event => { if (event.key === orderStorageKey() && !document.getElementById('reportsPage')?.classList.contains('hidden-view')) renderSalesReport(activeRange); });
   }
 
-  window.FoodTrekNowVendorReports = { calculateSalesReport, filterOrdersByRange, buildSalesCsv, renderSalesReport, getRangeStart, printSalesReport };
+  window.FoodTrekNowVendorReports = { calculateSalesReport, filterOrdersByRange, buildSalesCsv, renderSalesReport, getRangeStart, getRangeEnd, printSalesReport };
 })();

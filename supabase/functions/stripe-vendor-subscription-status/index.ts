@@ -53,11 +53,10 @@ function subscriptionState(subscription: Record<string, any>, existing: Record<s
 
 function responseState(row: Record<string, any> | null, adminControl: Record<string, any> | null = null) {
   const status = row?.status || 'not_started';
-  const graceActive = status === 'past_due' && row?.grace_period_ends_at && Date.parse(row.grace_period_ends_at) > Date.now();
   const adminFrozen = Boolean(adminControl?.is_frozen);
   return {
     status,
-    access_allowed: !adminFrozen && (['active', 'trialing'].includes(status) || Boolean(graceActive)),
+    access_allowed: !adminFrozen,
     admin_frozen: adminFrozen,
     freeze_reason: adminFrozen ? adminControl?.freeze_reason || null : null,
     current_period_end: row?.current_period_end || null,
@@ -94,4 +93,3 @@ Deno.serve(async request => {
     return json(request, { error: message }, 400);
   }
 });
-
