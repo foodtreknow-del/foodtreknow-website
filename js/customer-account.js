@@ -2473,7 +2473,139 @@
     if (page === 'vendorApplication') loadVendorApplication();
     if (page === 'vendorReviews' && currentAccount.isPlatformAdmin) loadVendorReviews();
     if (page === 'vendorManagement' && currentAccount.isPlatformAdmin) loadVendorManagement();
-    if (page === 'adminDirectory' && currentAccoumary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button><button class="customer-small-button" data-toggle-order-favorite="${escapeHtml(order.id)}" type="button">${isFavorite ? '♥ Saved' : '♡ Save Favorite'}</button>` : ''}${order.status === 'cancelled' ? `<button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Order Again</button>` : ''}</div></div></article>`;
+    if (page === 'adminDirectory' && currentAccount.isPlatformAdmin) loadAdminDirectory();
+    updateCartBadge();
+    updateCustomerNotificationBadge();
+    document.querySelector('.customer-sidebar')?.classList.remove('open');
+    document.getElementById('customerMenuButton').setAttribute('aria-expanded', 'false');
+    window.scrollTo(0, 0);
+  }
+
+  function renderOverview() {
+    const currentOrders = currentAccount.orders.filter(order => !['completed', 'cancelled'].includes(order.status));
+    const pastOrders = currentAccount.orders.filter(order => ['completed', 'cancelled'].includes(order.status));
+    const current = currentOrders[0];
+    const name = escapeHtml(currentAccount.preferredName || currentAccount.firstName);
+    const favoriteTrucks = TRUCKS.filter(truck => currentAccount.favoriteTrucks.includes(truck.id));
+    const visibleTrucks = favoriteTrucks.length ? favoriteTrucks : [TRUCK];
+    const payments = currentAccount.paymentMethods.slice(0, 2);
+    return `<div class="customer-home">
+      <header class="home-welcome">
+        <div><p class="home-kicker">${timeGreeting()}, ${name}!</p><h1>Ready for something delicious?</h1>
+          <button class="home-location-button" data-customer-action="change-location" type="button"><span>📍</span><span><small>Current Location</small><strong>${escapeHtml(preferredLocationLabel())}</strong></span><b>Change Location⌄</b></button>
+        </div>
+        <div class="home-weather-mark" aria-hidden="true"><span>Local eats</span><strong>Fresh finds nearby</strong></div>
+      </header>
+
+      <form id="customerHomeSearch" class="home-search" role="search">
+        <span aria-hidden="true">⌕</span><label class="sr-only" for="customerHomeSearchInput">Search FoodTrekNow</label><input id="customerHomeSearchInput" type="search" autocomplete="off" placeholder="Search food trucks, menu items, cuisines, or events..."><button type="submit">Search</button>
+      </form>
+      <div id="customerHomeSearchResults" class="home-search-results" aria-live="polite"></div>
+
+      <section class="home-primary-actions" aria-label="Primary actions">
+        <button class="home-action-card order" data-home-target="order" type="button"><span>🍔</span><strong>Order Food</strong><small>Browse menus</small><b>›</b></button>
+        <button class="home-action-card trucks" data-home-target="explore" type="button"><span>📍</span><strong>Find Trucks</strong><small>Near your location</small><b>›</b></button>
+        <button class="home-action-card events" data-home-target="events" type="button"><span>🎪</span><strong>Events</strong><small>Food & community</small><b>›</b></button>
+        <button class="home-action-card favorites" data-customer-action="view-favorites" type="button"><span>❤️</span><strong>Favorites</strong><small>Your saved spots</small><b>›</b></button>
+        <button class="home-action-card host-request" data-customer-action="need-food-truck" type="button"><span>🚚</span><strong>Need a Food Truck?</strong><small>Post a location or event request</small><b>›</b></button>
+      </section>
+
+      <section class="home-section home-order-section">
+        <div class="home-section-heading"><div><p class="eyebrow">Pickup status</p><h2>${current ? 'Your order is moving' : 'What are you craving?'}</h2></div>${current ? '<button class="home-link-button" data-customer-action="view-orders" type="button">Order History →</button>' : ''}</div>
+        ${activeOrderCard(current)}
+      </section>
+
+      <section id="customerHomeExplore" class="home-section">
+        <div class="home-section-heading"><div><p class="eyebrow">Saved for later</p><h2>Favorite Trucks</h2></div><button class="home-link-button" data-customer-action="view-favorites" type="button">View Favorites →</button></div>
+        <div class="home-truck-grid">${visibleTrucks.map(favoriteTruckHomeCard).join('')}</div>
+      </section>
+
+      <section id="customerHomeEvents" class="home-section">
+        <div class="home-section-heading"><div><p class="eyebrow">Make a plan</p><h2>Events Near You</h2></div><button class="home-link-button" data-home-target="all-events" type="button">View All Events →</button></div>
+        <div class="home-event-grid">${EVENTS.map(event => `<article class="home-event-card" data-home-event="${event.id}"><div class="event-date"><span>${event.date.split(' ')[0]}</span><strong>${event.date.split(' ')[1]}</strong></div><div><p>${escapeHtml(event.location)}</p><h3>${escapeHtml(event.name)}</h3><span>${escapeHtml(event.time)} · ${escapeHtml(event.detail)}</span></div><button data-home-event="${event.id}" type="button" aria-label="View ${escapeHtml(event.name)}">›</button></article>`).join('')}</div>
+      </section>
+
+      <section class="home-section">
+        <div class="home-section-heading"><div><p class="eyebrow">Order it again</p><h2>Recent Orders</h2></div><button class="home-link-button" data-customer-action="view-orders" type="button">View Order History →</button></div>
+        <div class="home-recent-orders">${pastOrders.slice(0, 3).map(order => `<article class="home-recent-order"><div class="recent-order-logo">🚚</div><div><h3>${escapeHtml(order.truckName)} · ${orderNumberLabel(order.id)}</h3><p>${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</p><span>${formatDate(order.createdAt)} · ${customerMoney(order.total)}</span></div><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button></article>`).join('') || '<div class="customer-card empty-customer-state"><strong>No recent orders yet</strong><p>Your past pickups will appear here.</p></div>'}</div>
+      </section>
+
+      <div class="home-two-column">
+        <section class="home-section home-compact-section"><div class="home-section-heading"><div><p class="eyebrow">Delivery details</p><h2>Addresses</h2></div></div><div class="home-saved-list">${homeAddressCard('Home')}${homeAddressCard('Work')}<button class="home-add-row" data-customer-action="add-address" type="button"><span>＋</span><strong>Add Address</strong></button></div></section>
+        <section class="home-section home-compact-section"><div class="home-section-heading"><div><p class="eyebrow">Faster checkout</p><h2>Payment Methods</h2></div></div><div class="home-saved-list">${payments.map(homePaymentCard).join('')}${payments.length ? '' : '<p class="home-empty-copy">No saved cards yet.</p>'}<button class="home-add-row" data-customer-action="add-payment" type="button"><span>＋</span><strong>Add Payment Method</strong></button></div></section>
+      </div>
+
+      <section class="home-section home-notifications">
+        <div class="home-section-heading"><div><p class="eyebrow">Stay in the loop</p><h2>Notifications</h2></div><button class="home-link-button" data-home-page="notifications" type="button">Manage Notifications →</button></div>
+        <div class="home-notification-list">
+          <article><span>🛍️</span><div><strong>Order updates are ${currentAccount.preferences.notifications.orderUpdates ? 'on' : 'off'}</strong><p>Pickup status and order confirmations</p></div><b>${currentAccount.preferences.notifications.orderUpdates ? 'On' : 'Off'}</b></article>
+          <article><span>❤️</span><div><strong>Favorite truck alerts are ${currentAccount.preferences.notifications.favoriteTrucks ? 'on' : 'off'}</strong><p>Hours, new menu items, and availability</p></div><b>${currentAccount.preferences.notifications.favoriteTrucks ? 'On' : 'Off'}</b></article>
+        </div>
+      </section>
+    </div>`;
+  }
+
+  function renderProfile() {
+    return `${pageHeader('Account', 'Your Profile', 'Keep your contact details and preferred name up to date.')}
+      <div class="customer-content-grid">
+        <section class="customer-card">
+          <div class="profile-photo-row">${avatarMarkup(currentAccount, true)}<div class="profile-photo-actions"><strong>Profile Photo <span class="muted">(optional)</span></strong><label class="customer-small-button" for="customerProfilePhoto">Choose Photo</label><input id="customerProfilePhoto" type="file" accept="image/*" hidden><small class="muted">JPG, PNG, or WEBP under 2 MB.</small></div></div>
+          <form id="customerProfileForm">
+            <div class="customer-form-grid">
+              <div><label for="profileFirstName">First Name</label><input id="profileFirstName" class="customer-input" value="${escapeHtml(currentAccount.firstName)}" required maxlength="50"></div>
+              <div><label for="profileLastName">Last Name</label><input id="profileLastName" class="customer-input" value="${escapeHtml(currentAccount.lastName)}" required maxlength="50"></div>
+              <div><label for="profilePreferredName">Preferred Name</label><input id="profilePreferredName" class="customer-input" value="${escapeHtml(currentAccount.preferredName || '')}" maxlength="50" placeholder="What should we call you?"></div>
+              <div><label for="profileMobile">Mobile Number</label><input id="profileMobile" class="customer-input" type="tel" value="${escapeHtml(currentAccount.mobile)}" required maxlength="20"></div>
+              <div><label for="profileEmail">Email Address</label><input id="profileEmail" class="customer-input" type="email" value="${escapeHtml(currentAccount.email)}" required maxlength="120"></div>
+            </div>
+            <p id="customerProfileMessage" class="form-message"></p>
+            <div class="customer-form-actions"><button class="primary-button" type="submit">Save Profile</button></div>
+          </form>
+        </section>
+        <aside class="customer-card"><h2 class="customer-section-title">Security</h2><p class="muted">Use a unique password to protect your account and order information.</p><button class="secondary-button full" data-customer-action="change-password" type="button">Change Password</button><div class="demo-note"><strong>Email verification</strong><br>${currentAccount.emailVerified ? 'Verified by Supabase' : 'Pending — check your email for the secure link'}</div></aside>
+      </div>`;
+  }
+
+  function renderAddresses() {
+    const cards = currentAccount.addresses.length ? currentAccount.addresses.map(address => `
+      <article class="customer-card customer-list-card">
+        <div><span class="address-label">${escapeHtml(address.label)}</span>${address.isDefault ? ' <span class="default-pill">Default</span>' : ''}<h3>${escapeHtml(address.recipient || `${currentAccount.firstName} ${currentAccount.lastName}`)}</h3><p>${escapeHtml(address.street)}${address.unit ? `, ${escapeHtml(address.unit)}` : ''}<br>${escapeHtml(address.city)}, ${escapeHtml(address.state)} ${escapeHtml(address.zip)}</p>${address.notes ? `<p><small>${escapeHtml(address.notes)}</small></p>` : ''}</div>
+        <div class="customer-card-actions"><button class="customer-small-button" data-edit-address="${address.id}" type="button">Edit</button><button class="customer-small-button danger" data-delete-address="${address.id}" type="button">Delete</button></div>
+      </article>`).join('') : '<div class="customer-card empty-customer-state"><span>⌖</span><strong>No saved addresses yet</strong><p>Add home, work, or another delivery location.</p></div>';
+    return `${pageHeader('Saved Locations', 'Addresses', 'Manage the locations you use for delivery and checkout.', '<button class="primary-button" data-customer-action="add-address" type="button">+ Add Address</button>')}<div class="customer-list">${cards}</div>`;
+  }
+
+  function renderFavorites() {
+    const favoriteTrucks = TRUCKS.filter(truck => currentAccount.favoriteTrucks.includes(truck.id));
+    const favoriteOrders = currentAccount.orders.filter(order => currentAccount.favoriteOrders.includes(order.id));
+    return `${pageHeader('Saved for Later', 'Favorites', 'Keep favorite trucks and meals close at hand.')}
+      <div class="customer-list">${favoriteTrucks.length ? favoriteTrucks.map(truck => `<section class="customer-card favorite-truck-card" data-open-truck-profile="${truck.id}"><div class="favorite-truck-art">${truck.icon || '🚚'}</div><div><p class="eyebrow">${escapeHtml(truck.status)}</p><h2 class="customer-section-title">${escapeHtml(truck.name)}</h2><p class="muted">${escapeHtml(truck.cuisine)} · ${escapeHtml(truck.wait)}</p></div><div class="customer-card-actions"><button class="customer-small-button primary" data-open-truck-profile="${truck.id}" type="button">View Truck</button><button class="heart-button saved" data-toggle-truck-favorite="${truck.id}" type="button" aria-label="Remove favorite truck">♥</button></div></section>`).join('') : '<div class="customer-card empty-customer-state"><span>♡</span><strong>No favorite trucks yet</strong><p>Explore nearby trucks and save the ones you love.</p></div>'}</div>
+      <h2>Favorite Orders</h2>
+      <div class="customer-list">${favoriteOrders.length ? favoriteOrders.map(order => favoriteOrderCard(order)).join('') : '<div class="customer-card empty-customer-state"><span>♡</span><strong>No favorite orders yet</strong><p>Open Order History and tap “Save Favorite” on a past meal.</p><button class="secondary-button" data-customer-action="view-orders" type="button">View Order History</button></div>'}</div>`;
+  }
+
+  function favoriteOrderCard(order) {
+    return `<article class="customer-card customer-order-card"><div><p class="eyebrow">${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><h3>${escapeHtml(order.truckName)}</h3><div class="order-item-summary">${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</div></div><div><div class="order-total">${customerMoney(order.total)}</div><div class="customer-card-actions"><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button><button class="customer-small-button danger" data-toggle-order-favorite="${escapeHtml(order.id)}" type="button">Remove</button></div></div></article>`;
+  }
+
+  function renderOrders() {
+    const current = currentAccount.orders.filter(order => !['completed', 'cancelled'].includes(order.status));
+    const past = currentAccount.orders.filter(order => ['completed', 'cancelled'].includes(order.status));
+    const shown = orderHistoryFilter === 'current' ? current : past;
+    return `${pageHeader('Every Pickup', 'Order History', 'Track active orders and revisit past meals.')}
+      <div class="order-history-tabs" role="tablist"><button class="order-history-tab ${orderHistoryFilter === 'current' ? 'active' : ''}" data-order-filter="current" type="button">Current Orders (${current.length})</button><button class="order-history-tab ${orderHistoryFilter === 'past' ? 'active' : ''}" data-order-filter="past" type="button">Past Orders (${past.length})</button></div>
+      <div class="customer-list">${shown.length ? shown.map(order => orderHistoryCard(order)).join('') : `<div class="customer-card empty-customer-state"><span>▤</span><strong>No ${orderHistoryFilter} orders</strong><p>Orders will appear here after checkout.</p></div>`}</div>`;
+  }
+
+  function orderHistoryCard(order) {
+    const isFavorite = currentAccount.favoriteOrders.includes(order.id);
+    const isPast = ['completed', 'cancelled'].includes(order.status);
+    const cancellationCopy = !order.supabaseOrderId
+      ? `Full refund: ${customerMoney(order.refund?.amount || order.total)}`
+      : order.cancellationResolution === 'vendor_credit'
+        ? `${customerMoney(order.refund?.amount || order.total)} ${order.truckName} credit issued`
+        : order.refundStatus === 'succeeded' ? `${customerMoney(order.refund?.amount || 0)} refunded through Stripe` : 'Stripe refund processing';
+    return `<article class="customer-card customer-order-card"><div><span class="status-pill ${isPast ? 'past' : ''} ${order.status === 'completed' ? 'picked-up' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span><h3>${escapeHtml(order.truckName)} · ${orderNumberLabel(order.id)}</h3><p class="muted">${formatDate(order.createdAt)}</p><div class="order-item-summary">${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</div>${order.status === 'cancelled' ? `<p class="refund-confirmation">${escapeHtml(cancellationCopy)}</p>` : ''}</div><div><div class="order-total">${customerMoney(order.total)}</div><div class="customer-card-actions"><button class="customer-small-button" data-order-details="${escapeHtml(order.id)}" type="button">Order Details</button>${isOrderCancellable(order) ? `<button class="customer-small-button danger" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button>` : ''}${order.status === 'completed' ? `<button class="customer-small-button" data-receipt="${escapeHtml(order.id)}" type="button">Receipt</button><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button><button class="customer-small-button" data-toggle-order-favorite="${escapeHtml(order.id)}" type="button">${isFavorite ? '♥ Saved' : '♡ Save Favorite'}</button>` : ''}${order.status === 'cancelled' ? `<button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Order Again</button>` : ''}</div></div></article>`;
   }
 
   function renderPayments() {
