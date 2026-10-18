@@ -13,7 +13,7 @@ test('customer and administrator onboarding screens are wired into the existing 
   assert.match(html, /js\/vendor-onboarding\.js\?v=vendor-onboarding-1/);
   assert.match(ui, /function renderVendorApplication\(\)/);
   assert.match(ui, /function renderVendorReviews\(\)/);
-  assert.match(ui, /currentAccount\.role !== 'admin'/);
+  assert.match(ui, /currentAccount\.isPlatformAdmin/);
 });
 
 test('vendor applications are private to their applicant and administrators', () => {

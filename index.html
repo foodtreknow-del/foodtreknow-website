@@ -207,6 +207,8 @@
         <button class="customer-nav-link customer-notification-nav-link" data-customer-page="notifications" type="button"><span>●</span> Notifications <b class="customer-notification-count hidden-view" data-customer-notification-count>0</b></button>
         <button class="customer-nav-link" data-customer-page="settings" type="button"><span>⚙</span> Settings</button>
         <button id="vendorApplicationNav" class="customer-nav-link hidden-view" data-customer-page="vendorApplication" type="button"><span>🚚</span> Become a Vendor</button>
+        <button id="adminCustomerPortalNav" class="customer-nav-link hidden-view" data-customer-page="overview" type="button"><span>👤</span> Customer Portal</button>
+        <button id="adminVendorPortalNav" class="customer-nav-link hidden-view" type="button"><span>🚚</span> Vendor Portal</button>
         <button id="adminVendorReviewNav" class="customer-nav-link hidden-view" data-customer-page="vendorReviews" type="button"><span>✓</span> Vendor Approvals</button>
         <button id="adminVendorManagementNav" class="customer-nav-link hidden-view" data-customer-page="vendorManagement" type="button"><span>▥</span> Vendor Management</button>
         <button id="adminContactDirectoryNav" class="customer-nav-link hidden-view" data-customer-page="adminDirectory" type="button"><span>☷</span> Contact Directory</button>
@@ -267,6 +269,8 @@
         <button class="nav-link" data-page="opportunities">Find Locations</button>
         <button class="nav-link" data-page="reports">Reports</button>
         <button class="nav-link" data-page="settings">Settings</button>
+        <button id="vendorCustomerPortalButton" class="nav-link hidden-view" type="button">Customer Portal</button>
+        <button id="vendorAdminPortalButton" class="nav-link hidden-view" type="button">Admin Controls</button>
         <button id="logoutButton" class="nav-link vendor-nav-logout" type="button">Log Out</button>
       </nav>
       <nav class="app-legal-links vendor-app-legal-links" aria-label="Vendor legal information"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="privacy.html#your-choices">Choices</a></nav>
@@ -601,17 +605,17 @@
 <script src="js/supabase-config.js?v=customer-auth-1"></script>
 <script src="js/supabase-client.js?v=password-recovery-2"></script>
 <script src="js/live-location.js?v=live-location-1"></script>
-<script src="js/supabase-auth.js?v=host-auth-1"></script>
+<script src="js/supabase-auth.js?v=admin-portal-switching-1"></script>
 <script src="js/vendor-onboarding.js?v=vendor-onboarding-1"></script>
 <script src="js/admin-vendor-management.js?v=admin-vendor-management-1"></script>
 <script src="js/admin-contact-directory.js?v=admin-contact-directory-1"></script>
-<script src="js/vendor-auth.js?v=admin-freeze-1"></script>
+<script src="js/vendor-auth.js?v=admin-portal-switching-1"></script>
 <script src="js/vendor-data.js?v=tenant-isolation-1"></script>
 <script src="js/customer-marketplace.js?v=event-logistics-1"></script>
 <script src="js/opportunity-marketplace.js?v=host-date-labels-1"></script>
 <script src="js/live-orders.js?v=communications-1"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=tenant-isolation-1"></script>
+<script src="js/app.js?v=admin-portal-switching-1"></script>
 <script src="js/vendor-cash-sales.js?v=complete-cash-menu-2"></script>
 <script src="js/vendor-reports.js?v=print-fix-1"></script>
 <script src="js/vendor-settings.js?v=tenant-isolation-1"></script>
@@ -619,7 +623,7 @@
 <script src="js/vendor-subscription.js?v=approved-vendor-access-2"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>
-<script src="js/customer-account.js?v=admin-contact-directory-1"></script>
+<script src="js/customer-account.js?v=admin-portal-switching-1"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>

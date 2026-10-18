@@ -27,9 +27,9 @@ test('Vendor menu item modal remains scrollable with sticky save actions', async
   assert.match(styles, /menu-item-modal-card \.menu-form-actions\{[^}]*position:sticky[^}]*bottom:0/);
 });
 
-test('Vendor logout is immediately below Settings in the sidebar menu', async () => {
+test('Vendor logout stays last after the administrator portal-switch controls', async () => {
   const [html, styles] = await Promise.all([read('index.html'), read('css/vendor.css')]);
-  assert.match(html, /data-page="settings">Settings<\/button>\s*<button id="logoutButton" class="nav-link vendor-nav-logout"/);
+  assert.match(html, /data-page="settings">Settings<\/button>[\s\S]*id="vendorCustomerPortalButton"[\s\S]*id="vendorAdminPortalButton"[\s\S]*id="logoutButton" class="nav-link vendor-nav-logout"/);
   assert.match(styles, /\.vendor-nav-logout\{[^}]*margin-top:4px/);
 });
 
@@ -111,9 +111,9 @@ test('vendor picked-up display uses fixed dates and never a running pickup timer
   assert.match(vendor, /if\(o\.status==='pickedup'\)return `<div class="timer">✓ Picked up \$\{orderDateStamp\(o\.pickedUpAt\)\}<\/div>`/);
   assert.match(vendor, /<strong>Placed:<\/strong> \$\{orderDateStamp\(o\.createdAt\)\}/);
   assert.match(vendor, /return value&&Number\.isFinite\(date\.getTime\(\)\)\?date\.toLocaleString/);
-  assert.match(html, /js\/app\.js\?v=tenant-isolation-1/);
-  assert.match(html, /js\/customer-account\.js\?v=admin-contact-directory-1/);
-  assert.match(worker, /foodtreknow-shell-v75/);
+  assert.match(html, /js\/app\.js\?v=admin-portal-switching-1/);
+  assert.match(html, /js\/customer-account\.js\?v=admin-portal-switching-1/);
+  assert.match(worker, /foodtreknow-shell-v76/);
 });
 
 test('Today\'s Sales counts every paid, non-cancelled sale placed today', async () => {

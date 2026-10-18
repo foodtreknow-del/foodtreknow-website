@@ -1,4 +1,4 @@
-const CACHE_NAME = 'foodtreknow-shell-v75';
+const CACHE_NAME = 'foodtreknow-shell-v76';
 const APP_SHELL = [
   './',
   './index.html',
@@ -89,3 +89,4 @@ self.addEventListener('fetch', event => {
     }))
   );
 });
+

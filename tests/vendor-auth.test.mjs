@@ -33,6 +33,7 @@ function harness(role = 'vendor', missingTable = '') {
     },
     async rpc(name) {
       calls.push(['rpc', name]);
+      if (name === 'is_admin') return { data: role === 'admin', error: null };
       return { data: { access_allowed: true, admin_frozen: false, freeze_reason: null }, error: null };
     },
     from(table) {
@@ -55,12 +56,17 @@ test('approved vendor credentials resolve the owned vendor profile and truck', a
   assert.deepEqual(JSON.parse(JSON.stringify(calls[0][1])), { email: 'vendor@example.com', password: 'safe-password' });
 });
 
-test('customer and administrator accounts cannot enter the vendor dashboard', async () => {
-  for (const role of ['customer', 'admin']) {
-    const { api, calls } = harness(role);
-    await assert.rejects(() => api.signIn('user@example.com', 'safe-password'), /not been approved/i);
-    assert.ok(calls.some(call => call[0] === 'signOut'));
-  }
+test('ordinary customers cannot enter the vendor dashboard', async () => {
+  const { api, calls } = harness('customer');
+  await assert.rejects(() => api.signIn('user@example.com', 'safe-password'), /not been approved/i);
+  assert.ok(calls.some(call => call[0] === 'signOut'));
+});
+
+test('the designated platform administrator can enter their owned vendor portal', async () => {
+  const { api } = harness('admin');
+  const context = await api.signIn('admin@example.com', 'safe-password');
+  assert.equal(context.isPlatformAdmin, true);
+  assert.equal(context.truck.id, 'truck-1');
 });
 
 test('incomplete approved vendor data produces clear repair guidance', async () => {
@@ -87,7 +93,7 @@ test('vendor password recovery validates the email and uses the secure Supabase 
 });
 
 test('secure vendor auth loads before the existing dashboard application', () => {
-  const authPosition = html.indexOf('js/vendor-auth.js?v=admin-freeze-1');
+  const authPosition = html.indexOf('js/vendor-auth.js?v=admin-portal-switching-1');
   const appPosition = html.indexOf('js/app.js');
   assert.ok(authPosition >= 0 && authPosition < appPosition);
   assert.match(appSource, /FoodTrekNowVendorAuth\.signIn/);

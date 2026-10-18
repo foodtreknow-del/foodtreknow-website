@@ -16,7 +16,9 @@
     const { data: profile, error: profileError } = await client.from('profiles').select('id, role, first_name, last_name').eq('id', user.id).maybeSingle();
     if (profileError) throw friendly(profileError);
     if (!profile) throw new Error('This account does not have a FoodTrekNow profile yet. Sign in through the customer portal first, then submit a Vendor Application.');
-    if (profile.role !== 'vendor') throw new Error('This account has not been approved for vendor access.');
+    const { data: isPlatformAdmin, error: adminError } = await client.rpc('is_admin');
+    if (adminError) throw friendly(adminError);
+    if (profile.role !== 'vendor' && !isPlatformAdmin) throw new Error('This account has not been approved for vendor access.');
 
     const { data: vendor, error: vendorError } = await client.from('vendor_profiles').select('*').eq('owner_id', user.id).maybeSingle();
     if (vendorError) throw friendly(vendorError);
@@ -27,7 +29,7 @@
     const { data: truck, error: truckError } = await client.from('trucks').select('*').eq('vendor_id', vendor.id).order('created_at', { ascending: true }).limit(1).maybeSingle();
     if (truckError) throw friendly(truckError);
     if (!truck) throw new Error('Your vendor profile does not have a food truck yet. Ask the FoodTrekNow administrator to complete the setup.');
-    return { user: { id: user.id, email: user.email }, profile, vendor, truck };
+    return { user: { id: user.id, email: user.email }, profile, vendor, truck, isPlatformAdmin: Boolean(isPlatformAdmin) };
   }
 
   window.FoodTrekNowVendorStorageKey = baseKey => {

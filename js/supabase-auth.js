@@ -32,6 +32,9 @@
         .maybeSingle();
       if (error) throw friendlyError(error, 'Your customer profile could not be loaded.');
 
+      const { data: isPlatformAdmin, error: adminError } = await this.client.rpc('is_admin');
+      if (adminError) throw friendlyError(adminError, 'Your account permissions could not be verified.');
+
       const metadata = user.user_metadata || {};
       const account = this.buildAccount({
         user,
@@ -45,7 +48,8 @@
           role: 'customer',
           created_at: user.created_at
         },
-        existing: this.repository.findById(user.id)
+        existing: this.repository.findById(user.id),
+        isPlatformAdmin: Boolean(isPlatformAdmin)
       });
       return this.repository.save(account);
     }
@@ -78,7 +82,8 @@
           role: 'customer',
           created_at: data.user.created_at
         },
-        existing: this.repository.findById(data.user.id)
+        existing: this.repository.findById(data.user.id),
+        isPlatformAdmin: false
       });
       account.requiresEmailVerification = !data.session;
       account.emailVerified = Boolean(data.user.email_confirmed_at);
