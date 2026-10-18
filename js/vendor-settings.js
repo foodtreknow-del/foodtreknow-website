@@ -36,7 +36,7 @@
       const saved = localStorage.getItem(storageKey(SETTINGS_STORAGE_KEY));
       if (saved) return normalizeSettings(JSON.parse(saved));
       const initial = cloneDefaults();
-      initial.notifications.orderSound = localStorage.getItem(SOUND_STORAGE_KEY) !== 'off';
+      initial.notifications.orderSound = localStorage.getItem(storageKey(SOUND_STORAGE_KEY)) !== 'off';
       return initial;
     } catch {
       return cloneDefaults();
@@ -154,7 +154,7 @@
     if (previewTitle) previewTitle.textContent = `${settings.profile.truckName} Menu`;
     const dashboardButton = document.querySelector('[data-page="dashboard"]');
     if (dashboardButton?.classList.contains('active')) field('pageTitle').textContent = settings.profile.truckName;
-    localStorage.setItem(SOUND_STORAGE_KEY, settings.notifications.orderSound ? 'on' : 'off');
+    localStorage.setItem(storageKey(SOUND_STORAGE_KEY), settings.notifications.orderSound ? 'on' : 'off');
     try {
       if (typeof soundOn !== 'undefined') soundOn = settings.notifications.orderSound;
       if (typeof updateSoundButton === 'function') updateSoundButton();
@@ -220,7 +220,7 @@
     setChecked('vendorAcceptingOrders', event.target.checked);
   });
   field('notificationOrderSound')?.addEventListener('change', event => {
-    localStorage.setItem(SOUND_STORAGE_KEY, event.target.checked ? 'on' : 'off');
+    localStorage.setItem(storageKey(SOUND_STORAGE_KEY), event.target.checked ? 'on' : 'off');
   });
   document.querySelector('[data-page="settings"]')?.addEventListener('click', () => { vendorSettings = loadSettings(); populateSettingsForm(vendorSettings); setMessage(''); });
   document.querySelector('[data-page="dashboard"]')?.addEventListener('click', () => applyVendorSettings(vendorSettings));

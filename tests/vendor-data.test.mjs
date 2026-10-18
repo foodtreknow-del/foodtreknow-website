@@ -87,7 +87,7 @@ test('database migration restricts menu synchronization to the owning authentica
 });
 
 test('vendor data loads before the dashboard and UI mutations queue synchronization', () => {
-  const vendorDataPosition = html.search(/js\/vendor-data\.js\?v=menu-options-\d+/);
+  const vendorDataPosition = html.search(/js\/vendor-data\.js\?v=tenant-isolation-\d+/);
   const appPosition = html.search(/js\/app\.js/);
   assert.ok(vendorDataPosition >= 0 && vendorDataPosition < appPosition);
   assert.match(appSource, /hydrateVendorMenu/);

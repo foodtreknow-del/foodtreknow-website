@@ -111,9 +111,9 @@ test('vendor picked-up display uses fixed dates and never a running pickup timer
   assert.match(vendor, /if\(o\.status==='pickedup'\)return `<div class="timer">✓ Picked up \$\{orderDateStamp\(o\.pickedUpAt\)\}<\/div>`/);
   assert.match(vendor, /<strong>Placed:<\/strong> \$\{orderDateStamp\(o\.createdAt\)\}/);
   assert.match(vendor, /return value&&Number\.isFinite\(date\.getTime\(\)\)\?date\.toLocaleString/);
-  assert.match(html, /js\/app\.js\?v=vendor-navigation-cache-fix-2/);
+  assert.match(html, /js\/app\.js\?v=tenant-isolation-1/);
   assert.match(html, /js\/customer-account\.js\?v=admin-contact-directory-1/);
-  assert.match(worker, /foodtreknow-shell-v74/);
+  assert.match(worker, /foodtreknow-shell-v75/);
 });
 
 test('Today\'s Sales counts every paid, non-cancelled sale placed today', async () => {

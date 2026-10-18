@@ -31,8 +31,6 @@ Deno.serve(async request => {
   if (request.method === 'OPTIONS') return json(request, { ok: true });
   if (request.method !== 'POST') return json(request, { error: 'Method not allowed.' }, 405);
   if (!isAllowedOrigin(request)) return json(request, { error: 'This application origin is not allowed.' }, 403);
-  let draftId = '';
-  let serviceClient: ReturnType<typeof createClient> | null = null;
   try {
     const authorization = request.headers.get('Authorization');
     if (!authorization?.startsWith('Bearer ')) throw new Error('Sign in with an approved tester account.');
@@ -43,7 +41,7 @@ Deno.serve(async request => {
     });
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData.user) throw new Error('Your tester session has expired. Please sign in again.');
-    serviceClient = createClient(url, requiredEnvironment('SUPABASE_SERVICE_ROLE_KEY'), {
+    const serviceClient = createClient(url, requiredEnvironment('SUPABASE_SERVICE_ROLE_KEY'), {
       auth: { persistSession: false, autoRefreshToken: false }
     });
     const dailyWindow = new Date();
@@ -59,7 +57,7 @@ Deno.serve(async request => {
       throw new Error('This tester account reached today’s no-charge order limit. Try again tomorrow.');
     }
     const body = await request.json();
-    const { data, error } = await userClient.rpc('create_payment_checkout_draft_with_credit', {
+    const { data, error } = await userClient.rpc('place_order', {
       p_truck_id: body.truckId,
       p_items: Array.isArray(body.items) ? body.items.map((item: Record<string, unknown>) => ({
         menu_item_id: item.menuItemId,
@@ -71,43 +69,26 @@ Deno.serve(async request => {
       p_customer_mobile: body.customerMobile || null,
       p_customer_email: body.customerEmail || null,
       p_order_notes: body.orderNotes || null,
-      p_use_vendor_credit: false
+      p_payment_label: 'Test Order - No Charge'
     });
     if (error) throw error;
-    const draft = Array.isArray(data) ? data[0] : data;
-    if (!draft?.draft_id) throw new Error('The test checkout draft was not created.');
-    draftId = draft.draft_id;
-    const testSessionId = `google_play_test_${draftId}`;
-    const { error: draftUpdateError } = await serviceClient.from('payment_checkout_drafts').update({
-      stripe_checkout_session_id: testSessionId,
-      status: 'paid',
-      stripe_livemode: false
-    }).eq('id', draftId).eq('customer_id', userData.user.id);
-    if (draftUpdateError) throw draftUpdateError;
-    const { data: finalized, error: finalizeError } = await serviceClient.rpc('finalize_paid_checkout', {
-      p_draft_id: draftId,
-      p_checkout_session_id: testSessionId,
-      p_payment_intent_id: '',
-      p_charge_id: '',
-      p_amount_paid_cents: Number(draft.stripe_due_cents),
-      p_payment_label: 'Google Play Test - No Charge'
-    });
-    if (finalizeError) throw finalizeError;
-    const order = Array.isArray(finalized) ? finalized[0] : finalized;
+    const order = Array.isArray(data) ? data[0] : data;
+    if (!order?.order_id) throw new Error('The no-charge test order was not created.');
     const { error: orderUpdateError } = await serviceClient.from('orders').update({
       is_test_order: true,
       stripe_livemode: false,
-      payment_label: 'Google Play Test - No Charge'
-    }).eq('id', order.order_id).eq('customer_id', userData.user.id);
+      payment_label: 'Test Order - No Charge',
+      payment_status: 'paid',
+      amount_paid_cents: 0,
+      payment_completed_at: new Date().toISOString()
+    }).eq('id', order.order_id)
+      .eq('customer_id', userData.user.id)
+      .eq('truck_id', body.truckId);
     if (orderUpdateError) throw orderUpdateError;
     return json(request, { order, testPayment: true, noCharge: true });
   } catch (error) {
-    if (draftId && serviceClient) {
-      await serviceClient.rpc('release_checkout_credit', { p_draft_id: draftId });
-      await serviceClient.from('payment_checkout_drafts').update({ status: 'failed' }).eq('id', draftId);
-    }
     const message = error instanceof Error ? error.message : 'The test order could not be placed.';
-    console.error('Google Play test checkout failed:', message);
+    console.error('No-charge test checkout failed:', message);
     return json(request, { error: message }, 400);
   }
 });

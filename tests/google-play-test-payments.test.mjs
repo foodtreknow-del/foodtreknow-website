@@ -21,7 +21,7 @@ test('no-charge checkout accepts authenticated closed-test users with an abuse l
 });
 
 test('test orders are clearly identified and excluded from live Stripe state', () => {
-  assert.match(testFunction, /Google Play Test - No Charge/);
+  assert.match(testFunction, /Test Order - No Charge/);
   assert.match(testFunction, /is_test_order: true/);
   assert.match(testFunction, /stripe_livemode: false/);
   assert.match(migration, /is_test_order boolean not null default false/);

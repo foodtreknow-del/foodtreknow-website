@@ -123,14 +123,16 @@
     syncMenu,
     syncSettings,
     queueMenuSync(categories, items) {
-      if (!activeTruckId()) return;
+      const truckId = activeTruckId();
+      if (!truckId) return;
       clearTimeout(menuTimer);
-      menuTimer = setTimeout(() => syncMenu(categories, items).catch(notifyError), 350);
+      menuTimer = setTimeout(() => syncMenu(categories, items, truckId).catch(notifyError), 350);
     },
     queueSettingsSync(settings) {
-      if (!activeTruckId()) return;
+      const truckId = activeTruckId();
+      if (!truckId) return;
       clearTimeout(settingsTimer);
-      settingsTimer = setTimeout(() => syncSettings(settings).catch(notifyError), 350);
+      settingsTimer = setTimeout(() => syncSettings(settings, truckId).catch(notifyError), 350);
     },
     getLastError() { return lastError; }
   });
