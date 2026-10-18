@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 71972)
-Total output lines: 4103
-
 (() => {
   'use strict';
 
@@ -2245,7 +2242,48 @@ Total output lines: 4103
     const totals = cartTotals();
     const unavailableItems = unavailableCartItems();
     const unavailableIds = new Set(unavailableItems.map(item => item.id));
-    if (!cart.items.length) return `<div class="ordering-page"><button class="ordering-back-button" data-customer-page-back="truckMenu" type="button">← Continue Shopping</button><section class="ordering-empty-cart"><span>🛒</span><p class="eyebrow">Your Cart</p><h1>Ready when you are.</h1><p>Add something delic…1972 tokens truncated…ton">Manage Payment Methods</button>'}</div></section>
+    if (!cart.items.length) return `<div class="ordering-page"><button class="ordering-back-button" data-customer-page-back="truckMenu" type="button">← Continue Shopping</button><section class="ordering-empty-cart"><span>🛒</span><p class="eyebrow">Your Cart</p><h1>Ready when you are.</h1><p>Add something delicious from ${escapeHtml(truck.name)}.</p><button class="primary-button" data-ordering-action="continue-shopping" type="button">Browse the Menu</button></section></div>`;
+    return `<div class="ordering-page cart-page">
+      ${pageHeader('Your Order', 'Shopping Cart', `${escapeHtml(truck.name)} · ${cart.items.reduce((total, item) => total + item.quantity, 0)} items`, '<button class="ordering-text-danger" data-ordering-action="empty-cart" type="button">Empty Cart</button>')}
+      ${unavailableItems.length ? `<div class="cart-availability-alert" role="alert"><span>⚠️</span><div><strong>Your cart changed</strong><p>${unavailableItems.length === 1 ? 'An item is' : 'Some items are'} now sold out. Remove ${unavailableItems.length === 1 ? 'it' : 'them'} before checkout.</p></div></div>` : ''}
+      <div class="cart-layout"><section class="cart-items-panel">${cart.items.map(item => cartItemMarkup(item, unavailableIds.has(item.id))).join('')}<button class="secondary-button" data-ordering-action="continue-shopping" type="button">← Continue Shopping</button></section>
+      <aside class="order-summary-card"><p class="order-number-banner"><small>Your permanent order number</small><strong>${orderNumberLabel(cart.orderNumber)}</strong></p><h2>Order Summary</h2><div><span>Subtotal</span><strong>${customerMoney(totals.subtotal)}</strong></div><div><span>Taxes <small>estimate</small></span><strong>${customerMoney(totals.tax)}</strong></div><div><span>Service Fee <small>placeholder</small></span><strong>${customerMoney(totals.serviceFee)}</strong></div><div class="order-summary-total"><span>Estimated Total</span><strong>${customerMoney(totals.total)}</strong></div><p>Estimated pickup in about ${truck.pickupMinutes} minutes.</p><button class="primary-button full" data-ordering-action="checkout" type="button" ${unavailableItems.length ? 'disabled aria-disabled="true"' : ''}>${unavailableItems.length ? 'Remove Sold-Out Items' : 'Proceed to Checkout'}</button></aside></div>
+    </div>`;
+  }
+
+  function checkoutSummaryMarkup(totals) {
+    return `<div class="checkout-summary-lines"><div><span>Subtotal</span><strong>${customerMoney(totals.subtotal)}</strong></div><div><span>Estimated tax</span><strong>${customerMoney(totals.tax)}</strong></div><div><span>Service fee</span><strong>${customerMoney(totals.serviceFee)}</strong></div><div><span>Total</span><strong>${customerMoney(totals.total)}</strong></div></div>`;
+  }
+
+  function renderCheckout() {
+    const truck = TRUCKS.find(item => item.id === currentAccount.cart.truckId) || selectedTruck();
+    const totals = cartTotals();
+    const defaultPayment = currentAccount.paymentMethods.find(method => method.isDefault) || currentAccount.paymentMethods[0];
+    const defaultAddress = currentAccount.addresses.find(address => address.isDefault) || currentAccount.addresses[0];
+    const secureStripeCheckout = Boolean(truck.supabase && !currentAccount.isGuest && window.FoodTrekNowCustomerPayments?.available);
+    const testPaymentMode = Boolean(secureStripeCheckout && window.FoodTrekNowCustomerPayments?.testMode);
+    const availableVendorCredit = Number(vendorCreditsByTruck.get(truck.id) || 0) / 100;
+    const vendorCreditMarkup = secureStripeCheckout && !testPaymentMode && availableVendorCredit > 0
+      ? `<label class="checkout-choice vendor-credit-choice"><input id="useVendorCredit" type="checkbox" checked><span><strong>Use ${customerMoney(availableVendorCredit)} ${escapeHtml(truck.name)} credit</strong><small>This credit works only with this food truck. Stripe will charge any remaining balance.</small></span></label>`
+      : '';
+    const paymentMarkup = testPaymentMode
+      ? `<div class="stripe-checkout-choice"><strong>Google Play test order - no charge</strong><p>This order will be sent to ${escapeHtml(truck.name)} and marked Test Paid. No card information is requested and no money is charged.</p><small>Test orders are excluded from the food truck's sales reports.</small></div>`
+      : secureStripeCheckout
+      ? `<div class="stripe-checkout-choice"><strong>Pay securely with Stripe</strong><p>Your payment goes directly to ${escapeHtml(truck.name)}. Available methods may include card, Apple Pay, Google Pay, and Cash App Pay based on your device and the truck's Stripe settings.</p><small>FoodTrekNow never receives or stores your full card number or security code.</small></div>`
+      : defaultPayment
+        ? `<label class="checkout-choice"><input name="paymentMethod" value="${defaultPayment.id}" type="radio" checked><span><strong>${escapeHtml(defaultPayment.brand)} ••••${escapeHtml(defaultPayment.last4)}</strong><small>${defaultPayment.isDefault ? 'Default payment preference' : `Expires ${escapeHtml(defaultPayment.expiry)}`}</small></span></label>`
+        : '<p>Pay at pickup (prototype).</p>';
+    const pickupInformation = currentAccount.isGuest
+      ? `<div class="checkout-card-content guest-pickup-fields"><h2>Pickup Information</h2><p>Enter the contact details the truck should use for this order.</p><label for="guestCheckoutName"><strong>Name</strong></label><input id="guestCheckoutName" class="customer-input" value="${escapeHtml(`${currentAccount.firstName || ''} ${currentAccount.lastName || ''}`.trim().replace(/^Guest$/, ''))}" autocomplete="name" required placeholder="Your name"><label for="guestCheckoutMobile"><strong>Mobile Number</strong></label><input id="guestCheckoutMobile" class="customer-input" type="tel" value="${escapeHtml(currentAccount.mobile)}" autocomplete="tel" required placeholder="(555) 555-0123"><label for="guestCheckoutEmail"><strong>Email Address</strong></label><input id="guestCheckoutEmail" class="customer-input" type="email" value="${escapeHtml(currentAccount.email)}" autocomplete="email" required placeholder="you@example.com"></div>`
+      : `<div><h2>Pickup Information</h2><p><strong>${escapeHtml(currentAccount.firstName)} ${escapeHtml(currentAccount.lastName)}</strong><br>${escapeHtml(currentAccount.mobile)} · ${escapeHtml(currentAccount.email)}</p></div>`;
+    return `<div class="ordering-page checkout-page">
+      <button class="ordering-back-button" data-customer-page-back="cart" type="button">← Back to Cart</button>
+      <form id="customerCheckoutForm"><div class="checkout-heading"><p class="eyebrow">Secure Checkout · ${orderNumberLabel(currentAccount.cart.orderNumber)}</p><h1>Review and Place Your Order</h1><p>${escapeHtml(truck.name)} · Pickup only</p></div>
+      <div class="checkout-layout"><div class="checkout-sections">
+        <section class="checkout-card"><span class="checkout-step">1</span>${pickupInformation}</section>
+        <section class="checkout-card"><span class="checkout-step">2</span><div class="checkout-card-content"><h2>Pickup Time</h2><label class="checkout-choice"><input name="pickupTime" value="asap" type="radio" checked><span><strong>ASAP</strong><small>Ready in about ${truck.pickupMinutes} minutes</small></span></label><label class="checkout-choice disabled"><input name="pickupTime" value="later" type="radio" disabled><span><strong>Schedule Later</strong><small>Coming in a future update</small></span></label></div></section>
+        <section class="checkout-card"><span class="checkout-step">3</span><div class="checkout-card-content"><h2>Saved Address <small>Future Delivery</small></h2><p>${defaultAddress ? `${escapeHtml(defaultAddress.label)} · ${escapeHtml(defaultAddress.street)}, ${escapeHtml(defaultAddress.city)}` : 'Add a saved address from your profile when delivery becomes available.'}</p></div></section>
+        <section class="checkout-card"><span class="checkout-step">4</span><div class="checkout-card-content"><h2>Payment Method</h2>${paymentMarkup}${vendorCreditMarkup}${secureStripeCheckout ? '' : '<button class="checkout-link" data-customer-action="view-payments" type="button">Manage Payment Methods</button>'}</div></section>
         <section class="checkout-card checkout-fields"><span class="checkout-step">5</span><div class="checkout-card-content"><label for="checkoutPromoCode"><strong>Promo Code</strong></label><div class="promo-row"><input id="checkoutPromoCode" class="customer-input" placeholder="Enter code"><button class="secondary-button" data-ordering-action="apply-promo" type="button">Apply</button></div><label for="checkoutOrderNotes"><strong>Order Notes</strong></label><textarea id="checkoutOrderNotes" class="customer-textarea" rows="3" maxlength="300" placeholder="Notes for the truck team"></textarea><p id="checkoutMessage" class="form-message"></p></div></section>
       </div><aside class="checkout-order-summary"><p class="order-number-banner"><small>Order Number</small><strong>${orderNumberLabel(currentAccount.cart.orderNumber)}</strong></p><p class="eyebrow">Final Summary</p><h2>${escapeHtml(truck.name)}</h2>${currentAccount.cart.items.map(item => `<div class="checkout-item-line"><span>${item.quantity}× ${escapeHtml(item.name)}</span><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong></div>`).join('')}${checkoutSummaryMarkup(totals)}<button class="primary-button full" type="submit">${testPaymentMode ? 'Place Test Order - No Charge' : secureStripeCheckout ? 'Continue to Secure Payment' : 'Place Order'}</button><button class="secondary-button full" data-customer-page-back="cart" type="button">Back to Cart</button></aside></div></form>
     </div>`;
@@ -4061,5 +4099,4 @@ Total output lines: 4103
   if (window.FoodTrekNowSupabaseRecoveryPending) handlePasswordRecovery();
   else restoreCustomerSession();
 })();
-
 
