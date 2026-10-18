@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const migration = read('supabase/migrations/202610180001_single_admin_and_tenant_isolation.sql');
+const signupIsolation = read('supabase/migrations/202610180002_strict_account_signup_isolation.sql');
 const checkout = read('supabase/functions/test-checkout-start/index.ts');
 const vendorData = read('js/vendor-data.js');
 const settings = read('js/vendor-settings.js');
@@ -24,6 +25,8 @@ test('vendor, truck, Host, location, and order ownership cannot be reassigned', 
   assert.match(migration, /A Host profile cannot be transferred between accounts/i);
   assert.match(migration, /A Host location cannot be transferred between Host accounts/i);
   assert.match(migration, /An order cannot be transferred between customer or food truck accounts/i);
+  assert.match(signupIsolation, /A vendor application cannot be transferred between accounts/i);
+  assert.match(signupIsolation, /An event cannot be transferred between Host accounts/i);
 });
 
 test('each food truck receives an independent order sequence beginning at 1001', () => {
@@ -50,3 +53,4 @@ test('delayed vendor saves retain the truck that initiated the save', () => {
   assert.match(settings, /storageKey\(SOUND_STORAGE_KEY\)/);
   assert.match(app, /localStorage\.setItem\(vendorStorageKey\(SOUND_KEY\)/);
 });
+
