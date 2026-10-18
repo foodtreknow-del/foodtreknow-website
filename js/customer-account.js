@@ -1,5 +1,5 @@
 Warning: truncated output (original token count: 71972)
-Total output lines: 4102
+Total output lines: 4103
 
 (() => {
   'use strict';
@@ -2245,7 +2245,7 @@ Total output lines: 4102
     const totals = cartTotals();
     const unavailableItems = unavailableCartItems();
     const unavailableIds = new Set(unavailableItems.map(item => item.id));
-    if (!cart.items.length) return `<div class="ordering-page"><button class="ordering-back-button" data-customer-page-back="truckMenu" type="button">← Continue Shopping</button><section class="ordering-empty-cart"><span>🛒</span><p class="eyebrow">Your Cart</p><h1>Ready when you are.</h1><p>Add something delic…1972 tokens truncated…utton">Manage Payment Methods</button>'}</div></section>
+    if (!cart.items.length) return `<div class="ordering-page"><button class="ordering-back-button" data-customer-page-back="truckMenu" type="button">← Continue Shopping</button><section class="ordering-empty-cart"><span>🛒</span><p class="eyebrow">Your Cart</p><h1>Ready when you are.</h1><p>Add something delic…1972 tokens truncated…ton">Manage Payment Methods</button>'}</div></section>
         <section class="checkout-card checkout-fields"><span class="checkout-step">5</span><div class="checkout-card-content"><label for="checkoutPromoCode"><strong>Promo Code</strong></label><div class="promo-row"><input id="checkoutPromoCode" class="customer-input" placeholder="Enter code"><button class="secondary-button" data-ordering-action="apply-promo" type="button">Apply</button></div><label for="checkoutOrderNotes"><strong>Order Notes</strong></label><textarea id="checkoutOrderNotes" class="customer-textarea" rows="3" maxlength="300" placeholder="Notes for the truck team"></textarea><p id="checkoutMessage" class="form-message"></p></div></section>
       </div><aside class="checkout-order-summary"><p class="order-number-banner"><small>Order Number</small><strong>${orderNumberLabel(currentAccount.cart.orderNumber)}</strong></p><p class="eyebrow">Final Summary</p><h2>${escapeHtml(truck.name)}</h2>${currentAccount.cart.items.map(item => `<div class="checkout-item-line"><span>${item.quantity}× ${escapeHtml(item.name)}</span><strong>${customerMoney(cartItemUnitPrice(item) * item.quantity)}</strong></div>`).join('')}${checkoutSummaryMarkup(totals)}<button class="primary-button full" type="submit">${testPaymentMode ? 'Place Test Order - No Charge' : secureStripeCheckout ? 'Continue to Secure Payment' : 'Place Order'}</button><button class="secondary-button full" data-customer-page-back="cart" type="button">Back to Cart</button></aside></div></form>
     </div>`;
@@ -4061,4 +4061,5 @@ Total output lines: 4102
   if (window.FoodTrekNowSupabaseRecoveryPending) handlePasswordRecovery();
   else restoreCustomerSession();
 })();
+
 
