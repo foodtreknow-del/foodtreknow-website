@@ -102,7 +102,8 @@ test('Customer, Vendor, and Host navigation tabs all resolve to portal content',
     assert.ok(html.includes(`data-page="${page}"`), `missing Vendor tab: ${page}`);
     assert.ok(html.includes(`id="${page}Page"`), `missing Vendor page: ${page}`);
   }
-  assert.match(app, /getElementById\(`\$\{btn\.dataset\.page\}Page`\)/);
+  assert.match(app, /function activateVendorPage\(page\)/);
+  assert.match(app, /getElementById\(`\$\{page\}Page`\)/);
 
   for (const tab of ['discover', 'today', 'applications', 'messages', 'bookings', 'route', 'notifications']) {
     assert.ok(marketplace.includes(`['${tab}',`), `missing Vendor marketplace tab: ${tab}`);
@@ -482,7 +483,7 @@ test('Host truck names open the existing customer storefront with a return path'
   const hostBookings = marketplace.slice(marketplace.indexOf('function hostBookingsMarkup'), marketplace.indexOf('function hostPaymentsMarkup'));
   assert.doesNotMatch(hostBookings, /data-booking-contact/);
   assert.match(hostBookings, /data-marketplace-message/);
-  assert.match(html, /js\/customer-account\.js\?v=admin-portal-switching-1/);
+  assert.match(html, /js\/customer-account\.js\?v=vendor-dashboard-navigation-1/);
 });
 
 test('Hosts can securely cancel an unresponsive approved food truck', async () => {

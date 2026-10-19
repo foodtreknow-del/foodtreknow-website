@@ -293,11 +293,11 @@
       <section id="dashboardPage" class="app-page">
         <section class="summary-grid">
           <article class="summary-card sales-summary"><span>Today's Sales</span><strong id="salesTotal">$0.00</strong><small id="salesTotalNote">All paid sales placed today</small></article>
-          <article class="summary-card new-summary"><span>New Orders</span><strong id="newSummaryCount">0</strong></article>
-          <article class="summary-card preparing-summary"><span>Preparing</span><strong id="preparingCount">0</strong></article>
-          <article class="summary-card ready-summary"><span>Ready</span><strong id="readyCount">0</strong></article>
-          <article class="summary-card pickedup-summary"><span>Picked Up</span><strong id="pickedUpCount">0</strong></article>
-          <article class="summary-card completed-summary"><span>Completed</span><strong id="completedCount">0</strong></article>
+          <button class="summary-card vendor-order-summary new-summary" data-dashboard-order-filter="new" type="button"><span>New Orders</span><strong id="newSummaryCount">0</strong><small>View orders</small></button>
+          <button class="summary-card vendor-order-summary preparing-summary" data-dashboard-order-filter="preparing" type="button"><span>Preparing</span><strong id="preparingCount">0</strong><small>View orders</small></button>
+          <button class="summary-card vendor-order-summary ready-summary" data-dashboard-order-filter="ready" type="button"><span>Ready</span><strong id="readyCount">0</strong><small>View orders</small></button>
+          <button class="summary-card vendor-order-summary pickedup-summary" data-dashboard-order-filter="pickedup" type="button"><span>Picked Up</span><strong id="pickedUpCount">0</strong><small>View orders</small></button>
+          <button class="summary-card vendor-order-summary completed-summary" data-dashboard-order-filter="completed" type="button"><span>Completed</span><strong id="completedCount">0</strong><small>View orders</small></button>
         </section>
         <section class="panel pickup-order-lookup" aria-labelledby="pickupOrderLookupTitle">
           <div>
@@ -615,7 +615,7 @@
 <script src="js/opportunity-marketplace.js?v=host-date-labels-1"></script>
 <script src="js/live-orders.js?v=communications-1"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=admin-portal-switching-1"></script>
+<script src="js/app.js?v=vendor-dashboard-navigation-1"></script>
 <script src="js/vendor-cash-sales.js?v=complete-cash-menu-2"></script>
 <script src="js/vendor-reports.js?v=print-fix-1"></script>
 <script src="js/vendor-settings.js?v=tenant-isolation-1"></script>
@@ -623,7 +623,7 @@
 <script src="js/vendor-subscription.js?v=approved-vendor-access-2"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>
-<script src="js/customer-account.js?v=admin-portal-switching-1"></script>
+<script src="js/customer-account.js?v=vendor-dashboard-navigation-1"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>

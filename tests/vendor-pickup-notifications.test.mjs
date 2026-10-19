@@ -26,3 +26,22 @@ test('new vendor orders use a persistent three-tone audible alert', () => {
   assert.match(vendorSource, /New Order #\$\{newestOrder\.id\} received/);
   assert.match(vendorSource, /three-tone preview confirms alerts are working/);
 });
+
+test('vendor dashboard status cards open the matching filtered order list', () => {
+  for (const status of ['new', 'preparing', 'ready', 'pickedup', 'completed']) {
+    assert.match(html, new RegExp(`data-dashboard-order-filter="${status}"`));
+  }
+  assert.match(vendorSource, /function setOrderFilter\(filter\)/);
+  assert.match(vendorSource, /setOrderFilter\(btn\.dataset\.dashboardOrderFilter\);activateVendorPage\('orders'\)/);
+});
+
+test('vendor sign-in always opens the dashboard page', () => {
+  assert.match(vendorSource, /function showDashboard[\s\S]*?render\(\);activateVendorPage\('dashboard'\);\}/);
+});
+
+test('live checkout waits for the permanent server order number', () => {
+  assert.match(customerSource, /truck\?\.supabase \? 'Assigned after checkout'/);
+  assert.match(customerSource, /Order number assigned after checkout/);
+  assert.match(customerSource, /id: Number\(placed\.order_number\)/);
+  assert.match(customerSource, /pickupInstructions: `Show \$\{orderNumberLabel\(placed\.order_number\)\}/);
+});
