@@ -63,3 +63,16 @@ test('vendor order details include unread badges and two-way messaging', () => {
   assert.match(vendorSource, /subscribeVendorCommunications/);
   assert.match(vendorSource, /mapped\.messages=previous\.messages/);
 });
+
+test('vendor portal has a persistent customer-message inbox and polling fallback', () => {
+  assert.match(html, /data-page="messages"/);
+  assert.match(html, /id="vendorMessageNavCount"/);
+  assert.match(html, /id="vendorMessageAlert"/);
+  assert.match(html, /id="vendorMessagesList"/);
+  assert.match(vendorSource, /function renderVendorMessagesPage\(\)/);
+  assert.match(vendorSource, /hydrateVendorCommunications\(context,true\)/);
+  assert.match(vendorSource, /New customer message for Order/);
+  assert.match(vendorSource, /navigator\.vibrate/);
+  assert.match(vendorSource, /document\.title=unread/);
+  assert.match(vendorSource, /data-message-order/);
+});

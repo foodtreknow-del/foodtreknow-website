@@ -265,6 +265,7 @@
       <nav>
         <button class="nav-link active" data-page="dashboard">Dashboard</button>
         <button class="nav-link" data-page="orders">Orders</button>
+        <button class="nav-link vendor-message-nav" data-page="messages">Messages <span id="vendorMessageNavCount" class="vendor-nav-count hidden-view" aria-label="0 unread customer messages">0</span></button>
         <button class="nav-link" data-page="menu">Menu</button>
         <button class="nav-link" data-page="opportunities">Find Locations</button>
         <button class="nav-link" data-page="reports">Reports</button>
@@ -289,6 +290,12 @@
         <div><span>Vendor plan required</span><strong>Start your 14-day free trial, then continue for $14.99/month, to use orders, menus, reports, and live truck controls.</strong></div>
         <button id="vendorSubscriptionGateButton" class="primary-button" type="button">View Subscription</button>
       </section>
+
+      <button id="vendorMessageAlert" class="vendor-message-alert hidden-view" type="button" aria-live="assertive">
+        <span aria-hidden="true">💬</span>
+        <span><strong id="vendorMessageAlertTitle">New customer message</strong><small>Open the vendor message inbox</small></span>
+        <b id="vendorMessageAlertCount">0</b>
+      </button>
 
       <section id="dashboardPage" class="app-page">
         <section class="summary-grid">
@@ -336,6 +343,16 @@
             <input id="orderSearch" class="search-input" type="search" placeholder="Search order number or customer" />
           </div>
           <div id="allOrdersList" class="order-list orders-page-list"></div>
+        </div>
+      </section>
+
+      <section id="messagesPage" class="app-page hidden-view">
+        <div class="panel vendor-messages-workspace">
+          <div class="vendor-section-heading vendor-messages-heading">
+            <div><p class="eyebrow">Customer Communication</p><h2>Order Messages</h2><p class="muted">New customer messages stay highlighted until you open the conversation.</p></div>
+            <span id="vendorMessagesUnreadSummary" class="vendor-message-summary">0 unread</span>
+          </div>
+          <div id="vendorMessagesList" class="vendor-messages-list" aria-live="polite"></div>
         </div>
       </section>
 
