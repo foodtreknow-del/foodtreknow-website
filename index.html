@@ -206,10 +206,12 @@
         <button class="customer-nav-link" data-customer-page="payments" type="button"><span>▣</span> Payment Methods</button>
         <button class="customer-nav-link customer-notification-nav-link" data-customer-page="notifications" type="button"><span>●</span> Notifications <b class="customer-notification-count hidden-view" data-customer-notification-count>0</b></button>
         <button class="customer-nav-link" data-customer-page="settings" type="button"><span>⚙</span> Settings</button>
-        <button id="vendorApplicationNav" class="customer-nav-link hidden-view" data-customer-page="vendorApplication" type="button"><span>🚚</span> Become a Vendor</button>
+        <button id="vendorApplicationNav" class="customer-nav-link hidden-view" data-customer-page="vendorApplication" type="button"><span>🚚</span> <b>Become a Vendor</b></button>
+        <button id="hostApplicationNav" class="customer-nav-link hidden-view" data-customer-page="hostApplication" type="button"><span>📍</span> <b>Become a Host</b></button>
         <button id="adminCustomerPortalNav" class="customer-nav-link hidden-view" data-customer-page="overview" type="button"><span>👤</span> Customer Portal</button>
         <button id="adminVendorPortalNav" class="customer-nav-link hidden-view" type="button"><span>🚚</span> Vendor Portal</button>
         <button id="adminVendorReviewNav" class="customer-nav-link hidden-view" data-customer-page="vendorReviews" type="button"><span>✓</span> Vendor Approvals</button>
+        <button id="adminHostReviewNav" class="customer-nav-link hidden-view" data-customer-page="hostReviews" type="button"><span>✓</span> Host Approvals</button>
         <button id="adminVendorManagementNav" class="customer-nav-link hidden-view" data-customer-page="vendorManagement" type="button"><span>▥</span> Vendor Management</button>
         <button id="adminContactDirectoryNav" class="customer-nav-link hidden-view" data-customer-page="adminDirectory" type="button"><span>☷</span> Contact Directory</button>
       </nav>
@@ -248,6 +250,7 @@
       <div class="host-portal-guidance"><span>📍</span><p>Post openings, review food truck requests, and manage confirmed visits.</p></div>
       <div class="host-portal-account"><strong id="hostPortalAccountName">FoodTrekNow Host</strong><small>Secure host account</small></div>
       <button id="switchToCustomerPortalButton" class="secondary-button full" type="button">Switch to Customer Portal</button>
+      <button id="switchToVendorPortalFromHostButton" class="secondary-button full hidden-view" type="button">Switch to Vendor Portal</button>
       <button id="hostPortalSignOutButton" class="customer-signout-button host-portal-sign-out" type="button">Sign Out</button>
       <nav class="app-legal-links" aria-label="Host legal information"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="privacy.html#your-choices">Choices</a></nav>
     </aside>
@@ -271,6 +274,7 @@
         <button class="nav-link" data-page="reports">Reports</button>
         <button class="nav-link" data-page="settings">Settings</button>
         <button id="vendorCustomerPortalButton" class="nav-link hidden-view" type="button">Customer Portal</button>
+        <button id="vendorHostPortalButton" class="nav-link hidden-view" type="button">Host Portal</button>
         <button id="vendorAdminPortalButton" class="nav-link hidden-view" type="button">Admin Controls</button>
         <button id="logoutButton" class="nav-link vendor-nav-logout" type="button">Log Out</button>
       </nav>
@@ -624,15 +628,16 @@
 <script src="js/live-location.js?v=live-location-1"></script>
 <script src="js/supabase-auth.js?v=admin-portal-switching-1"></script>
 <script src="js/vendor-onboarding.js?v=vendor-onboarding-1"></script>
+<script src="js/host-onboarding.js?v=multi-portal-1"></script>
 <script src="js/admin-vendor-management.js?v=admin-vendor-management-1"></script>
 <script src="js/admin-contact-directory.js?v=admin-contact-directory-1"></script>
-<script src="js/vendor-auth.js?v=admin-portal-switching-1"></script>
+<script src="js/vendor-auth.js?v=multi-portal-1"></script>
 <script src="js/vendor-data.js?v=tenant-isolation-1"></script>
 <script src="js/customer-marketplace.js?v=event-logistics-1"></script>
-<script src="js/opportunity-marketplace.js?v=host-date-labels-1"></script>
+<script src="js/opportunity-marketplace.js?v=multi-portal-1"></script>
 <script src="js/live-orders.js?v=communications-1"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=vendor-dashboard-navigation-1"></script>
+<script src="js/app.js?v=multi-portal-2"></script>
 <script src="js/vendor-cash-sales.js?v=complete-cash-menu-2"></script>
 <script src="js/vendor-reports.js?v=print-fix-1"></script>
 <script src="js/vendor-settings.js?v=tenant-isolation-1"></script>
@@ -640,7 +645,7 @@
 <script src="js/vendor-subscription.js?v=approved-vendor-access-2"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>
-<script src="js/customer-account.js?v=vendor-dashboard-navigation-1"></script>
+<script src="js/customer-account.js?v=multi-portal-2"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>

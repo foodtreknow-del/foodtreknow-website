@@ -10,7 +10,9 @@
 
     async getMyApplication() {
       if (!client) return null;
-      const { data, error } = await client.from('vendor_applications').select('*').maybeSingle();
+      const { data: userData, error: userError } = await client.auth.getUser();
+      if (userError || !userData?.user) throw failure(userError, 'Sign in to view your vendor application.');
+      const { data, error } = await client.from('vendor_applications').select('*').eq('applicant_id', userData.user.id).maybeSingle();
       if (error) throw failure(error, 'Your vendor application could not be loaded.');
       return data;
     },

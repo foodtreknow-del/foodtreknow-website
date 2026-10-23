@@ -13,7 +13,7 @@ test('only the singleton platform administrator receives admin status', () => {
   assert.match(customerAuth, /client\.rpc\('is_admin'\)/);
   assert.match(customerAuth, /isPlatformAdmin: Boolean\(isPlatformAdmin\)/);
   assert.match(vendorAuth, /client\.rpc\('is_admin'\)/);
-  assert.match(vendorAuth, /profile\.role !== 'vendor' && !isPlatformAdmin/);
+  assert.match(vendorAuth, /from\('vendor_profiles'\).*owner_id/);
 });
 
 test('administrator portal controls are in both left navigation menus before logout', () => {
@@ -25,6 +25,6 @@ test('administrator portal controls are in both left navigation menus before log
 });
 
 test('admin pages fail closed for every ordinary customer and vendor', () => {
-  assert.match(customer, /\['vendorReviews', 'vendorManagement', 'adminDirectory'\]\.includes\(page\) && !currentAccount\?\.isPlatformAdmin/);
+  assert.match(customer, /\['vendorReviews', 'hostReviews', 'vendorManagement', 'adminDirectory'\]\.includes\(page\) && !currentAccount\?\.isPlatformAdmin/);
   assert.match(customer, /classList\.toggle\('hidden-view', !isPlatformAdmin\)/);
 });

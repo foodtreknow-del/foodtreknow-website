@@ -192,7 +192,7 @@ test("production I'm Hungry entry always opens customer sign-in and account crea
   assert.match(html, /id="showCustomerSignInButton"[^>]*>Sign In<\/button>/);
   assert.match(html, /id="showCreateAccountButton"[^>]*>Create Account<\/button>/);
   assert.match(html, /id="guestCheckoutButton"/);
-  assert.match(html, /js\/customer-account\.js\?v=vendor-dashboard-navigation-1/);
+  assert.match(html, /js\/customer-account\.js\?v=multi-portal-2/);
 });
 
 test('mobile host account menu has a visible internal close control', () => {
@@ -309,19 +309,14 @@ test('customers can sign in by email or mobile and invalid credentials are rejec
   await assert.rejects(() => window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'wrong-password'), /incorrect/);
 });
 
-test('an existing FoodTrekNow login opens the dedicated host portal and can switch back to customer', async () => {
+test('an unapproved FoodTrekNow login is sent to the Host application before Host portal access', async () => {
   const account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'safe-password');
   localStorage.setItem('ftnCustomerSessionV1', JSON.stringify({ accountId: account.id }));
   await emit(element('openHostPortalButton'), 'click');
-  assert.equal(element('hostPortalView').classList.contains('hidden-view'), false);
-  assert.equal(element('customerAccountView').classList.contains('hidden-view'), true);
-  assert.equal(element('hostPortalAccountName').textContent, 'Avery Jordan');
-  assert.equal(localStorage.getItem('ftnPortalDestinationV1'), 'host');
-
-  await emit(element('switchToCustomerPortalButton'), 'click');
   assert.equal(element('customerAccountView').classList.contains('hidden-view'), false);
   assert.equal(element('hostPortalView').classList.contains('hidden-view'), true);
   assert.equal(localStorage.getItem('ftnPortalDestinationV1'), 'customer');
+  assert.match(element('customerAccountContent').innerHTML, /Become a FoodTrekNow Host/);
 });
 
 test('duplicate email or mobile accounts are rejected', async () => {

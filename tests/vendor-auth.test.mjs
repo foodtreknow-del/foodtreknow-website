@@ -56,8 +56,8 @@ test('approved vendor credentials resolve the owned vendor profile and truck', a
   assert.deepEqual(JSON.parse(JSON.stringify(calls[0][1])), { email: 'vendor@example.com', password: 'safe-password' });
 });
 
-test('ordinary customers cannot enter the vendor dashboard', async () => {
-  const { api, calls } = harness('customer');
+test('accounts without an approved vendor profile cannot enter the vendor dashboard', async () => {
+  const { api, calls } = harness('customer', 'vendor_profiles');
   await assert.rejects(() => api.signIn('user@example.com', 'safe-password'), /not been approved/i);
   assert.ok(calls.some(call => call[0] === 'signOut'));
 });
@@ -70,7 +70,7 @@ test('the designated platform administrator can enter their owned vendor portal'
 });
 
 test('incomplete approved vendor data produces clear repair guidance', async () => {
-  await assert.rejects(() => harness('vendor', 'vendor_profiles').api.signIn('vendor@example.com', 'safe-password'), /approval is incomplete/i);
+  await assert.rejects(() => harness('vendor', 'vendor_profiles').api.signIn('vendor@example.com', 'safe-password'), /not been approved/i);
   await assert.rejects(() => harness('vendor', 'trucks').api.signIn('vendor@example.com', 'safe-password'), /does not have a food truck/i);
   assert.doesNotMatch(source, /\.single\(\)/);
 });
@@ -93,7 +93,7 @@ test('vendor password recovery validates the email and uses the secure Supabase 
 });
 
 test('secure vendor auth loads before the existing dashboard application', () => {
-  const authPosition = html.indexOf('js/vendor-auth.js?v=admin-portal-switching-1');
+  const authPosition = html.indexOf('js/vendor-auth.js?v=multi-portal-1');
   const appPosition = html.indexOf('js/app.js');
   assert.ok(authPosition >= 0 && authPosition < appPosition);
   assert.match(appSource, /FoodTrekNowVendorAuth\.signIn/);

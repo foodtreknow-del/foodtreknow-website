@@ -296,7 +296,7 @@
     if (!user) throw new Error('Sign in to create and manage host opportunities.');
     const profiles = await query(client.from('location_hosts').select('*').eq('owner_id', user.id).limit(1));
     state.host.profile = profiles[0] || null;
-    if (!state.host.profile) {
+    if (!state.host.profile || state.host.profile.verification_status !== 'verified') {
       state.host.locations = [];
       state.host.opportunities = [];
       state.host.applications = [];
@@ -305,7 +305,7 @@
       state.host.reviews = [];
       state.host.notifications = [];
       state.host.stripe = null;
-      return;
+      throw new Error('Administrator approval is required before this account can use the Host Portal. Open Customer Portal and select Become a Host to view your application.');
     }
     const hostId = state.host.profile.id;
     const [locations, opportunities, notifications, stripeAccounts] = await Promise.all([
@@ -813,7 +813,7 @@
     const root = document.getElementById('hostOpportunityMarketplace');
     if (!root) return;
     const opportunityDraft = captureHostOpportunityDraft();
-    if (!state.host.profile) { root.innerHTML = hostProfileForm(); return; }
+    if (!state.host.profile) { root.innerHTML = '<div class="marketplace-error"><strong>Host approval required</strong><p>Open Customer Portal and select Become a Host to submit or review your application.</p></div>'; return; }
     root.innerHTML = `<section class="marketplace-hero host"><div><p class="eyebrow">Host Opportunity Center</p><h2>${escapeHtml(state.host.profile.business_name)}</h2><p>Request food trucks, review applicants, and manage recurring visits.</p></div><span class="status-pill ${state.host.profile.verification_status}">${escapeHtml(state.host.profile.verification_status)}</span></section>${hostTabs()}<section class="marketplace-panel">${hostContent()}</section>`;
     restoreHostOpportunityDraft(opportunityDraft);
     syncHostOpportunityDateLabels();

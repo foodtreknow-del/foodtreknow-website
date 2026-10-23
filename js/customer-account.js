@@ -1031,6 +1031,7 @@
   const modalContent = document.getElementById('customerAccountModalContent');
   let currentAccount = null;
   let currentPage = 'overview';
+  let portalAccess = { vendor_approved: false, host_approved: false, is_admin: false };
   let adminDirectorySnapshot = { customers: [], vendors: [], hosts: [] };
   let orderHistoryFilter = 'current';
   let selectedTruckId = TRUCK.id;
@@ -1156,6 +1157,7 @@
     document.body.classList.remove('login-page');
     renderCustomerShell();
     renderCustomerPage(page);
+    refreshPortalAccess().catch(error => customerToast(error.message));
     refreshCustomerMarketplace();
     if (!customerMarketplaceSubscribed && window.FoodTrekNowCustomerMarketplace?.subscribeLocations) {
       window.FoodTrekNowCustomerMarketplace.subscribeLocations(() => refreshCustomerMarketplace(true));
@@ -1172,10 +1174,41 @@
     window.scrollTo(0, 0);
   }
 
-  function openHostPortal(account) {
+  async function refreshPortalAccess() {
+    if (!currentAccount || currentAccount.isGuest) {
+      portalAccess = { vendor_approved: false, host_approved: false, is_admin: false };
+      renderCustomerShell();
+      return portalAccess;
+    }
+    if (window.FoodTrekNowHostOnboarding?.available) {
+      portalAccess = await window.FoodTrekNowHostOnboarding.getPortalAccess();
+    } else {
+      portalAccess = {
+        vendor_approved: currentAccount.role === 'vendor',
+        host_approved: currentAccount.role === 'host',
+        is_admin: Boolean(currentAccount.isPlatformAdmin)
+      };
+    }
+    renderCustomerShell();
+    return portalAccess;
+  }
+
+  async function openHostPortal(account) {
     setPortalDestination('host');
     hostStorefrontPreview = false;
     currentAccount = CustomerOrderingService.ensureState(account);
+    try {
+      await refreshPortalAccess();
+    } catch (error) {
+      openCustomerAccount(currentAccount, 'hostApplication');
+      customerToast(error.message);
+      return;
+    }
+    if (!portalAccess.host_approved) {
+      openCustomerAccount(currentAccount, 'hostApplication');
+      customerToast('Submit a Host application or wait for administrator approval before opening the Host Portal.');
+      return;
+    }
     clearInterval(customerMarketplaceRefreshTimer);
     customerMarketplaceRefreshTimer = null;
     hidePrimaryViews();
@@ -1183,7 +1216,8 @@
     document.body.classList.remove('login-page');
     const name = currentAccount.preferredName || currentAccount.firstName || 'Host';
     document.getElementById('hostPortalAccountName').textContent = `${name} ${currentAccount.lastName || ''}`.trim();
-    window.FoodTrekNowOpportunityMarketplace?.mountHost();
+    document.getElementById('switchToVendorPortalFromHostButton').classList.toggle('hidden-view', !portalAccess.vendor_approved);
+    await window.FoodTrekNowOpportunityMarketplace?.mountHost();
     window.scrollTo(0, 0);
   }
 
@@ -1198,8 +1232,9 @@
   window.FoodTrekNowKeepHostPortal = keepHostPortalVisible;
 
   function openSelectedPortal(account) {
-    if (authDestination === 'host') openHostPortal(account);
-    else openCustomerAccount(account);
+    if (authDestination === 'host') return openHostPortal(account);
+    openCustomerAccount(account);
+    return Promise.resolve();
   }
 
   async function openTruckStorefrontFromHost(truckId) {
@@ -1561,7 +1596,7 @@
     // Marketplace, order, and cross-tab updates can arrive while a customer is
     // typing. The vendor application is intentionally rebuilt by
     // renderCustomerPage(), so redrawing it would discard the unsaved draft.
-    return currentPage === 'vendorApplication';
+    return ['vendorApplication', 'hostApplication'].includes(currentPage);
   }
 
   function refreshCustomerOrders() {
@@ -1615,10 +1650,18 @@
     document.getElementById('customerVerificationBanner').classList.toggle('hidden-view', currentAccount.emailVerified || currentAccount.verificationDismissed);
     document.getElementById('customerSignOutButton').textContent = currentAccount.isGuest ? 'Exit Guest Checkout' : 'Sign Out';
     const isPlatformAdmin = Boolean(currentAccount.isPlatformAdmin);
-    document.getElementById('vendorApplicationNav').classList.toggle('hidden-view', Boolean(currentAccount.isGuest) || isPlatformAdmin || currentAccount.role === 'vendor');
+    const vendorNav = document.getElementById('vendorApplicationNav');
+    const hostNav = document.getElementById('hostApplicationNav');
+    vendorNav.classList.toggle('hidden-view', Boolean(currentAccount.isGuest));
+    hostNav.classList.toggle('hidden-view', Boolean(currentAccount.isGuest));
+    (vendorNav.querySelector('b') || vendorNav).textContent = portalAccess.vendor_approved ? 'Vendor Portal' : 'Become a Vendor';
+    (hostNav.querySelector('b') || hostNav).textContent = portalAccess.host_approved ? 'Host Portal' : 'Become a Host';
+    vendorNav.dataset.portalApproved = String(Boolean(portalAccess.vendor_approved));
+    hostNav.dataset.portalApproved = String(Boolean(portalAccess.host_approved));
     document.getElementById('adminCustomerPortalNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminVendorPortalNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminVendorReviewNav').classList.toggle('hidden-view', !isPlatformAdmin);
+    document.getElementById('adminHostReviewNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminVendorManagementNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminContactDirectoryNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === currentPage));
@@ -2445,7 +2488,7 @@
   }
 
   function renderCustomerPage(page) {
-    if (['vendorReviews', 'vendorManagement', 'adminDirectory'].includes(page) && !currentAccount?.isPlatformAdmin) page = 'overview';
+    if (['vendorReviews', 'hostReviews', 'vendorManagement', 'adminDirectory'].includes(page) && !currentAccount?.isPlatformAdmin) page = 'overview';
     currentPage = page;
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === page));
     document.querySelectorAll('[data-bottom-page]').forEach(button => button.classList.toggle('active', button.dataset.bottomPage === page));
@@ -2467,13 +2510,17 @@
       notifications: renderNotifications,
       settings: renderSettings,
       vendorApplication: renderVendorApplication,
+      hostApplication: renderHostApplication,
       vendorReviews: renderVendorReviews,
+      hostReviews: renderHostReviews,
       vendorManagement: renderVendorManagement,
       adminDirectory: renderAdminDirectory
     };
     accountContent.innerHTML = (renderers[page] || renderers.overview)();
     if (page === 'vendorApplication') loadVendorApplication();
+    if (page === 'hostApplication') loadHostApplication();
     if (page === 'vendorReviews' && currentAccount.isPlatformAdmin) loadVendorReviews();
+    if (page === 'hostReviews' && currentAccount.isPlatformAdmin) loadHostReviews();
     if (page === 'vendorManagement' && currentAccount.isPlatformAdmin) loadVendorManagement();
     if (page === 'adminDirectory' && currentAccount.isPlatformAdmin) loadAdminDirectory();
     updateCartBadge();
@@ -2699,6 +2746,48 @@
     }
   }
 
+  function hostApplicationForm(application = null) {
+    const selected = value => application?.host_kind === value ? ' selected' : '';
+    return `<form id="hostApplicationForm" class="customer-card"><h2 class="customer-section-title">Host Information</h2><div class="customer-form-grid">
+      <div><label for="hostApplicationName">Your Name</label><input id="hostApplicationName" class="customer-input" maxlength="120" required value="${escapeHtml(application?.host_name || `${currentAccount.firstName || ''} ${currentAccount.lastName || ''}`.trim())}"></div>
+      <div><label for="hostApplicationBusinessName">Business, Property, or Event Name</label><input id="hostApplicationBusinessName" class="customer-input" maxlength="160" required value="${escapeHtml(application?.business_name || '')}"></div>
+      <div><label for="hostApplicationKind">Host Type</label><select id="hostApplicationKind" class="customer-input" required><option value="business"${selected('business')}>Business</option><option value="property_manager"${selected('property_manager')}>Property Manager</option><option value="event_organizer"${selected('event_organizer')}>Event Organizer</option><option value="community"${selected('community')}>Community / HOA</option><option value="other"${selected('other')}>Other</option></select></div>
+      <div><label for="hostApplicationPhone">Contact Phone</label><input id="hostApplicationPhone" class="customer-input" type="tel" maxlength="24" required value="${escapeHtml(application?.contact_phone || currentAccount.mobile || '')}"></div>
+      <div style="grid-column:1/-1"><label for="hostApplicationEmail">Contact Email</label><input id="hostApplicationEmail" class="customer-input" type="email" maxlength="120" required value="${escapeHtml(application?.contact_email || currentAccount.email || '')}"></div>
+    </div><p id="hostApplicationMessage" class="form-message" aria-live="polite"></p><div class="customer-form-actions"><button class="primary-button" type="submit">${application ? 'Resubmit Host Application' : 'Submit Host Application'}</button></div></form>`;
+  }
+
+  function renderHostApplication() {
+    return `<div class="vendor-application-shell">${pageHeader('Event & Location Partners', 'Become a FoodTrekNow Host', 'Submit your location or event organization for administrator review.')}<section id="hostApplicationContent" class="customer-card"><p class="muted">Loading your Host application…</p></section></div>`;
+  }
+
+  async function loadHostApplication() {
+    const container = document.getElementById('hostApplicationContent');
+    if (!container) return;
+    try {
+      await refreshPortalAccess();
+      if (portalAccess.host_approved) {
+        container.className = 'customer-card vendor-application-status';
+        container.innerHTML = '<span class="vendor-status-badge approved">Approved</span><h2>Your Host Portal is ready</h2><p>You can switch between Customer, Vendor (if approved), and Host portals using the left menu.</p><div class="customer-form-actions"><button class="primary-button" data-open-approved-host-portal type="button">Open Host Portal</button></div>';
+        return;
+      }
+      const application = await window.FoodTrekNowHostOnboarding.getMyApplication();
+      if (!application) return void (container.outerHTML = `<div id="hostApplicationContent">${hostApplicationForm()}</div>`);
+      if (application.status === 'rejected') {
+        container.outerHTML = `<div id="hostApplicationContent"><section class="customer-card vendor-application-status"><span class="vendor-status-badge rejected">Rejected</span><h2>Application needs attention</h2><p>${escapeHtml(application.review_notes || 'Review the information below and resubmit when ready.')}</p></section><div style="height:16px"></div>${hostApplicationForm(application)}</div>`;
+        return;
+      }
+      const descriptions = { pending: 'Your information is securely saved. The FoodTrekNow administrator will review it before Host access is enabled.', approved: 'Your Host Portal is approved and ready.', withdrawn: 'This application was withdrawn. You may submit it again.' };
+      container.className = 'customer-card vendor-application-status';
+      container.innerHTML = `<span class="vendor-status-badge ${application.status}">${escapeHtml(application.status)}</span><h2>${escapeHtml(application.business_name)}</h2><p>${escapeHtml(descriptions[application.status] || '')}</p>${application.review_notes ? `<p><strong>Administrator note:</strong> ${escapeHtml(application.review_notes)}</p>` : ''}${application.status === 'approved' ? '<div class="customer-form-actions"><button class="primary-button" data-open-approved-host-portal type="button">Open Host Portal</button></div>' : ''}`;
+    } catch (error) { container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`; }
+  }
+
+  async function activateApprovedHostPortal() {
+    if (!currentAccount) throw new Error('Your FoodTrekNow session has expired. Sign in again.');
+    await openHostPortal(currentAccount);
+  }
+
   function renderVendorReviews() {
     return `${pageHeader('Administrator', 'Vendor Approvals', 'Review food truck applications and control access to the vendor platform.')}<section id="vendorReviewContent" class="customer-card"><p class="muted">Loading vendor applications…</p></section>`;
   }
@@ -2711,6 +2800,21 @@
       if (!applications.length) return void (container.innerHTML = '<div class="empty-customer-state"><span>🚚</span><h2>No vendor applications yet</h2><p>New food truck submissions will appear here.</p></div>');
       container.className = 'vendor-review-list';
       container.innerHTML = applications.map(application => `<article class="customer-card vendor-review-card" data-vendor-review-card="${application.id}"><div><span class="vendor-status-badge ${application.status}">${escapeHtml(application.status)}</span><h2>${escapeHtml(application.truck_name)}</h2><p><strong>${escapeHtml(application.business_name)}</strong> · ${escapeHtml(application.cuisine)}</p><p>${escapeHtml(application.description || 'No description provided.')}</p><div class="vendor-review-meta"><span>${escapeHtml(application.city)}, ${escapeHtml(application.state)}</span><span>${escapeHtml(application.business_email)}</span><span>${escapeHtml(application.business_mobile)}</span></div></div>${application.status === 'pending' ? `<div class="vendor-review-actions"><button class="customer-small-button primary" data-vendor-decision="approved" data-vendor-application-id="${application.id}" type="button">Approve Vendor</button><button class="customer-small-button danger" data-vendor-decision="rejected" data-vendor-application-id="${application.id}" type="button">Reject</button></div><label class="vendor-review-notes">Review Notes<textarea class="customer-textarea" data-vendor-review-notes rows="2" placeholder="Optional note for the applicant"></textarea></label>` : `<div><strong>Reviewed</strong><p>${escapeHtml(application.review_notes || 'No review note.')}</p></div>`}</article>`).join('');
+    } catch (error) { container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`; }
+  }
+
+  function renderHostReviews() {
+    return `${pageHeader('Administrator', 'Host Approvals', 'Review Host applications and control access to event and location tools.')}<section id="hostReviewContent" class="customer-card"><p class="muted">Loading Host applications…</p></section>`;
+  }
+
+  async function loadHostReviews() {
+    const container = document.getElementById('hostReviewContent');
+    if (!container) return;
+    try {
+      const applications = await window.FoodTrekNowHostOnboarding.listApplications();
+      if (!applications.length) return void (container.innerHTML = '<div class="empty-customer-state"><span>📍</span><h2>No Host applications yet</h2><p>New event and location Host submissions will appear here.</p></div>');
+      container.className = 'vendor-review-list';
+      container.innerHTML = applications.map(application => `<article class="customer-card vendor-review-card" data-host-review-card="${application.id}"><div><span class="vendor-status-badge ${application.status}">${escapeHtml(application.status)}</span><h2>${escapeHtml(application.business_name)}</h2><p><strong>${escapeHtml(application.host_name)}</strong> · ${escapeHtml(application.host_kind.replaceAll('_', ' '))}</p><div class="vendor-review-meta"><span>${escapeHtml(application.contact_email)}</span><span>${escapeHtml(application.contact_phone)}</span></div></div>${application.status === 'pending' ? `<div class="vendor-review-actions"><button class="customer-small-button primary" data-host-decision="approved" data-host-application-id="${application.id}" type="button">Approve Host</button><button class="customer-small-button danger" data-host-decision="rejected" data-host-application-id="${application.id}" type="button">Reject</button></div><label class="vendor-review-notes">Review Notes<textarea class="customer-textarea" data-host-review-notes rows="2" placeholder="Optional note for the applicant"></textarea></label>` : `<div><strong>Reviewed</strong><p>${escapeHtml(application.review_notes || 'No review note.')}</p></div>`}</article>`).join('');
     } catch (error) { container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`; }
   }
 
@@ -2947,7 +3051,7 @@
     if (CustomerAuthService.usesSupabase()) {
       try {
         const account = currentAccount || await CustomerAuthService.getCurrentAccount();
-        if (account) openHostPortal(account);
+        if (account) await openHostPortal(account);
         else showCustomerAuth('signin', 'host');
       } catch (error) {
         showCustomerAuth('signin', 'host');
@@ -2957,7 +3061,7 @@
     }
     const session = readSession();
     const account = session ? repository.findById(session.accountId) : null;
-    if (account) openHostPortal(account);
+    if (account) await openHostPortal(account);
     else showCustomerAuth('signin', 'host');
   });
   document.getElementById('backToVendorButton').addEventListener('click', showVendorLogin);
@@ -3019,7 +3123,7 @@
         document.getElementById('customerSignInMessage').textContent = 'Account created. Check your email and select the verification link before signing in.';
       } else {
         saveSession(account.id, true);
-        openSelectedPortal(account);
+        await openSelectedPortal(account);
         customerToast('Account created. Welcome to FoodTrekNow!');
       }
     } catch (error) {
@@ -3035,7 +3139,7 @@
       saveSession(account.id, document.getElementById('customerRememberMe').checked);
       event.target.reset();
       message.textContent = '';
-      openSelectedPortal(account);
+      await openSelectedPortal(account);
       customerToast('Signed in successfully.');
     } catch (error) {
       message.textContent = error.message;
@@ -3113,6 +3217,10 @@
   document.getElementById('switchToCustomerPortalButton').addEventListener('click', () => {
     if (currentAccount) openCustomerAccount(currentAccount);
   });
+  document.getElementById('switchToVendorPortalFromHostButton').addEventListener('click', async () => {
+    try { await activateApprovedVendorPortal(false); }
+    catch (error) { customerToast(error.message); }
+  });
   document.getElementById('hostPortalMobileMenuButton').addEventListener('click', event => {
     const sidebar = document.querySelector('.host-portal-sidebar');
     const open = sidebar.classList.toggle('open');
@@ -3131,7 +3239,16 @@
   document.getElementById('customerNotificationButton').addEventListener('click', () => renderCustomerPage('notifications'));
   document.getElementById('customerAccountNav').addEventListener('click', event => {
     const button = event.target.closest('[data-customer-page]');
-    if (button) renderCustomerPage(button.dataset.customerPage);
+    if (!button) return;
+    if (button.id === 'vendorApplicationNav' && button.dataset.portalApproved === 'true') {
+      void activateApprovedVendorPortal(false);
+      return;
+    }
+    if (button.id === 'hostApplicationNav' && button.dataset.portalApproved === 'true') {
+      void activateApprovedHostPortal();
+      return;
+    }
+    renderCustomerPage(button.dataset.customerPage);
   });
   document.getElementById('adminVendorPortalNav').addEventListener('click', async () => {
     if (!currentAccount?.isPlatformAdmin) return;
@@ -3148,6 +3265,12 @@
     const account = await CustomerAuthService.getCurrentAccount();
     if (!account) throw new Error('Your FoodTrekNow session has expired. Sign in again.');
     openCustomerAccount(account, page);
+    return account;
+  };
+  window.FoodTrekNowOpenHostPortal = async () => {
+    const account = await CustomerAuthService.getCurrentAccount();
+    if (!account) throw new Error('Your FoodTrekNow session has expired. Sign in again.');
+    await openHostPortal(account);
     return account;
   };
   document.getElementById('customerBottomNav').addEventListener('click', event => {
@@ -3209,9 +3332,28 @@
       } catch (error) { customerToast(error.message); }
       return;
     }
+    const hostDecision = event.target.closest('[data-host-decision]');
+    if (hostDecision) {
+      const decision = hostDecision.dataset.hostDecision;
+      const label = decision === 'approved' ? 'approve this Host account' : 'reject this Host application';
+      if (!confirm(`Are you sure you want to ${label}?`)) return;
+      const card = hostDecision.closest('[data-host-review-card]');
+      const notes = card?.querySelector('[data-host-review-notes]')?.value || '';
+      try {
+        await window.FoodTrekNowHostOnboarding.review(hostDecision.dataset.hostApplicationId, decision, notes);
+        customerToast(decision === 'approved' ? 'Host approved and Host Portal enabled.' : 'Host application rejected.');
+        await loadHostReviews();
+      } catch (error) { customerToast(error.message); }
+      return;
+    }
     const approvedVendorPortal = event.target.closest('[data-open-approved-vendor-portal]');
     if (approvedVendorPortal) {
       await activateApprovedVendorPortal(false);
+      return;
+    }
+    const approvedHostPortal = event.target.closest('[data-open-approved-host-portal]');
+    if (approvedHostPortal) {
+      await activateApprovedHostPortal();
       return;
     }
     const refreshVendorManagement = event.target.closest('[data-refresh-vendor-management]');
@@ -3587,6 +3729,28 @@
         await window.FoodTrekNowVendorOnboarding.submit(input);
         customerToast('Vendor application submitted for review.');
         await loadVendorApplication();
+      } catch (error) { message.textContent = error.message; }
+      return;
+    }
+    if (event.target.id === 'hostApplicationForm') {
+      event.preventDefault();
+      const message = document.getElementById('hostApplicationMessage');
+      const input = {
+        hostName: document.getElementById('hostApplicationName').value.trim(),
+        businessName: document.getElementById('hostApplicationBusinessName').value.trim(),
+        hostKind: document.getElementById('hostApplicationKind').value,
+        contactPhone: document.getElementById('hostApplicationPhone').value.trim(),
+        contactEmail: document.getElementById('hostApplicationEmail').value.trim()
+      };
+      if (!input.hostName || !input.businessName || normalizePhone(input.contactPhone).length < 7 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.contactEmail)) {
+        message.textContent = 'Complete every required field with a valid contact email and phone number.';
+        return;
+      }
+      try {
+        await window.FoodTrekNowHostOnboarding.submit(input);
+        customerToast('Host application submitted for administrator review.');
+        await refreshPortalAccess();
+        await loadHostApplication();
       } catch (error) { message.textContent = error.message; }
       return;
     }
@@ -4047,7 +4211,7 @@
       try {
         currentAccount = await CustomerAuthService.updateRecoveredPassword(nextPassword);
         closeModal();
-        if (currentAccount) openSelectedPortal(currentAccount);
+        if (currentAccount) await openSelectedPortal(currentAccount);
         customerToast('Your password has been reset and verified.');
       } catch (error) {
         message.textContent = error.message;
@@ -4089,7 +4253,7 @@
         const account = await CustomerAuthService.getCurrentAccount();
         if (account) {
           saveSession(account.id, true);
-          openSelectedPortal(account);
+          await openSelectedPortal(account);
         } else {
           clearSession();
         }
@@ -4103,7 +4267,7 @@
     const session = readSession();
     if (!session) return;
     const account = repository.findById(session.accountId);
-    if (account) openSelectedPortal(account);
+    if (account) await openSelectedPortal(account);
     else clearSession();
   }
 

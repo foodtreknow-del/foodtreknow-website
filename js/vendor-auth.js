@@ -18,18 +18,19 @@
     if (!profile) throw new Error('This account does not have a FoodTrekNow profile yet. Sign in through the customer portal first, then submit a Vendor Application.');
     const { data: isPlatformAdmin, error: adminError } = await client.rpc('is_admin');
     if (adminError) throw friendly(adminError);
-    if (profile.role !== 'vendor' && !isPlatformAdmin) throw new Error('This account has not been approved for vendor access.');
-
     const { data: vendor, error: vendorError } = await client.from('vendor_profiles').select('*').eq('owner_id', user.id).maybeSingle();
     if (vendorError) throw friendly(vendorError);
-    if (!vendor) throw new Error('Your vendor approval is incomplete. Ask the FoodTrekNow administrator to repair your vendor profile.');
+    if (!vendor) throw new Error('This account has not been approved for vendor access.');
     const { data: accessState, error: accessError } = await client.rpc('current_vendor_access_state');
     if (accessError) throw friendly(accessError);
     if (accessState?.admin_frozen) throw new Error(`Vendor access is temporarily frozen. ${clean(accessState.freeze_reason) || 'Contact the FoodTrekNow administrator for assistance.'}`);
     const { data: truck, error: truckError } = await client.from('trucks').select('*').eq('vendor_id', vendor.id).order('created_at', { ascending: true }).limit(1).maybeSingle();
     if (truckError) throw friendly(truckError);
     if (!truck) throw new Error('Your vendor profile does not have a food truck yet. Ask the FoodTrekNow administrator to complete the setup.');
-    return { user: { id: user.id, email: user.email }, profile, vendor, truck, isPlatformAdmin: Boolean(isPlatformAdmin) };
+    let portalAccess = {};
+    const { data: access, error: portalError } = await client.rpc('current_portal_access');
+    if (!portalError && access) portalAccess = access;
+    return { user: { id: user.id, email: user.email }, profile, vendor, truck, isPlatformAdmin: Boolean(isPlatformAdmin), hostApproved: Boolean(portalAccess.host_approved) };
   }
 
   window.FoodTrekNowVendorStorageKey = baseKey => {
