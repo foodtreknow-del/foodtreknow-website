@@ -144,6 +144,11 @@
   }
 
   function applyVendorSettings(settings = vendorSettings) {
+    // Authentication replaces the demo defaults with the signed-in truck.
+    // Keep that identity in memory so returning to Dashboard cannot reapply
+    // the stale "Capital City Eats" name before Settings is manually saved.
+    vendorSettings = normalizeSettings(settings);
+    settings = vendorSettings;
     const onlineToggle = field('onlineToggle');
     if (onlineToggle) onlineToggle.checked = Boolean(settings.operations.acceptingOrders);
     const statusText = field('statusText');
