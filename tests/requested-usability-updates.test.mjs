@@ -113,7 +113,7 @@ test('vendor picked-up display uses fixed dates and never a running pickup timer
   assert.match(vendor, /return value&&Number\.isFinite\(date\.getTime\(\)\)\?date\.toLocaleString/);
   assert.match(html, /js\/app\.js\?v=multi-portal-2/);
   assert.match(html, /js\/customer-account\.js\?v=multi-portal-2/);
-  assert.match(worker, /foodtreknow-shell-v78/);
+  assert.match(worker, /foodtreknow-shell-v79/);
 });
 
 test('Today\'s Sales counts every paid, non-cancelled sale placed today', async () => {
@@ -121,3 +121,4 @@ test('Today\'s Sales counts every paid, non-cancelled sale placed today', async 
   assert.match(vendor, /if\(o\?\.paid!==true\|\|o\.status==='cancelled'\)return false/);
   assert.match(vendor, /const saleValue=o\.createdAt\|\|o\.receivedAt/);
 });
+
