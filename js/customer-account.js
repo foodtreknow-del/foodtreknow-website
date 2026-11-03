@@ -2505,6 +2505,7 @@
       profile: renderProfile,
       addresses: renderAddresses,
       favorites: renderFavorites,
+      messages: renderMessages,
       orders: renderOrders,
       payments: renderPayments,
       notifications: renderNotifications,
@@ -2557,6 +2558,7 @@
         <button class="home-action-card events" data-home-target="events" type="button"><span>🎪</span><strong>Events</strong><small>Food & community</small><b>›</b></button>
         <button class="home-action-card favorites" data-customer-action="view-favorites" type="button"><span>❤️</span><strong>Favorites</strong><small>Your saved spots</small><b>›</b></button>
         <button class="home-action-card host-request" data-customer-action="need-food-truck" type="button"><span>🚚</span><strong>Need a Food Truck?</strong><small>Post a location or event request</small><b>›</b></button>
+        <button class="home-action-card messenger" data-customer-action="view-messages" type="button"><span>💬</span><strong>Messenger</strong><small>Food truck messages</small><b>›</b></button>
       </section>
 
       <section class="home-section home-order-section">
@@ -2635,6 +2637,16 @@
 
   function favoriteOrderCard(order) {
     return `<article class="customer-card customer-order-card"><div><p class="eyebrow">${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><h3>${escapeHtml(order.truckName)}</h3><div class="order-item-summary">${order.items.map(item => `${item.qty}× ${escapeHtml(item.name)}`).join(' · ')}</div></div><div><div class="order-total">${customerMoney(order.total)}</div><div class="customer-card-actions"><button class="customer-small-button primary" data-reorder="${escapeHtml(order.id)}" type="button">Reorder</button><button class="customer-small-button danger" data-toggle-order-favorite="${escapeHtml(order.id)}" type="button">Remove</button></div></div></article>`;
+  }
+
+  function renderMessages() {
+    const orders = [...currentAccount.orders].filter(order => order.supabaseOrderId).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+    const messageNotifications = customerNotifications.filter(notification => notification.kind === 'order_message');
+    const cards = orders.map(order => {
+      const unread = messageNotifications.filter(notification => notification.order_id === order.supabaseOrderId && !notification.is_read).length;
+      return `<article class="customer-card customer-order-card"><div><p class="eyebrow">${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><h3>${escapeHtml(order.truckName)}</h3><p class="muted">${unread ? `${unread} unread message${unread === 1 ? '' : 's'}` : 'Open this conversation to send or review messages.'}</p><span class="status-pill ${['completed','cancelled'].includes(order.status) ? 'past' : ''}">${escapeHtml(order.statusLabel || order.status || 'Order')}</span></div><div class="customer-card-actions"><button class="customer-small-button primary" data-order-details="${escapeHtml(order.id)}" type="button">Open Conversation</button></div></article>`;
+    }).join('');
+    return `${pageHeader('Quick Access', 'Messenger', 'Send pickup questions and review conversations with food trucks from your orders.')}<div class="customer-list">${cards || '<div class="customer-card empty-customer-state"><span>💬</span><strong>No conversations yet</strong><p>After you place an order, its food-truck conversation will appear here.</p><button class="secondary-button" data-home-target="order" type="button">Order Food</button></div>'}</div>`;
   }
 
   function renderOrders() {
@@ -3397,6 +3409,7 @@
     if (actionButton) {
       const actions = {
         'view-favorites': () => renderCustomerPage('favorites'),
+        'view-messages': () => renderCustomerPage('messages'),
         'view-orders': () => renderCustomerPage('orders'),
         'view-addresses': () => renderCustomerPage('addresses'),
         'view-payments': () => renderCustomerPage('payments'),
