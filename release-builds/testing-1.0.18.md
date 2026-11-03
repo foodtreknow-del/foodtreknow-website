@@ -8,4 +8,5 @@ Included updates:
 - Add a vendor bulk CSV menu import with a downloadable template, preview, categories, size pricing, and paid add-ons.
 - Keep the authenticated vendor's actual food-truck name active throughout its portal.
 - Cache the new menu-import module in installed mobile web sessions.
+- Refresh all release checks for offline cache version 79.
 
