@@ -191,7 +191,7 @@
     }
 
     async signOut() {
-      const { error } = await this.client.auth.signOut();
+      const { error } = await this.client.auth.signOut({ scope: 'local' });
       if (error) throw friendlyError(error, 'You could not be signed out.');
     }
 

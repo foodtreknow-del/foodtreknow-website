@@ -187,6 +187,7 @@ test('customer sign-in, reset, password update, sign-out, and deletion use Supab
   await adapter.deleteAccount(account.id);
   assert.ok(calls.some(call => call[0] === 'reset'));
   assert.ok(calls.some(call => call[0] === 'updateUser' && call[1].password === 'new-safe-password'));
+  assert.ok(calls.some(call => call[0] === 'signOut' && call[1]?.scope === 'local'));
   assert.ok(calls.some(call => call[0] === 'rpc' && call[1] === 'delete_my_account'));
   assert.equal(accounts.has(account.id), false);
 });

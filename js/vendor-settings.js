@@ -166,6 +166,14 @@
     } catch {}
   }
 
+  function applyRemoteSettings(value) {
+    vendorSettings = saveSettings(value);
+    pendingLogo = vendorSettings.profile.logo || '';
+    populateSettingsForm(vendorSettings);
+    applyVendorSettings(vendorSettings);
+    return vendorSettings;
+  }
+
   function setMessage(message, type = '') {
     const node = field('vendorSettingsMessage');
     if (!node) return;
@@ -232,5 +240,5 @@
 
   populateSettingsForm(vendorSettings);
   applyVendorSettings(vendorSettings);
-  window.FoodTrekNowVendorSettings = { defaults: cloneDefaults, normalizeSettings, validateSettings, loadSettings, saveSettings, applyVendorSettings };
+  window.FoodTrekNowVendorSettings = { defaults: cloneDefaults, normalizeSettings, validateSettings, loadSettings, saveSettings, applyVendorSettings, applyRemoteSettings };
 })();

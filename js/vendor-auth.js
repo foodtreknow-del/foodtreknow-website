@@ -49,7 +49,7 @@
         localStorage.setItem(ACTIVE_TRUCK_KEY, context.truck.id);
         return context;
       } catch (accessError) {
-        await client.auth.signOut();
+        await client.auth.signOut({ scope: 'local' });
         throw accessError;
       }
     },
@@ -69,7 +69,7 @@
     async signOut() {
       localStorage.removeItem(ACTIVE_TRUCK_KEY);
       if (!client) return;
-      const { error } = await client.auth.signOut();
+      const { error } = await client.auth.signOut({ scope: 'local' });
       if (error) throw friendly(error);
     },
     async requestPasswordReset(email) {

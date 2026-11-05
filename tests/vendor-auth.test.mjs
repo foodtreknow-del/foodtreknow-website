@@ -29,7 +29,7 @@ function harness(role = 'vendor', missingTable = '') {
       async signInWithPassword(payload) { calls.push(['signIn', payload]); return { data: { user }, error: null }; },
       async getSession() { return { data: { session: { user } }, error: null }; },
       async resetPasswordForEmail(email, options) { calls.push(['resetPassword', email, options]); return { error: null }; },
-      async signOut() { calls.push(['signOut']); return { error: null }; }
+      async signOut(options) { calls.push(['signOut', options]); return { error: null }; }
     },
     async rpc(name) {
       calls.push(['rpc', name]);
@@ -90,6 +90,12 @@ test('vendor password recovery validates the email and uses the secure Supabase 
   await assert.rejects(() => api.requestPasswordReset(''), /vendor email address/i);
   await api.requestPasswordReset('VENDOR@example.com');
   assert.deepEqual(JSON.parse(JSON.stringify(calls.at(-1))), ['resetPassword', 'vendor@example.com', { redirectTo: 'https://www.foodtreknow.com/' }]);
+});
+
+test('vendor sign-out only ends the current device session', async () => {
+  const { api, calls } = harness();
+  await api.signOut();
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.at(-1))), ['signOut', { scope: 'local' }]);
 });
 
 test('secure vendor auth loads before the existing dashboard application', () => {
