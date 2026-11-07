@@ -15,7 +15,7 @@ on:
       version_code:
         description: Increasing Google Play build number
         required: true
-        default: "28"
+        default: "29"
         type: string
 
 permissions:
@@ -58,7 +58,7 @@ jobs:
       - name: Validate testing mode and release version
         env:
           RELEASE_VERSION_NAME: ${{ inputs.version_name || '1.0.25' }}
-          RELEASE_VERSION_CODE: ${{ inputs.version_code || '28' }}
+          RELEASE_VERSION_CODE: ${{ inputs.version_code || '29' }}
         run: |
           grep -q '"paymentMode":"test"' www/js/build-config.js
           [[ "$RELEASE_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { echo "Version code must be a positive integer."; exit 1; }
@@ -84,7 +84,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           RELEASE_VERSION_NAME: ${{ inputs.version_name || '1.0.25' }}
-          RELEASE_VERSION_CODE: ${{ inputs.version_code || '28' }}
+          RELEASE_VERSION_CODE: ${{ inputs.version_code || '29' }}
         run: >-
           ./android/gradlew -p android bundleRelease --no-daemon
           -PFOODTREKNOW_VERSION_NAME="$RELEASE_VERSION_NAME"
@@ -96,7 +96,7 @@ jobs:
       - name: Upload signed no-charge testing bundle
         uses: actions/upload-artifact@v4
         with:
-          name: FoodTrekNow-Android-TEST-${{ inputs.version_name || '1.0.25' }}-${{ inputs.version_code || '28' }}
+          name: FoodTrekNow-Android-TEST-${{ inputs.version_name || '1.0.25' }}-${{ inputs.version_code || '29' }}
           path: |
             android/app/build/outputs/bundle/release/app-release.aab
             android/app/build/outputs/bundle/release/app-release.aab.sha256
