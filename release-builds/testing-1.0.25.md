@@ -11,3 +11,4 @@ Included updates:
 - Add visible Report and Block controls to customer/vendor order messages, Host/vendor event messages, and Host reviews.
 - Store reports privately for the single FoodTrekNow administrator and prevent blocked accounts from continuing to message each other.
 - Hide blocked messages and reviews while preserving administrator access for moderation.
+- Rebuild both testing packages from the verified complete source files.
