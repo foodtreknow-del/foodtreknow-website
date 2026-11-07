@@ -50,10 +50,10 @@ jobs:
           app = Spaceship::ConnectAPI::App.find("com.foodtreknow.app")
           abort("FoodTrekNow app was not found in App Store Connect.") unless app
 
-          version = app.get_edit_app_store_version(
-            platform: platform,
+          version = app.get_app_store_versions(
+            filter: { platform: platform },
             includes: "appStoreVersionSubmission,build"
-          )
+          ).find { |candidate| candidate.version_string == "1.0.25" }
           abort("Editable App Store version was not found.") unless version
           abort("Expected version 1.0.25, found #{version.version_string}.") unless version.version_string == "1.0.25"
 
@@ -67,10 +67,10 @@ jobs:
 
           version.select_build(build_id: build.id)
 
-          selected = app.get_edit_app_store_version(
-            platform: platform,
+          selected = app.get_app_store_versions(
+            filter: { platform: platform },
             includes: "appStoreVersionSubmission,build"
-          )
+          ).find { |candidate| candidate.version_string == "1.0.25" }
           selected_number = selected&.build&.version
           abort("Build selection verification failed; selected build is #{selected_number.inspect}.") unless selected_number == "21"
 
