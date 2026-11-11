@@ -1361,6 +1361,10 @@
       eventLogisticsNotes: event.event_logistics_notes || '',
       startsAt: event.starts_at,
       endsAt: event.ends_at,
+      attendanceCount: Number(event.attendance_count || 0),
+      customerCheckedIn: Boolean(event.customer_checked_in),
+      customerReviewed: Boolean(event.customer_reviewed),
+      reviews: Array.isArray(event.reviews) ? event.reviews : [],
       live: true
     };
   }
@@ -1424,6 +1428,7 @@
           pickupInstructions: truck.pickup_instructions || '',
           minimumOrder: Number(truck.minimum_order) || 0,
           taxRate: Number(truck.tax_rate) || 0,
+          reviews: Array.isArray(truck.reviews) ? truck.reviews : [],
           supabase: true
         });
         TRUCK_MENUS[truck.id] = truck.menu.map(item => ({
@@ -1664,6 +1669,7 @@
     document.getElementById('adminHostReviewNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminVendorManagementNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminContactDirectoryNav').classList.toggle('hidden-view', !isPlatformAdmin);
+    document.getElementById('adminReviewModerationNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === currentPage));
     updateCartBadge();
     updateCustomerNotificationBadge();
@@ -2081,6 +2087,7 @@
       </header>
       <nav class="menu-category-jump" aria-label="Menu categories">${categories.map(category => `<button data-menu-category="${escapeHtml(category)}" type="button">${escapeHtml(category)}</button>`).join('')}</nav>
       <div class="full-menu-sections">${categories.map(category => `<section class="full-menu-category" data-menu-section="${escapeHtml(category)}"><div class="ordering-section-heading"><div><p class="eyebrow">Browse</p><h2>${escapeHtml(category)}</h2></div><span>${menu.filter(item => item.category === category).length} items</span></div><div class="full-menu-grid">${menu.filter(item => item.category === category).map(item => orderingItemCard(item)).join('')}</div></section>`).join('')}</div>
+      <section class="customer-card truck-review-feed"><div class="ordering-section-heading"><div><p class="eyebrow">Customer Feedback</p><h2>Food Truck Reviews</h2></div><span>${(truck.reviews||[]).length} reviews</span></div>${(truck.reviews||[]).length?(truck.reviews||[]).slice(0,10).map(review=>`<article><strong>${'★'.repeat(Number(review.rating)||0)}${'☆'.repeat(Math.max(0,5-Number(review.rating||0)))}</strong><p>${escapeHtml(review.comment||'Rating submitted without a written comment.')}</p><small>${new Date(review.created_at).toLocaleDateString()}</small></article>`).join(''):'<p class="muted">No customer reviews yet.</p>'}</section>
       <aside class="floating-cart-summary ${cartCount ? 'has-items' : ''}" aria-live="polite">
         <button class="floating-cart-review" data-ordering-action="open-cart" type="button"><span>🛒</span><span><small>Your order</small><strong><b data-live-cart-count>${cartCount}</b> <span data-live-cart-noun>item${cartCount === 1 ? '' : 's'}</span> · <b data-live-cart-total>${customerMoney(cartSubtotal)}</b></strong></span></button>
         <button class="primary-button floating-checkout-button" data-ordering-action="checkout" type="button" ${cartCount ? '' : 'disabled'}>Checkout</button>
@@ -2488,7 +2495,7 @@
   }
 
   function renderCustomerPage(page) {
-    if (['vendorReviews', 'hostReviews', 'vendorManagement', 'adminDirectory'].includes(page) && !currentAccount?.isPlatformAdmin) page = 'overview';
+    if (['vendorReviews', 'hostReviews', 'vendorManagement', 'adminDirectory', 'adminReviews'].includes(page) && !currentAccount?.isPlatformAdmin) page = 'overview';
     currentPage = page;
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === page));
     document.querySelectorAll('[data-bottom-page]').forEach(button => button.classList.toggle('active', button.dataset.bottomPage === page));
@@ -2515,6 +2522,7 @@
       hostReviews: renderHostReviews,
       vendorManagement: renderVendorManagement,
       adminDirectory: renderAdminDirectory
+      ,adminReviews: renderAdminReviews
     };
     accountContent.innerHTML = (renderers[page] || renderers.overview)();
     if (page === 'vendorApplication') loadVendorApplication();
@@ -2523,6 +2531,7 @@
     if (page === 'hostReviews' && currentAccount.isPlatformAdmin) loadHostReviews();
     if (page === 'vendorManagement' && currentAccount.isPlatformAdmin) loadVendorManagement();
     if (page === 'adminDirectory' && currentAccount.isPlatformAdmin) loadAdminDirectory();
+    if (page === 'adminReviews' && currentAccount.isPlatformAdmin) loadAdminReviews();
     updateCartBadge();
     updateCustomerNotificationBadge();
     document.querySelector('.customer-sidebar')?.classList.remove('open');
@@ -2681,7 +2690,9 @@
     ];
     const feed = customerNotifications.length ? customerNotifications.map(notification => {
       const order = currentAccount.orders.find(item => item.supabaseOrderId === notification.order_id);
-      return `<article class="communication-notification ${notification.is_read ? '' : 'unread'}"><span class="communication-notification-icon" aria-hidden="true">${notification.kind === 'order_message' ? '💬' : '🛍️'}</span><div><div class="communication-notification-heading"><strong>${escapeHtml(notification.title)}</strong>${notification.is_read ? '' : '<b>New</b>'}</div><p>${escapeHtml(notification.body)}</p><small>${new Date(notification.created_at).toLocaleString()}</small></div>${order ? `<button class="customer-small-button" data-notification-order="${escapeHtml(order.id)}" data-notification-id="${escapeHtml(notification.id)}" type="button">View Order</button>` : ''}</article>`;
+      const adminAction=notification.action_type&&currentAccount.isPlatformAdmin?`<button class="customer-small-button" data-admin-notification-action="${escapeHtml(notification.action_type)}" data-notification-id="${escapeHtml(notification.id)}" type="button">${notification.action_type==='vendor_application'?'Review Vendor':notification.action_type==='host_application'?'Review Host':'View Customer'}</button>`:'';
+      const icon=notification.kind==='order_message'?'💬':notification.action_type==='vendor_application'?'🚚':notification.action_type==='host_application'?'📍':notification.action_type==='customer'?'👤':'🛍️';
+      return `<article class="communication-notification ${notification.is_read ? '' : 'unread'}"><span class="communication-notification-icon" aria-hidden="true">${icon}</span><div><div class="communication-notification-heading"><strong>${escapeHtml(notification.title)}</strong>${notification.is_read ? '' : '<b>New</b>'}</div><p>${escapeHtml(notification.body)}</p><small>${new Date(notification.created_at).toLocaleString()}</small></div>${order ? `<button class="customer-small-button" data-notification-order="${escapeHtml(order.id)}" data-notification-id="${escapeHtml(notification.id)}" type="button">View Order</button>` : adminAction}</article>`;
     }).join('') : '<div class="empty-customer-state communication-empty"><span>🔔</span><strong>No notifications yet</strong><p>Order updates and truck messages will appear here.</p></div>';
     return `${pageHeader('Stay in the Loop', 'Notifications', 'Order updates and messages, all in one place.', unreadCount ? '<button class="secondary-button" data-mark-notifications-read type="button">Mark All Read</button>' : '')}<section class="customer-card communication-inbox"><div class="communication-section-heading"><div><p class="eyebrow">Notification Center</p><h2>Recent Updates</h2></div><span>${unreadCount} unread</span></div><div class="communication-notification-list">${feed}</div></section><section class="customer-card communication-preferences"><h2 class="customer-section-title">Preferences</h2>${rows.map(([key, title, copy]) => `<div class="setting-row"><div><strong>${title}</strong><small>${copy}</small></div><label class="customer-switch" aria-label="${title}"><input type="checkbox" data-notification-setting="${key}" ${preferences[key] ? 'checked' : ''}><span></span></label></div>`).join('')}</section>`;
   }
@@ -2920,6 +2931,18 @@
     openModal(`<div class="admin-contact-modal"><p class="eyebrow">Administrator Contact</p><h2 id="customerModalTitle">${escapeHtml(title)}</h2><p>${escapeHtml(organization || '')}</p><div class="admin-contact-details"><div><small>Username / Login Email</small><strong>${escapeHtml(record.username || record.loginEmail || 'Not provided')}</strong></div><div><small>Contact Email</small><strong>${emailLine}</strong></div><div><small>Mobile Number</small><strong>${mobileLine}</strong></div></div>${extra}</div>`);
   }
 
+  function renderAdminReviews(){
+    return `${pageHeader('Administrator','Review Moderation','Only the FoodTrekNow platform administrator can remove a false, abusive, or inappropriate review.')}<section id="adminReviewModerationContent" class="customer-card"><p class="muted">Loading customer, food truck, and event reviews…</p></section>`;
+  }
+
+  async function loadAdminReviews(){
+    const container=document.getElementById('adminReviewModerationContent');if(!container)return;
+    try{
+      const reviews=await window.FoodTrekNowAdminReviews.load();
+      container.innerHTML=reviews.length?`<div class="vendor-review-list">${reviews.map(review=>{const profile=review.reviewer||{};const reviewer=profile.preferred_name||[profile.first_name,profile.last_name].filter(Boolean).join(' ')||review.reviewer_role||'Customer';return `<article class="vendor-review-card" data-admin-review-card="${escapeHtml(review.id)}"><div><span class="vendor-status-badge ${review.is_removed?'rejected':'approved'}">${review.is_removed?'Removed':escapeHtml(review.reviewType)}</span><h2>${escapeHtml(review.subject)}</h2><p><strong>${'★'.repeat(Number(review.rating)||0)}${'☆'.repeat(Math.max(0,5-Number(review.rating||0)))}</strong> · ${escapeHtml(reviewer)}</p><p>${escapeHtml(review.comment||'No written review.')}</p><small>${new Date(review.created_at).toLocaleString()}</small></div>${review.is_removed?'':`<div><label>Removal reason<textarea class="customer-textarea" data-admin-review-reason rows="2" placeholder="False, abusive, private information, or policy violation"></textarea></label><button class="customer-small-button danger" data-admin-remove-review="${escapeHtml(review.id)}" data-review-type="${escapeHtml(review.reviewType)}" type="button">Remove Review</button></div>`}</article>`;}).join('')}</div>`:'<div class="empty-customer-state"><span>★</span><strong>No reviews posted yet</strong></div>';
+    }catch(error){container.innerHTML=`<p class="form-message">${escapeHtml(error.message)}</p>`;}
+  }
+
   function openModal(html) {
     modalContent.innerHTML = html;
     accountModal.classList.remove('hidden');
@@ -2941,7 +2964,11 @@
     try { const parsed = new URL(eventItem.siteMapImageUrl); if (parsed.protocol === 'https:') mapImage = parsed.href; } catch { /* Optional Host map image. */ }
     const mappedTrucks = (eventItem.trucks || []).filter(truck => Number.isFinite(Number(truck.map_x)) && Number.isFinite(Number(truck.map_y)));
     const mapMarkup = eventItem.customerMapEnabled && mappedTrucks.length ? `<section class="customer-event-map-section"><div><h3>Event pickup map</h3><p>${escapeHtml(eventItem.vendorZoneName || 'Food vendor zone')}${eventItem.vendorEntrance ? ` · Enter at ${escapeHtml(eventItem.vendorEntrance)}` : ''}</p></div><div class="customer-event-layout-map${mapImage ? ' has-image' : ''}"${mapImage ? ` style="background-image:linear-gradient(rgba(10,22,36,.12),rgba(10,22,36,.12)),url('${escapeHtml(mapImage)}')"` : ''}>${mappedTrucks.map(truck => `<button class="customer-event-map-pin" style="left:${Number(truck.map_x)}%;top:${Number(truck.map_y)}%" data-event-truck="${escapeHtml(truck.id)}" type="button"><strong>${escapeHtml(truck.space_code || 'Truck')}</strong><small>${escapeHtml(truck.name || '')}</small></button>`).join('')}</div>${eventItem.eventLogisticsNotes ? `<p class="customer-event-map-notes">${escapeHtml(eventItem.eventLogisticsNotes)}</p>` : ''}</section>` : '';
-    openModal(`<div class="customer-event-modal"><p class="eyebrow">Confirmed Host Event</p><h2 id="customerModalTitle">${escapeHtml(eventItem.name)}</h2><div class="customer-event-summary"><div class="event-date"><span>${escapeHtml(eventItem.date.split(' ')[0] || 'TBD')}</span><strong>${escapeHtml(eventItem.date.split(' ')[1] || '')}</strong></div><div><strong>${escapeHtml(eventItem.location)}</strong><p>${escapeHtml(eventItem.time)} · ${escapeHtml(eventItem.detail)}</p>${eventItem.hostName ? `<small>Hosted by ${escapeHtml(eventItem.hostName)}</small>` : ''}</div></div>${eventItem.description ? `<p class="customer-event-description">${escapeHtml(eventItem.description)}</p>` : ''}<div class="customer-event-actions">${eventItem.address ? `<button class="secondary-button" data-event-directions="${eventItem.id}" type="button">Directions</button>` : ''}</div>${mapMarkup}<h3>Food trucks attending</h3><div class="customer-event-trucks">${truckMarkup}</div></div>`);
+    const now=Date.now(),starts=Date.parse(eventItem.startsAt||0),ends=Date.parse(eventItem.endsAt||0),checkInOpen=now>=starts-8*60*60*1000&&now<=ends+4*60*60*1000;
+    const attendanceAction=eventItem.live&&!currentAccount?.isGuest?(eventItem.customerCheckedIn?`<span class="customer-event-checked-in">✓ Checked in · ${eventItem.attendanceCount} guest${eventItem.attendanceCount===1?'':'s'}</span>`:checkInOpen?`<button class="primary-button" data-customer-event-check-in="${escapeHtml(eventItem.id)}" type="button">Check In at Event</button>`:'<span class="muted">Check-in opens on the event day.</span>'):'';
+    const reviewAction=eventItem.customerCheckedIn?(eventItem.customerReviewed?'<span class="customer-event-checked-in">✓ Review submitted</span>':`<button class="secondary-button" data-customer-event-review="${escapeHtml(eventItem.id)}" type="button">Review This Event</button>`):'';
+    const reviewFeed=(eventItem.reviews||[]).length?`<section class="customer-event-reviews"><h3>Event Reviews</h3>${eventItem.reviews.slice(0,8).map(review=>`<article><strong>${'★'.repeat(Number(review.rating)||0)}${'☆'.repeat(Math.max(0,5-Number(review.rating||0)))}</strong><p>${escapeHtml(review.comment||'Rating submitted without a written comment.')}</p><small>${escapeHtml(review.reviewer_role||'customer')} · ${new Date(review.created_at).toLocaleDateString()}</small></article>`).join('')}</section>`:'';
+    openModal(`<div class="customer-event-modal"><p class="eyebrow">Confirmed Host Event</p><h2 id="customerModalTitle">${escapeHtml(eventItem.name)}</h2><div class="customer-event-summary"><div class="event-date"><span>${escapeHtml(eventItem.date.split(' ')[0] || 'TBD')}</span><strong>${escapeHtml(eventItem.date.split(' ')[1] || '')}</strong></div><div><strong>${escapeHtml(eventItem.location)}</strong><p>${escapeHtml(eventItem.time)} · ${escapeHtml(eventItem.detail)}</p>${eventItem.hostName ? `<small>Hosted by ${escapeHtml(eventItem.hostName)}</small>` : ''}</div></div>${eventItem.description ? `<p class="customer-event-description">${escapeHtml(eventItem.description)}</p>` : ''}<div class="customer-event-actions">${eventItem.address ? `<button class="secondary-button" data-event-directions="${eventItem.id}" type="button">Directions</button>` : ''}${attendanceAction}${reviewAction}</div>${mapMarkup}<h3>Food trucks attending</h3><div class="customer-event-trucks">${truckMarkup}</div>${reviewFeed}</div>`);
   }
 
   function addressModal(address = null) {
@@ -3027,7 +3054,7 @@
       : '';
     const communication = !receiptOnly && order.supabaseOrderId ? `<section class="order-conversation"><div class="communication-section-heading"><div><p class="eyebrow">Pickup Communication</p><h3>Message ${escapeHtml(order.truckName)}</h3></div><span>Live</span></div><div class="message-thread" data-customer-conversation><p class="muted">Loading messages…</p></div><form id="customerOrderMessageForm" data-order-message-id="${order.supabaseOrderId}"><label for="customerOrderMessage">Message</label><div class="message-composer"><textarea id="customerOrderMessage" class="customer-textarea" maxlength="500" rows="2" required placeholder="Ask a pickup question or share an update"></textarea><button class="primary-button" type="submit">Send</button></div><p class="form-message" data-message-error></p></form></section>` : '';
     const milestoneLines = `<h3>Order Timeline</h3><div class="receipt-line"><span>Order Placed</span><strong>${formatOrderDateTime(order.createdAt)}</strong></div><div class="receipt-line"><span>Order Received</span><strong>${formatOrderDateTime(order.receivedAt || order.createdAt)}</strong></div>${order.completedAt ? `<div class="receipt-line"><span>Picked Up</span><strong>${formatOrderDateTime(order.completedAt)}</strong></div>` : ''}`;
-    openModal(`<div class="customer-receipt"><div class="receipt-brand"><p class="eyebrow">${receiptOnly ? 'Receipt' : 'Order Details'}</p><h2 id="customerModalTitle">${escapeHtml(order.truckName)}</h2><p>${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><span class="status-pill ${['completed', 'cancelled'].includes(order.status) ? 'past' : ''} ${order.status === 'completed' ? 'picked-up' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span></div>${milestoneLines}<h3>Items</h3>${itemLines}<div class="receipt-line"><span>Subtotal</span><strong>${customerMoney(order.subtotal)}</strong></div><div class="receipt-line"><span>Tax</span><strong>${customerMoney(order.tax)}</strong></div>${creditPaymentLine}<div class="receipt-line receipt-total"><strong>Total</strong><strong>${customerMoney(order.total)}</strong></div>${cancellationLine}<p class="muted">${order.status === 'cancelled' ? !order.supabaseOrderId ? 'Demo refund recorded on this device.' : order.cancellationResolution === 'vendor_credit' ? `Credit is available only at ${escapeHtml(order.truckName)}.` : 'Stripe refund timing depends on the customer’s bank.' : receiptOnly ? 'Paid · Customer receipt view' : 'Pickup status updates appear in your account and notification preferences.'}</p>${communication}${isOrderCancellable(order) ? `<button class="customer-small-button danger full" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button>` : ''}${order.status === 'completed' ? `<button class="primary-button full" data-reorder="${escapeHtml(order.id)}" type="button">Reorder This Meal</button>` : ''}</div>`);
+    openModal(`<div class="customer-receipt"><div class="receipt-brand"><p class="eyebrow">${receiptOnly ? 'Receipt' : 'Order Details'}</p><h2 id="customerModalTitle">${escapeHtml(order.truckName)}</h2><p>${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><span class="status-pill ${['completed', 'cancelled'].includes(order.status) ? 'past' : ''} ${order.status === 'completed' ? 'picked-up' : ''} ${order.status === 'cancelled' ? 'cancelled' : ''}">${escapeHtml(order.statusLabel)}</span></div>${milestoneLines}<h3>Items</h3>${itemLines}<div class="receipt-line"><span>Subtotal</span><strong>${customerMoney(order.subtotal)}</strong></div><div class="receipt-line"><span>Tax</span><strong>${customerMoney(order.tax)}</strong></div>${creditPaymentLine}<div class="receipt-line receipt-total"><strong>Total</strong><strong>${customerMoney(order.total)}</strong></div>${cancellationLine}<p class="muted">${order.status === 'cancelled' ? !order.supabaseOrderId ? 'Demo refund recorded on this device.' : order.cancellationResolution === 'vendor_credit' ? `Credit is available only at ${escapeHtml(order.truckName)}.` : 'Stripe refund timing depends on the customer’s bank.' : receiptOnly ? 'Paid · Customer receipt view' : 'Pickup status updates appear in your account and notification preferences.'}</p>${communication}${isOrderCancellable(order) ? `<button class="customer-small-button danger full" data-cancel-order="${escapeHtml(order.id)}" type="button">Cancel Order</button>` : ''}${order.status === 'completed'&&order.supabaseOrderId?`<button class="secondary-button full" data-customer-truck-review="${escapeHtml(order.supabaseOrderId)}" data-review-truck-name="${escapeHtml(order.truckName)}" type="button">Review ${escapeHtml(order.truckName)}</button>`:''}${order.status === 'completed' ? `<button class="primary-button full" data-reorder="${escapeHtml(order.id)}" type="button">Reorder This Meal</button>` : ''}</div>`);
     if (communication) loadCustomerConversation(order);
   }
 
@@ -3318,6 +3345,21 @@
       if (currentPage === 'notifications') renderCustomerPage('notifications');
       return;
     }
+    const adminNotificationAction=event.target.closest('[data-admin-notification-action]');
+    if(adminNotificationAction){
+      if(adminNotificationAction.dataset.notificationId)await markCustomerNotificationsRead([adminNotificationAction.dataset.notificationId]);
+      const destination=adminNotificationAction.dataset.adminNotificationAction==='vendor_application'?'vendorReviews':adminNotificationAction.dataset.adminNotificationAction==='host_application'?'hostReviews':'adminDirectory';
+      renderCustomerPage(destination);return;
+    }
+    const removeReview=event.target.closest('[data-admin-remove-review]');
+    if(removeReview){
+      const card=removeReview.closest('[data-admin-review-card]'),reason=card?.querySelector('[data-admin-review-reason]')?.value.trim()||'';
+      if(reason.length<3){customerToast('Enter a brief reason for removing this review.');return;}
+      if(!confirm('Remove this review from public view?'))return;
+      removeReview.disabled=true;
+      try{await window.FoodTrekNowAdminReviews.remove(removeReview.dataset.reviewType,removeReview.dataset.adminRemoveReview,reason);customerToast('Review removed from public view.');await loadAdminReviews();}
+      catch(error){customerToast(error.message);removeReview.disabled=false;}return;
+    }
     const vendorDecision = event.target.closest('[data-vendor-decision]');
     if (vendorDecision) {
       const decision = vendorDecision.dataset.vendorDecision;
@@ -3595,6 +3637,28 @@
       if (eventItem) customerEventModal(eventItem);
       return;
     }
+    const eventCheckIn = event.target.closest('[data-customer-event-check-in]');
+    if (eventCheckIn) {
+      eventCheckIn.disabled = true;
+      try {
+        await window.FoodTrekNowCustomerMarketplace.checkInEvent(eventCheckIn.dataset.customerEventCheckIn);
+        customerToast('You are checked in. The Host attendance report was updated.');
+        await refreshCustomerMarketplace(true);
+        const eventItem = EVENTS.find(item => String(item.id) === String(eventCheckIn.dataset.customerEventCheckIn));
+        if (eventItem) customerEventModal(eventItem);
+      } catch (error) { customerToast(error.message); eventCheckIn.disabled = false; }
+      return;
+    }
+    const eventReview = event.target.closest('[data-customer-event-review]');
+    if (eventReview) {
+      openModal(`<form id="customerEventReviewForm" data-opportunity-id="${escapeHtml(eventReview.dataset.customerEventReview)}"><p class="eyebrow">Event Review</p><h2 id="customerModalTitle">Share Your Event Experience</h2><label>Rating<select name="rating" class="customer-select" required><option value="5">5 — Excellent</option><option value="4">4 — Very Good</option><option value="3">3 — Good</option><option value="2">2 — Fair</option><option value="1">1 — Poor</option></select></label><label>Review<textarea name="comment" class="customer-textarea" maxlength="1200" rows="4" placeholder="Tell others about the event."></textarea></label><p class="form-message"></p><div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" type="submit">Post Review</button></div></form>`);
+      return;
+    }
+    const truckReview = event.target.closest('[data-customer-truck-review]');
+    if (truckReview) {
+      openModal(`<form id="customerTruckReviewForm" data-order-id="${escapeHtml(truckReview.dataset.customerTruckReview)}"><p class="eyebrow">Food Truck Review</p><h2 id="customerModalTitle">Review ${escapeHtml(truckReview.dataset.reviewTruckName||'Food Truck')}</h2><label>Rating<select name="rating" class="customer-select" required><option value="5">5 — Excellent</option><option value="4">4 — Very Good</option><option value="3">3 — Good</option><option value="2">2 — Fair</option><option value="1">1 — Poor</option></select></label><label>Review<textarea name="comment" class="customer-textarea" maxlength="1200" rows="4" placeholder="Share your food and service experience."></textarea></label><p class="form-message"></p><div class="customer-form-actions"><button class="secondary-button" data-close-customer-modal type="button">Cancel</button><button class="primary-button" type="submit">Post Review</button></div></form>`);
+      return;
+    }
     const orderFavorite = event.target.closest('[data-toggle-order-favorite]');
     if (orderFavorite) return toggleFavoriteOrder(orderFavorite.dataset.toggleOrderFavorite);
     const reorder = event.target.closest('[data-reorder]');
@@ -3708,6 +3772,16 @@
   });
 
   accountContent.addEventListener('submit', async event => {
+    if (event.target.id === 'customerEventReviewForm') {
+      event.preventDefault(); const data=new FormData(event.target),button=event.target.querySelector('button[type="submit"]'),message=event.target.querySelector('.form-message');button.disabled=true;
+      try { await window.FoodTrekNowCustomerMarketplace.reviewEvent(event.target.dataset.opportunityId,data.get('rating'),data.get('comment'));closeModal();await refreshCustomerMarketplace(true);customerToast('Your event review was posted.'); }
+      catch(error){message.textContent=error.message;button.disabled=false;} return;
+    }
+    if (event.target.id === 'customerTruckReviewForm') {
+      event.preventDefault(); const data=new FormData(event.target),button=event.target.querySelector('button[type="submit"]'),message=event.target.querySelector('.form-message');button.disabled=true;
+      try { await window.FoodTrekNowCustomerMarketplace.reviewTruck(event.target.dataset.orderId,data.get('rating'),data.get('comment'));closeModal();customerToast('Your food truck review was posted.'); }
+      catch(error){message.textContent=error.message;button.disabled=false;} return;
+    }
     if (event.target.id === 'vendorApplicationForm') {
       event.preventDefault();
       const message = document.getElementById('vendorApplicationMessage');

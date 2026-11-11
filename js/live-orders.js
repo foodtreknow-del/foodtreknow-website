@@ -83,6 +83,13 @@
     return data;
   }
 
+  async function setVendorOrdersArchived(orderIds, archived) {
+    if (!client || !Array.isArray(orderIds) || !orderIds.length) throw new Error('Select at least one completed order.');
+    const { data, error } = await client.rpc('set_vendor_orders_archived', { p_order_ids: orderIds, p_archived: Boolean(archived) });
+    if (error) throw error;
+    return Number(data || 0);
+  }
+
   async function cancelCustomerOrder(orderId) {
     if (!client || !orderId) throw new Error('The secure order could not be identified.');
     const { data, error } = await client.rpc('cancel_my_order', { p_order_id: orderId });
@@ -187,6 +194,7 @@
     loadVendorOrders,
     updateVendorStatus,
     setVendorOrderArchived,
+    setVendorOrdersArchived,
     cancelCustomerOrder,
     loadOrderConversation,
     loadVendorMessages,

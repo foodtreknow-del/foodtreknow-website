@@ -28,9 +28,10 @@ test('new vendor orders use a persistent three-tone audible alert', () => {
 });
 
 test('vendor dashboard status cards open the matching filtered order list', () => {
-  for (const status of ['new', 'preparing', 'ready', 'pickedup', 'completed']) {
+  for (const status of ['new', 'preparing', 'ready', 'completed']) {
     assert.match(html, new RegExp(`data-dashboard-order-filter="${status}"`));
   }
+  assert.doesNotMatch(html, /data-dashboard-order-filter="pickedup"/);
   assert.match(vendorSource, /function setOrderFilter\(filter\)/);
   assert.match(vendorSource, /setOrderFilter\(btn\.dataset\.dashboardOrderFilter\);activateVendorPage\('orders'\)/);
 });

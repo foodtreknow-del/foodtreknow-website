@@ -81,6 +81,7 @@
       contact_email: settings.profile.email || null,
       location_name: [settings.profile.city, settings.profile.state].filter(Boolean).join(', ') || null,
       accepting_orders: Boolean(settings.operations.acceptingOrders),
+      auto_archive_completed_orders: Boolean(settings.operations.autoArchiveCompleted),
       estimated_prep_minutes: Number(settings.operations.prepTime),
       minimum_order: Number(settings.operations.minimumOrder),
       tax_rate: Number(settings.operations.taxRate) / 100,

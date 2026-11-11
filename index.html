@@ -214,6 +214,7 @@
         <button id="adminHostReviewNav" class="customer-nav-link hidden-view" data-customer-page="hostReviews" type="button"><span>✓</span> Host Approvals</button>
         <button id="adminVendorManagementNav" class="customer-nav-link hidden-view" data-customer-page="vendorManagement" type="button"><span>▥</span> Vendor Management</button>
         <button id="adminContactDirectoryNav" class="customer-nav-link hidden-view" data-customer-page="adminDirectory" type="button"><span>☷</span> Contact Directory</button>
+        <button id="adminReviewModerationNav" class="customer-nav-link hidden-view" data-customer-page="adminReviews" type="button"><span>★</span> Review Moderation</button>
       </nav>
       <button id="customerSignOutButton" class="customer-signout-button" type="button">Sign Out</button>
       <nav class="app-legal-links" aria-label="Customer legal information"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="privacy.html#your-choices">Choices</a></nav>
@@ -307,28 +308,28 @@
           <button class="summary-card vendor-order-summary new-summary" data-dashboard-order-filter="new" type="button"><span>New Orders</span><strong id="newSummaryCount">0</strong><small>View orders</small></button>
           <button class="summary-card vendor-order-summary preparing-summary" data-dashboard-order-filter="preparing" type="button"><span>Preparing</span><strong id="preparingCount">0</strong><small>View orders</small></button>
           <button class="summary-card vendor-order-summary ready-summary" data-dashboard-order-filter="ready" type="button"><span>Ready</span><strong id="readyCount">0</strong><small>View orders</small></button>
-          <button class="summary-card vendor-order-summary pickedup-summary" data-dashboard-order-filter="pickedup" type="button"><span>Picked Up</span><strong id="pickedUpCount">0</strong><small>View orders</small></button>
           <button class="summary-card vendor-order-summary completed-summary" data-dashboard-order-filter="completed" type="button"><span>Completed</span><strong id="completedCount">0</strong><small>View orders</small></button>
         </section>
-        <section class="panel pickup-order-lookup" aria-labelledby="pickupOrderLookupTitle">
-          <div>
-            <p class="eyebrow">Customer Pickup</p>
-            <h2 id="pickupOrderLookupTitle">Find an Order Number</h2>
-            <p class="muted">Enter the customer's order number to open the order immediately.</p>
-          </div>
-          <form id="pickupOrderLookupForm" class="pickup-order-lookup-form">
-            <label class="sr-only" for="pickupOrderLookup">Order number</label>
-            <input id="pickupOrderLookup" class="search-input" type="search" inputmode="numeric" autocomplete="off" placeholder="Enter order number" />
-            <button class="primary-button" type="submit">Find Order</button>
-          </form>
-          <p id="pickupOrderLookupMessage" class="form-message pickup-order-lookup-message" aria-live="polite"></p>
+        <section class="vendor-dashboard-tools">
+          <section class="panel pickup-order-lookup compact" aria-labelledby="pickupOrderLookupTitle">
+            <div><p class="eyebrow">Customer Pickup</p><h2 id="pickupOrderLookupTitle">Find Order</h2></div>
+            <form id="pickupOrderLookupForm" class="pickup-order-lookup-form">
+              <label class="sr-only" for="pickupOrderLookup">Order number</label>
+              <input id="pickupOrderLookup" class="search-input" type="search" inputmode="numeric" autocomplete="off" placeholder="Order number" />
+              <button class="primary-button" type="submit">Find</button>
+            </form>
+            <p id="pickupOrderLookupMessage" class="form-message pickup-order-lookup-message" aria-live="polite"></p>
+          </section>
+          <button id="vendorOpportunityDashboardAlert" class="panel vendor-opportunity-dashboard-alert" type="button">
+            <span class="vendor-opportunity-alert-icon" aria-hidden="true">📣</span>
+            <span><small>Host Opportunities</small><strong id="vendorOpportunityDashboardTitle">No unread event alerts</strong><b id="vendorOpportunityDashboardDetail">Open Find Locations to view upcoming events.</b></span>
+            <em id="vendorOpportunityDashboardCount">0</em>
+          </button>
         </section>
         <section class="dashboard-grid">
           <div class="panel workflow-panel panel-new"><div class="panel-heading"><div><p class="eyebrow">Incoming</p><h2>New Orders</h2></div><span id="newOrderCount" class="count-pill">0</span></div><div id="newOrders" class="order-list"></div></div>
           <div class="panel workflow-panel panel-preparing"><div class="panel-heading"><div><p class="eyebrow">Kitchen</p><h2>Received / Preparing</h2></div></div><div id="preparingOrders" class="order-list"></div></div>
           <div class="panel workflow-panel panel-ready"><div class="panel-heading"><div><p class="eyebrow">Pickup</p><h2>Ready for Pickup</h2></div></div><div id="readyOrders" class="order-list"></div></div>
-          <div class="panel workflow-panel panel-pickedup"><div class="panel-heading"><div><p class="eyebrow">Confirmed</p><h2>Picked Up</h2></div></div><div id="pickedUpOrders" class="order-list"></div></div>
-          <div class="panel workflow-panel panel-completed"><div class="panel-heading"><div><p class="eyebrow">Kitchen Completed</p><h2>Completed Orders</h2></div></div><div id="completedOrders" class="order-list compact"></div></div>
         </section>
       </section>
 
@@ -340,11 +341,15 @@
               <button class="filter-tab" data-filter="new">New <span id="tabNewCount">0</span></button>
               <button class="filter-tab" data-filter="preparing">Preparing <span id="tabPreparingCount">0</span></button>
               <button class="filter-tab" data-filter="ready">Ready <span id="tabReadyCount">0</span></button>
-              <button class="filter-tab" data-filter="pickedup">Picked Up <span id="tabPickedUpCount">0</span></button>
               <button class="filter-tab" data-filter="completed">Completed <span id="tabCompletedCount">0</span></button>
               <button class="filter-tab" data-filter="archived">Archive <span id="tabArchivedCount">0</span></button>
             </div>
             <input id="orderSearch" class="search-input" type="search" placeholder="Search order number or customer" />
+          </div>
+          <div id="completedOrderBulkToolbar" class="completed-order-bulk-toolbar hidden-view">
+            <label><input id="selectAllCompletedOrders" type="checkbox"> Select all completed orders</label>
+            <span id="completedOrderSelectionCount">0 selected</span>
+            <button id="archiveSelectedOrdersButton" class="primary-button" type="button" disabled>Archive Selected</button>
           </div>
           <div id="allOrdersList" class="order-list orders-page-list"></div>
         </div>
@@ -477,6 +482,7 @@
             <section class="panel settings-panel">
               <div class="settings-panel-heading"><span class="settings-icon" aria-hidden="true">⚡</span><div><h3>Order Operations</h3><p>Set availability, timing, and checkout defaults.</p></div></div>
               <div class="settings-toggle-row"><div><strong>Accepting Orders</strong><small>Customers can place new pickup orders.</small></div><label class="switch"><input id="vendorAcceptingOrders" type="checkbox"><span class="slider"></span></label></div>
+              <div class="settings-toggle-row"><div><strong>Auto-Archive Picked-Up Orders</strong><small>Move an order to Archive immediately after pickup is confirmed.</small></div><label class="switch"><input id="vendorAutoArchiveCompleted" type="checkbox"><span class="slider"></span></label></div>
               <div class="settings-form-grid compact-grid">
                 <div><label for="vendorPrepTime">Estimated Prep Time</label><div class="settings-suffix-input"><input id="vendorPrepTime" class="settings-input" type="number" min="5" max="120" step="5" required><span>min</span></div></div>
                 <div><label for="vendorMinimumOrder">Minimum Order</label><div class="settings-prefix-input"><span>$</span><input id="vendorMinimumOrder" class="settings-input" type="number" min="0" max="500" step="0.01"></div></div>
@@ -631,21 +637,22 @@
 <script src="js/host-onboarding.js?v=multi-portal-1"></script>
 <script src="js/admin-vendor-management.js?v=admin-vendor-management-1"></script>
 <script src="js/admin-contact-directory.js?v=admin-contact-directory-1"></script>
+<script src="js/admin-reviews.js?v=operations-reviews-1"></script>
 <script src="js/vendor-auth.js?v=multi-portal-1"></script>
-<script src="js/vendor-data.js?v=tenant-isolation-1"></script>
-<script src="js/customer-marketplace.js?v=event-logistics-1"></script>
-<script src="js/opportunity-marketplace.js?v=multi-portal-1"></script>
-<script src="js/live-orders.js?v=communications-1"></script>
+<script src="js/vendor-data.js?v=operations-reviews-1"></script>
+<script src="js/customer-marketplace.js?v=operations-reviews-1"></script>
+<script src="js/opportunity-marketplace.js?v=operations-reviews-1"></script>
+<script src="js/live-orders.js?v=operations-reviews-1"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=multi-portal-2"></script>
+<script src="js/app.js?v=operations-reviews-1"></script>
 <script src="js/vendor-cash-sales.js?v=complete-cash-menu-2"></script>
 <script src="js/vendor-reports.js?v=print-fix-1"></script>
-<script src="js/vendor-settings.js?v=tenant-isolation-1"></script>
+<script src="js/vendor-settings.js?v=operations-reviews-1"></script>
 <script src="js/vendor-location.js?v=live-location-1"></script>
 <script src="js/vendor-subscription.js?v=approved-vendor-access-2"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>
-<script src="js/customer-account.js?v=multi-portal-2"></script>
+<script src="js/customer-account.js?v=operations-reviews-1"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>

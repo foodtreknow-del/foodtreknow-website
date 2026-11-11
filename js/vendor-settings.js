@@ -8,7 +8,7 @@
   const standardHours = Object.fromEntries(dayNames.map(day => [day.toLowerCase(), { enabled: day !== 'Sunday', open: '11:00', close: day === 'Friday' || day === 'Saturday' ? '21:00' : '20:00' }]));
   const defaults = {
     profile: { truckName: 'Capital City Eats', cuisine: 'American favorites · Burgers · Tacos', description: 'Fresh-made comfort food, local favorites, and fast pickup from the heart of the city.', phone: '(919) 555-0147', email: 'vendor@foodtreknow.com', website: '', street: '', city: 'Raleigh', state: 'NC', zip: '27601', logo: '' },
-    operations: { acceptingOrders: true, prepTime: 20, minimumOrder: 0, taxRate: 6, pickupInstructions: 'Look for the FoodTrekNow pickup sign at the service window.' },
+    operations: { acceptingOrders: true, autoArchiveCompleted: false, prepTime: 20, minimumOrder: 0, taxRate: 6, pickupInstructions: 'Look for the FoodTrekNow pickup sign at the service window.' },
     hours: standardHours,
     payments: { creditCard: true, applePay: true, googlePay: true, cashApp: true, payAtPickup: false },
     notifications: { orderSound: true, emailOrders: true, smsOrders: false, pushOrders: false, dailySummary: true }
@@ -108,6 +108,7 @@
     setValue('vendorState', settings.profile.state);
     setValue('vendorZip', settings.profile.zip);
     setChecked('vendorAcceptingOrders', settings.operations.acceptingOrders);
+    setChecked('vendorAutoArchiveCompleted', settings.operations.autoArchiveCompleted);
     setValue('vendorPrepTime', settings.operations.prepTime);
     setValue('vendorMinimumOrder', settings.operations.minimumOrder);
     setValue('vendorTaxRate', settings.operations.taxRate);
@@ -136,7 +137,7 @@
   function readSettingsForm() {
     return normalizeSettings({
       profile: { truckName: field('vendorTruckName').value.trim(), cuisine: field('vendorCuisine').value.trim(), description: field('vendorDescription').value.trim(), phone: field('vendorPhone').value.trim(), email: field('vendorEmail').value.trim().toLowerCase(), website: field('vendorWebsite').value.trim(), street: field('vendorStreet').value.trim(), city: field('vendorCity').value.trim(), state: field('vendorState').value.trim().toUpperCase(), zip: field('vendorZip').value.trim(), logo: pendingLogo },
-      operations: { acceptingOrders: field('vendorAcceptingOrders').checked, prepTime: Number(field('vendorPrepTime').value), minimumOrder: Number(field('vendorMinimumOrder').value), taxRate: Number(field('vendorTaxRate').value), pickupInstructions: field('vendorPickupInstructions').value.trim() },
+      operations: { acceptingOrders: field('vendorAcceptingOrders').checked, autoArchiveCompleted: field('vendorAutoArchiveCompleted').checked, prepTime: Number(field('vendorPrepTime').value), minimumOrder: Number(field('vendorMinimumOrder').value), taxRate: Number(field('vendorTaxRate').value), pickupInstructions: field('vendorPickupInstructions').value.trim() },
       hours: Object.fromEntries(dayNames.map(day => [day.toLowerCase(), { enabled: field(`hours${day}Enabled`).checked, open: field(`hours${day}Open`).value, close: field(`hours${day}Close`).value }])),
       payments: { creditCard: field('paymentCreditCard').checked, applePay: field('paymentApplePay').checked, googlePay: field('paymentGooglePay').checked, cashApp: field('paymentCashApp').checked, payAtPickup: field('paymentAtPickup').checked },
       notifications: { orderSound: field('notificationOrderSound').checked, emailOrders: field('notificationEmailOrders').checked, smsOrders: field('notificationSmsOrders').checked, pushOrders: field('notificationPushOrders').checked, dailySummary: field('notificationDailySummary').checked }

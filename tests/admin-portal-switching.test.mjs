@@ -25,6 +25,6 @@ test('administrator portal controls are in both left navigation menus before log
 });
 
 test('admin pages fail closed for every ordinary customer and vendor', () => {
-  assert.match(customer, /\['vendorReviews', 'hostReviews', 'vendorManagement', 'adminDirectory'\]\.includes\(page\) && !currentAccount\?\.isPlatformAdmin/);
+  assert.match(customer, /\['vendorReviews', 'hostReviews', 'vendorManagement', 'adminDirectory', 'adminReviews'\]\.includes\(page\) && !currentAccount\?\.isPlatformAdmin/);
   assert.match(customer, /classList\.toggle\('hidden-view', !isPlatformAdmin\)/);
 });
