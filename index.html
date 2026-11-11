@@ -202,6 +202,7 @@
         <button class="customer-nav-link" data-customer-page="profile" type="button"><span>☺</span> Profile</button>
         <button class="customer-nav-link" data-customer-page="addresses" type="button"><span>⌖</span> Addresses</button>
         <button class="customer-nav-link" data-customer-page="favorites" type="button"><span>♥</span> Favorites</button>
+        <button class="customer-nav-link" data-customer-page="messages" type="button"><span>💬</span> Messenger</button>
         <button class="customer-nav-link" data-customer-page="orders" type="button"><span>▤</span> Order History</button>
         <button class="customer-nav-link" data-customer-page="payments" type="button"><span>▣</span> Payment Methods</button>
         <button class="customer-nav-link customer-notification-nav-link" data-customer-page="notifications" type="button"><span>●</span> Notifications <b class="customer-notification-count hidden-view" data-customer-notification-count>0</b></button>
@@ -379,7 +380,7 @@
               <h2>Menu Items</h2>
               <p class="muted">Add items, update prices, and control what customers can order.</p>
             </div>
-            <div class="menu-toolbar-actions"><button id="manageCategoriesButton" class="secondary-button" type="button">Manage Categories</button><button id="previewCustomerMenuButton" class="secondary-button" type="button">Preview Customer Menu</button><button id="addMenuItemButton" class="primary-button" type="button">+ Add Menu Item</button></div>
+            <div class="menu-toolbar-actions"><button id="importMenuButton" class="secondary-button" type="button">Upload Menu File</button><button id="manageCategoriesButton" class="secondary-button" type="button">Manage Categories</button><button id="previewCustomerMenuButton" class="secondary-button" type="button">Preview Customer Menu</button><button id="addMenuItemButton" class="primary-button" type="button">+ Add Menu Item</button></div>
           </div>
           <div class="menu-controls">
             <input id="menuSearch" class="search-input" type="search" placeholder="Search menu items" />
@@ -618,6 +619,15 @@
       <div id="categoryList" class="category-list"></div>
     </div>
   </div>
+  <div id="menuImportModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="menuImportTitle">
+    <div class="modal-card menu-import-modal-card">
+      <button id="closeMenuImportModal" class="modal-close" type="button" aria-label="Close menu upload">×</button>
+      <p class="eyebrow">Bulk Menu Setup</p><h2 id="menuImportTitle">Upload a Complete Menu</h2>
+      <p class="muted">Prepare the menu in Excel or Google Sheets, save it as a CSV file, and upload it here. Categories, descriptions, base prices, size pricing, and paid add-ons can all be imported.</p>
+      <button id="downloadMenuTemplateButton" class="secondary-button" type="button">Download CSV Template</button>
+      <form id="menuImportForm"><label for="menuImportFile">Menu CSV file</label><input id="menuImportFile" class="menu-import-file" type="file" accept=".csv,text/csv" required><label for="menuImportMode">How should this file be applied?</label><select id="menuImportMode" class="menu-select"><option value="merge">Add new items and update matching items</option><option value="replace">Replace the entire current menu</option></select><div id="menuImportPreview" class="menu-import-preview" aria-live="polite"><strong>No file selected</strong><p>Select a CSV file to review it before importing.</p></div><p id="menuImportError" class="form-message" aria-live="polite"></p><div class="menu-form-actions"><button id="cancelMenuImportButton" class="secondary-button" type="button">Cancel</button><button id="applyMenuImportButton" class="primary-button" type="submit" disabled>Import Menu</button></div></form>
+    </div>
+  </div>
   <div id="customerPreviewModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="customerPreviewTitle">
     <div class="modal-card customer-preview-card">
       <button id="closeCustomerPreviewModal" class="modal-close" aria-label="Close">×</button>
@@ -637,22 +647,23 @@
 <script src="js/host-onboarding.js?v=multi-portal-1"></script>
 <script src="js/admin-vendor-management.js?v=admin-vendor-management-1"></script>
 <script src="js/admin-contact-directory.js?v=admin-contact-directory-1"></script>
-<script src="js/admin-reviews.js?v=operations-reviews-1"></script>
+<script src="js/admin-reviews.js?v=operations-reviews-2"></script>
 <script src="js/vendor-auth.js?v=multi-portal-1"></script>
-<script src="js/vendor-data.js?v=operations-reviews-1"></script>
-<script src="js/customer-marketplace.js?v=operations-reviews-1"></script>
-<script src="js/opportunity-marketplace.js?v=operations-reviews-1"></script>
-<script src="js/live-orders.js?v=operations-reviews-1"></script>
+<script src="js/vendor-data.js?v=operations-reviews-2"></script>
+<script src="js/customer-marketplace.js?v=operations-reviews-2"></script>
+<script src="js/opportunity-marketplace.js?v=operations-reviews-2"></script>
+<script src="js/live-orders.js?v=operations-reviews-2"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
-<script src="js/app.js?v=operations-reviews-1"></script>
+<script src="js/menu-import.js?v=bulk-menu-1"></script>
+<script src="js/app.js?v=operations-reviews-2"></script>
 <script src="js/vendor-cash-sales.js?v=complete-cash-menu-2"></script>
 <script src="js/vendor-reports.js?v=print-fix-1"></script>
-<script src="js/vendor-settings.js?v=operations-reviews-1"></script>
+<script src="js/vendor-settings.js?v=operations-reviews-2"></script>
 <script src="js/vendor-location.js?v=live-location-1"></script>
 <script src="js/vendor-subscription.js?v=approved-vendor-access-2"></script>
 <script src="js/vendor-payments.js?v=stripe-connect-1"></script>
 <script src="js/pwa.js?v=release-1"></script>
-<script src="js/customer-account.js?v=operations-reviews-1"></script>
+<script src="js/customer-account.js?v=operations-reviews-2"></script>
 <script src="js/beta-banner.js"></script>
 </body>
 </html>

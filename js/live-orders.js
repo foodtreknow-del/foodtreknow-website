@@ -129,6 +129,112 @@
     return Number(data || 0);
   }
 
+  async function reportContent(contentType, contentId, reason, details = '') {
+    if (!client || !contentId) throw new Error('The content could not be identified.');
+    const allowedTypes = ['order_message', 'opportunity_message', 'opportunity_review'];
+    const allowedReasons = ['harassment', 'hate', 'spam', 'unsafe', 'false_information', 'other'];
+    if (!allowedTypes.includes(contentType)) throw new Error('Select valid content to report.');
+    if (!allowedReasons.includes(reason)) throw new Error('Select a reason for the report.');
+    const note = String(details || '').trim();
+    if (note.length > 500) throw new Error('Report details must be 500 characters or fewer.');
+    const { data, error } = await client.rpc('report_content', {
+      p_content_type: contentType,
+      p_content_id: contentId,
+      p_reason: reason,
+      p_details: note
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  async function setUserBlocked(userId, blocked = true, reason = '') {
+    if (!client || !userId) throw new Error('The account could not be identified.');
+    const note = String(reason || '').trim();
+    if (note.length > 300) throw new Error('Block details must be 300 characters or fewer.');
+    const { data, error } = await client.rpc('set_user_block', {
+      p_blocked_user_id: userId,
+      p_blocked: Boolean(blocked),
+      p_reason: note
+    });
+    if (error) throw error;
+    return Boolean(data);
+  }
+
+  function closeSafetyDialog() {
+    document.getElementById('contentSafetyDialog')?.remove();
+  }
+
+  function dispatchSafetyUpdate(detail) {
+    document.dispatchEvent(new CustomEvent('foodtreknow:content-safety-updated', { detail }));
+  }
+
+  function openReportDialog(trigger) {
+    closeSafetyDialog();
+    const contentType = trigger.dataset.reportContent;
+    const contentId = trigger.dataset.contentId;
+    const reportedUserId = trigger.dataset.reportedUserId;
+    const label = trigger.dataset.contentLabel || 'this content';
+    const dialog = document.createElement('div');
+    dialog.id = 'contentSafetyDialog';
+    dialog.className = 'content-safety-overlay';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-labelledby', 'contentSafetyTitle');
+    dialog.innerHTML = `<div class="content-safety-card"><button class="content-safety-close" data-close-content-safety type="button" aria-label="Close">×</button><p class="eyebrow">Community Safety</p><h2 id="contentSafetyTitle">Report ${label}</h2><p>Your report is private and will be reviewed by the FoodTrekNow administrator.</p><form id="contentSafetyReportForm"><label for="contentSafetyReason">Reason</label><select id="contentSafetyReason" required><option value="">Choose a reason</option><option value="harassment">Harassment or bullying</option><option value="hate">Hate or discrimination</option><option value="spam">Spam or scam</option><option value="unsafe">Unsafe or threatening content</option><option value="false_information">False or misleading information</option><option value="other">Other</option></select><label for="contentSafetyDetails">Additional details (optional)</label><textarea id="contentSafetyDetails" maxlength="500" rows="4" placeholder="Tell us what happened."></textarea>${reportedUserId ? '<label class="content-safety-block-choice"><input id="contentSafetyAlsoBlock" type="checkbox"> Also block this account</label>' : ''}<p class="form-message" data-content-safety-message></p><div class="content-safety-actions"><button class="secondary-button" data-close-content-safety type="button">Cancel</button><button class="danger-button" type="submit">Submit Report</button></div></form></div>`;
+    document.body.appendChild(dialog);
+    dialog.querySelector('select')?.focus();
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog || event.target.closest('[data-close-content-safety]')) closeSafetyDialog();
+    });
+    dialog.querySelector('form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const submit = event.target.querySelector('button[type="submit"]');
+      const message = event.target.querySelector('[data-content-safety-message]');
+      submit.disabled = true;
+      message.textContent = 'Submitting your report…';
+      try {
+        const reason = dialog.querySelector('#contentSafetyReason').value;
+        const details = dialog.querySelector('#contentSafetyDetails').value;
+        await reportContent(contentType, contentId, reason, details);
+        const alsoBlock = Boolean(dialog.querySelector('#contentSafetyAlsoBlock')?.checked);
+        if (alsoBlock && reportedUserId) await setUserBlocked(reportedUserId, true, reason);
+        message.classList.add('success-message');
+        message.textContent = alsoBlock ? 'Report submitted and account blocked.' : 'Report submitted. Thank you for helping keep FoodTrekNow safe.';
+        trigger.closest('[data-content-author]')?.remove();
+        dispatchSafetyUpdate({ action: 'reported', contentType, contentId, reportedUserId, blocked: alsoBlock });
+        window.setTimeout(closeSafetyDialog, 900);
+      } catch (error) {
+        message.textContent = error.message || 'The report could not be submitted.';
+        submit.disabled = false;
+      }
+    });
+  }
+
+  async function blockFromTrigger(trigger) {
+    const userId = trigger.dataset.blockUser;
+    const label = trigger.dataset.blockLabel || 'this account';
+    if (!userId || !window.confirm(`Block ${label}? You will no longer see their messages or reviews, and they will not be able to message you.`)) return;
+    trigger.disabled = true;
+    try {
+      await setUserBlocked(userId, true, 'Blocked from user-generated content controls');
+      document.querySelectorAll(`[data-content-author="${CSS.escape(userId)}"]`).forEach(element => element.remove());
+      dispatchSafetyUpdate({ action: 'blocked', reportedUserId: userId, blocked: true });
+      window.alert(`${label} has been blocked.`);
+    } catch (error) {
+      window.alert(error.message || 'The account could not be blocked.');
+      trigger.disabled = false;
+    }
+  }
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('click', event => {
+      const report = event.target.closest('[data-report-content]');
+      if (report) { event.preventDefault(); openReportDialog(report); return; }
+      const block = event.target.closest('[data-block-user]');
+      if (block) { event.preventDefault(); blockFromTrigger(block); }
+    });
+  }
+
   async function loadCustomerNotifications() {
     if (!client) return [];
     const { data, error } = await client.from('customer_notifications').select('*').order('created_at', { ascending: false }).limit(100);
@@ -200,6 +306,9 @@
     loadVendorMessages,
     sendOrderMessage,
     markOrderMessagesRead,
+    reportContent,
+    setUserBlocked,
+    openReportDialog,
     loadCustomerNotifications,
     markCustomerNotificationsRead,
     subscribeCustomer,

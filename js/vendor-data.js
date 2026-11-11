@@ -4,6 +4,8 @@
   const client = window.FoodTrekNowSupabaseClient;
   let menuTimer = null;
   let settingsTimer = null;
+  let realtimeChannel = null;
+  let realtimeTruckId = '';
   let lastError = '';
   const activeTruckId = () => localStorage.getItem('ftnActiveVendorTruckId');
   const uniquePriceOptions = options => {
@@ -86,7 +88,18 @@
       minimum_order: Number(settings.operations.minimumOrder),
       tax_rate: Number(settings.operations.taxRate) / 100,
       pickup_instructions: settings.operations.pickupInstructions || null,
-      logo_url: settings.profile.logo || null
+      logo_url: settings.profile.logo || null,
+      portal_settings: {
+        profile: {
+          website: settings.profile.website || '',
+          street: settings.profile.street || '',
+          city: settings.profile.city || '',
+          state: settings.profile.state || '',
+          zip: settings.profile.zip || ''
+        },
+        payments: settings.payments || {},
+        notifications: settings.notifications || {}
+      }
     }).eq('id', truckId);
     if (error) throw error;
 
@@ -117,12 +130,27 @@
     }]));
   }
 
+  function subscribeVendorData(truckId, callback) {
+    if (!client || !truckId || typeof client.channel !== 'function') return null;
+    if (realtimeChannel && realtimeTruckId === truckId) return realtimeChannel;
+    if (realtimeChannel) client.removeChannel(realtimeChannel);
+    realtimeTruckId = truckId;
+    realtimeChannel = client.channel(`vendor-data-${truckId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories', filter: `truck_id=eq.${truckId}` }, payload => callback?.({ kind: 'menu', payload }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items', filter: `truck_id=eq.${truckId}` }, payload => callback?.({ kind: 'menu', payload }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trucks', filter: `id=eq.${truckId}` }, payload => callback?.({ kind: 'settings', payload }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'truck_hours', filter: `truck_id=eq.${truckId}` }, payload => callback?.({ kind: 'hours', payload }))
+      .subscribe(status => { if (status === 'SUBSCRIBED') callback?.({ kind: 'sync' }); });
+    return realtimeChannel;
+  }
+
   window.FoodTrekNowVendorData = Object.freeze({
     available: Boolean(client),
     loadMenu,
     loadHours,
     syncMenu,
     syncSettings,
+    subscribeVendorData,
     queueMenuSync(categories, items) {
       const truckId = activeTruckId();
       if (!truckId) return;

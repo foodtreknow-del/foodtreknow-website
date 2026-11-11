@@ -154,7 +154,7 @@ test('a recovery URL is recognized before Supabase consumes its auth parameters'
   vm.runInContext(clientSource, context, { filename: 'supabase-client.js' });
   assert.equal(context.window.FoodTrekNowSupabaseRecoveryPending, true);
   assert.match(html, /js\/supabase-client\.js\?v=password-recovery-2/);
-  assert.match(html, /js\/customer-account\.js\?v=operations-reviews-1/);
+  assert.match(html, /js\/customer-account\.js\?v=operations-reviews-2/);
 });
 
 test('customer sign-up sends safe profile metadata and requires email verification', async () => {
@@ -187,6 +187,7 @@ test('customer sign-in, reset, password update, sign-out, and deletion use Supab
   await adapter.deleteAccount(account.id);
   assert.ok(calls.some(call => call[0] === 'reset'));
   assert.ok(calls.some(call => call[0] === 'updateUser' && call[1].password === 'new-safe-password'));
+  assert.ok(calls.some(call => call[0] === 'signOut' && call[1]?.scope === 'local'));
   assert.ok(calls.some(call => call[0] === 'rpc' && call[1] === 'delete_my_account'));
   assert.equal(accounts.has(account.id), false);
 });

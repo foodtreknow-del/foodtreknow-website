@@ -1,4 +1,4 @@
-const CACHE_NAME = 'foodtreknow-shell-v78';
+const CACHE_NAME = 'foodtreknow-shell-v81';
 const APP_SHELL = [
   './',
   './index.html',
@@ -25,6 +25,7 @@ const APP_SHELL = [
   './js/customer-payments.js',
   './js/live-location.js',
   './js/live-orders.js',
+  './js/menu-import.js',
   './js/supabase-auth.js',
   './js/supabase-client.js',
   './js/supabase-config.js',
@@ -35,6 +36,7 @@ const APP_SHELL = [
   './js/host-onboarding.js',
   './js/admin-vendor-management.js',
   './js/admin-contact-directory.js',
+  './js/admin-reviews.js',
   './js/vendor-payments.js',
   './js/vendor-subscription.js',
   './js/vendor-reports.js',

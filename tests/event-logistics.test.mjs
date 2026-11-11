@@ -46,7 +46,7 @@ test('vendors and customers receive assigned-space navigation without removing e
   assert.match(customer, /Pickup at/);
   assert.match(customer, /Need a Food Truck\?/);
   assert.match(html, /Host \/ Event Organizer Login/);
-  assert.match(html, /operations-reviews-1/);
+  assert.match(html, /operations-reviews-2/);
 });
 
 test('monthly vendor subscription pricing remains unchanged by logistics work', async () => {

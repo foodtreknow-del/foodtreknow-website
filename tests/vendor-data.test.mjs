@@ -8,6 +8,7 @@ const appSource = fs.readFileSync(new URL('../js/app.js', import.meta.url), 'utf
 const settingsSource = fs.readFileSync(new URL('../js/vendor-settings.js', import.meta.url), 'utf8');
 const customerSource = fs.readFileSync(new URL('../js/customer-account.js', import.meta.url), 'utf8');
 const migration = fs.readFileSync(new URL('../supabase/migrations/202608230004_vendor_menu_sync.sql', import.meta.url), 'utf8');
+const realtimeMigration = fs.readFileSync(new URL('../supabase/migrations/202611040001_vendor_realtime_settings.sql', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 function harness() {
@@ -31,7 +32,15 @@ function harness() {
   };
   const client = {
     from: table => builder(table),
-    async rpc(name, payload) { calls.push(['rpc', name, payload]); return { error: null }; }
+    async rpc(name, payload) { calls.push(['rpc', name, payload]); return { error: null }; },
+    channel(name) {
+      calls.push(['channel', name]);
+      return {
+        on(type, filter, callback) { calls.push(['on', type, filter, callback]); return this; },
+        subscribe(callback) { calls.push(['subscribe']); callback?.('SUBSCRIBED'); return this; }
+      };
+    },
+    removeChannel(channel) { calls.push(['removeChannel', channel]); }
   };
   const localStorage = { getItem: key => key === 'ftnActiveVendorTruckId' ? 'truck-1' : null };
   const window = { FoodTrekNowSupabaseClient: client, dispatchEvent() {} };
@@ -62,11 +71,18 @@ test('vendor menu changes use the protected synchronization function', async () 
 test('vendor settings update the truck and all weekly operating hours', async () => {
   const { api, calls } = harness();
   await api.syncSettings({
-    profile: { truckName: 'BCS Food Truck', cuisine: 'Soul Food', description: '', phone: '123', email: 'vendor@example.com', city: 'Bowie', state: 'MD', logo: '' },
+    profile: { truckName: 'BCS Food Truck', cuisine: 'Soul Food', description: '', phone: '123', email: 'vendor@example.com', website: 'https://example.com', street: '1 Main St', city: 'Bowie', state: 'MD', zip: '20715', logo: '' },
     operations: { acceptingOrders: true, prepTime: 25, minimumOrder: 5, taxRate: 6, pickupInstructions: 'At the window' },
+    payments: { cash: true, card: true },
+    notifications: { orderSound: true, customerReady: true },
     hours: { monday: { enabled: true, open: '11:00', close: '20:00' }, sunday: { enabled: false, open: '11:00', close: '20:00' } }
   }, 'truck-1');
-  assert.ok(calls.some(entry => entry[0] === 'update' && entry[1] === 'trucks' && entry[2].estimated_prep_minutes === 25));
+  const truckUpdate = calls.find(entry => entry[0] === 'update' && entry[1] === 'trucks');
+  assert.equal(truckUpdate[2].estimated_prep_minutes, 25);
+  assert.equal(truckUpdate[2].portal_settings.profile.website, 'https://example.com');
+  assert.equal(truckUpdate[2].portal_settings.profile.street, '1 Main St');
+  assert.equal(truckUpdate[2].portal_settings.payments.cash, true);
+  assert.equal(truckUpdate[2].portal_settings.notifications.orderSound, true);
   const hours = calls.find(entry => entry[0] === 'upsert' && entry[1] === 'truck_hours');
   assert.equal(hours[2][0].truck_id, 'truck-1');
   assert.ok(hours[2].some(row => row.day_of_week === 0 && row.is_closed));
@@ -79,6 +95,16 @@ test('remote vendor hours map back into the settings model', async () => {
   assert.deepEqual({ ...hours.monday }, { enabled: true, open: '11:00', close: '20:00' });
 });
 
+test('vendor menu, settings, and hours subscribe to truck-scoped realtime changes', () => {
+  const { api, calls } = harness();
+  const events = [];
+  api.subscribeVendorData('truck-1', event => events.push(event.kind));
+  const subscriptions = calls.filter(entry => entry[0] === 'on').map(entry => entry[2]);
+  assert.deepEqual(subscriptions.map(value => value.table), ['menu_categories', 'menu_items', 'trucks', 'truck_hours']);
+  assert.deepEqual(subscriptions.map(value => value.filter), ['truck_id=eq.truck-1', 'truck_id=eq.truck-1', 'id=eq.truck-1', 'truck_id=eq.truck-1']);
+  assert.deepEqual(events, ['sync']);
+});
+
 test('database migration restricts menu synchronization to the owning authenticated vendor', () => {
   assert.match(migration, /if not public\.owns_truck\(p_truck_id\)/i);
   assert.match(migration, /revoke all on function public\.sync_vendor_menu[\s\S]*from public, anon/i);
@@ -86,11 +112,19 @@ test('database migration restricts menu synchronization to the owning authentica
   assert.match(migration, /unique index[\s\S]*truck_id, client_key/i);
 });
 
+test('realtime migration stores shared portal settings and publishes vendor data changes', () => {
+  assert.match(realtimeMigration, /add column if not exists portal_settings jsonb/i);
+  assert.match(realtimeMigration, /supabase_realtime add table public\.menu_categories/i);
+  assert.match(realtimeMigration, /supabase_realtime add table public\.truck_hours/i);
+});
+
 test('vendor data loads before the dashboard and UI mutations queue synchronization', () => {
-  const vendorDataPosition = html.indexOf('js/vendor-data.js?v=operations-reviews-1');
+  const vendorDataPosition = html.search(/js\/vendor-data\.js\?v=(?:tenant-isolation-\d+|vendor-realtime-\d+|operations-reviews-\d+)/);
   const appPosition = html.search(/js\/app\.js/);
   assert.ok(vendorDataPosition >= 0 && vendorDataPosition < appPosition);
   assert.match(appSource, /hydrateVendorMenu/);
+  assert.match(appSource, /subscribeVendorData\(context\)/);
+  assert.match(settingsSource, /applyRemoteSettings/);
   assert.match(appSource, /queueMenuSync\(categories,menuItems\)/);
   assert.match(settingsSource, /queueSettingsSync\(vendorSettings\)/);
   assert.match(customerSource, /if \(localStorage\.getItem\('ftnVendorLoggedIn'\)\) return/);

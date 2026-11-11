@@ -1,0 +1,83 @@
+name: Apple Select Store Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/apple-select-store-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  select-build:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out FoodTrekNow
+        uses: actions/checkout@v6
+
+      - name: Install fastlane
+        run: gem install fastlane --no-document
+
+      - name: Select build 21 for App Store version 1.0.25
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          [[ -n "$APP_STORE_CONNECT_API_KEY_ID" ]] || { echo "Missing APP_STORE_CONNECT_API_KEY_ID secret."; exit 1; }
+          [[ -n "$APP_STORE_CONNECT_API_PRIVATE_KEY" ]] || { echo "Missing APP_STORE_CONNECT_API_PRIVATE_KEY secret."; exit 1; }
+          [[ -n "$APP_STORE_CONNECT_ISSUER_ID" ]] || { echo "Missing APP_STORE_CONNECT_ISSUER_ID secret."; exit 1; }
+
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          printf '%s' "$APP_STORE_CONNECT_API_PRIVATE_KEY" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+
+          ruby <<'RUBY'
+          require "spaceship"
+
+          token = Spaceship::ConnectAPI::Token.create(
+            key_id: ENV.fetch("APP_STORE_CONNECT_API_KEY_ID"),
+            issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+            filepath: File.join(ENV.fetch("RUNNER_TEMP"), "AuthKey_#{ENV.fetch('APP_STORE_CONNECT_API_KEY_ID')}.p8")
+          )
+          Spaceship::ConnectAPI.token = token
+
+          platform = Spaceship::ConnectAPI::Platform::IOS
+          app = Spaceship::ConnectAPI::App.find("com.foodtreknow.app")
+          abort("FoodTrekNow app was not found in App Store Connect.") unless app
+
+          version = app.get_app_store_versions(
+            filter: { platform: platform },
+            includes: "appStoreVersionSubmission,build"
+          ).find { |candidate| candidate.version_string == "1.0.25" }
+          abort("Editable App Store version was not found.") unless version
+          abort("Expected version 1.0.25, found #{version.version_string}.") unless version.version_string == "1.0.25"
+
+          build = Spaceship::ConnectAPI::Build.all(
+            app_id: app.id,
+            version: "1.0.25",
+            build_number: "21",
+            platform: platform
+          ).first
+          abort("Build 1.0.25 (21) was not found or is not processed.") unless build
+
+          version.select_build(build_id: build.id)
+
+          selected = app.get_app_store_versions(
+            filter: { platform: platform },
+            includes: "appStoreVersionSubmission,build"
+          ).find { |candidate| candidate.version_string == "1.0.25" }
+          selected_number = selected&.build&.version
+          abort("Build selection verification failed; selected build is #{selected_number.inspect}.") unless selected_number == "21"
+
+          puts "Verified App Store version 1.0.25 now uses build 21."
+          RUBY
+
+      - name: Remove temporary API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8"
+

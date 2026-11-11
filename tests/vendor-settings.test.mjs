@@ -19,10 +19,12 @@ class ElementMock {
 }
 const elements = new Map();
 const element = id => { if (!elements.has(id)) elements.set(id, new ElementMock()); return elements.get(id); };
+const selectorElements = new Map();
+const selectorElement = selector => { if (!selectorElements.has(selector)) selectorElements.set(selector, new ElementMock()); return selectorElements.get(selector); };
 
 globalThis.window = globalThis;
 globalThis.localStorage = new StorageMock();
-globalThis.document = { getElementById: element, querySelector: () => new ElementMock() };
+globalThis.document = { getElementById: element, querySelector: selectorElement };
 globalThis.confirm = () => true;
 globalThis.Event = class { constructor(type) { this.type = type; } };
 vm.runInThisContext(source, { filename: 'vendor-settings.js' });
@@ -87,6 +89,20 @@ test('settings save and load round trip through the current local persistence mo
   assert.equal(loaded.profile.truckName, 'Oak City Kitchen');
   assert.equal(loaded.operations.acceptingOrders, false);
   assert.equal(loaded.payments.payAtPickup, true);
+});
+
+test('authenticated truck identity remains active when the vendor returns to Dashboard', () => {
+  const settings = window.FoodTrekNowVendorSettings.defaults();
+  settings.profile.truckName = 'BCS Food Truck';
+  window.FoodTrekNowVendorSettings.applyVendorSettings(settings);
+
+  const dashboard = selectorElement('[data-page="dashboard"]');
+  dashboard.classList.contains = name => name === 'active';
+  const clickHandler = dashboard.listeners.get('click')?.[0];
+  assert.equal(typeof clickHandler, 'function');
+  clickHandler();
+
+  assert.equal(element('pageTitle').textContent, 'BCS Food Truck');
 });
 
 test('first-time settings preserve the existing vendor sound preference', () => {
