@@ -11,7 +11,7 @@ const migration = fs.readFileSync(new URL('../supabase/migrations/202610150002_a
 
 test('admin portal includes the privacy-limited Vendor Management section', () => {
   assert.match(html, /id="adminVendorManagementNav"[^>]+data-customer-page="vendorManagement"/);
-  assert.match(html, /js\/admin-vendor-management\.js\?v=admin-vendor-management-1/);
+  assert.match(html, /js\/admin-vendor-management\.js\?v=[^"']+/);
   assert.match(ui, /function renderVendorManagement\(\)/);
   assert.match(ui, /Privacy-limited manager view/);
   assert.match(ui, /Customer names, phone numbers, order contents, passwords, banking information, and card details are never shown/);

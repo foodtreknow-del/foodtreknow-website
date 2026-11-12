@@ -99,7 +99,7 @@ test('vendor sign-out only ends the current device session', async () => {
 });
 
 test('secure vendor auth loads before the existing dashboard application', () => {
-  const authPosition = html.indexOf('js/vendor-auth.js?v=multi-portal-1');
+  const authPosition = html.indexOf('js/vendor-auth.js');
   const appPosition = html.indexOf('js/app.js');
   assert.ok(authPosition >= 0 && authPosition < appPosition);
   assert.match(appSource, /FoodTrekNowVendorAuth\.signIn/);

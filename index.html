@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" type="image/png" href="assets/foodtreknow-logo.png" />
 <link rel="apple-touch-icon" href="assets/foodtreknow-logo.png" />
-<link rel="stylesheet" href="css/vendor.css?v=complete-cash-menu-2" />
+<link rel="stylesheet" href="css/vendor.css?v=health-permit-badge-1" />
 <link rel="stylesheet" href="css/vendor-reports.css?v=print-fix-1" />
 <link rel="stylesheet" href="css/vendor-settings.css?v=vendor-trial-1" />
 <link rel="stylesheet" href="css/opportunity-marketplace.css?v=host-date-labels-1" />
@@ -285,7 +285,7 @@
 
     <main class="main-content">
       <header class="topbar">
-        <div><p id="pageEyebrow" class="eyebrow">Vendor Dashboard</p><h1 id="pageTitle">Capital City Eats</h1></div>
+        <div><p id="pageEyebrow" class="eyebrow">Vendor Dashboard</p><div class="vendor-title-row"><h1 id="pageTitle">Capital City Eats</h1><img id="vendorHealthPermitBadge" class="vendor-health-permit-badge hidden-view" src="assets/health-permit-verified-badge.png" alt="Health Permit Verified" title="Health Permit Verified by FoodTrekNow" /></div></div>
         <div class="topbar-actions">
           <button id="vendorLocationQuickButton" class="secondary-button" type="button">📍 Share Location</button><button id="soundToggleButton" class="secondary-button" type="button">🔔 Sound On</button><button id="newCashSaleButton" class="primary-button" type="button">+ New Cash Sale</button>
           <div class="status-control"><span id="statusDot" class="status-dot online"></span><span id="statusText">Online</span><label class="switch"><input id="onlineToggle" type="checkbox" checked /><span class="slider"></span></label></div>
@@ -321,9 +321,9 @@
             </form>
             <p id="pickupOrderLookupMessage" class="form-message pickup-order-lookup-message" aria-live="polite"></p>
           </section>
-          <button id="vendorOpportunityDashboardAlert" class="panel vendor-opportunity-dashboard-alert" type="button">
+          <button id="vendorOpportunityDashboardAlert" class="panel vendor-opportunity-dashboard-alert" type="button" aria-label="View host opportunities">
             <span class="vendor-opportunity-alert-icon" aria-hidden="true">📣</span>
-            <span><small>Host Opportunities</small><strong id="vendorOpportunityDashboardTitle">No unread event alerts</strong><b id="vendorOpportunityDashboardDetail">Open Find Locations to view upcoming events.</b></span>
+            <strong>Host Opportunities</strong>
             <em id="vendorOpportunityDashboardCount">0</em>
           </button>
         </section>
@@ -645,17 +645,17 @@
 <script src="js/supabase-auth.js?v=admin-portal-switching-1"></script>
 <script src="js/vendor-onboarding.js?v=vendor-onboarding-1"></script>
 <script src="js/host-onboarding.js?v=multi-portal-1"></script>
-<script src="js/admin-vendor-management.js?v=admin-vendor-management-1"></script>
+<script src="js/admin-vendor-management.js?v=health-permit-badge-1"></script>
 <script src="js/admin-contact-directory.js?v=admin-contact-directory-1"></script>
 <script src="js/admin-reviews.js?v=operations-reviews-2"></script>
-<script src="js/vendor-auth.js?v=multi-portal-1"></script>
+<script src="js/vendor-auth.js?v=health-permit-badge-1"></script>
 <script src="js/vendor-data.js?v=operations-reviews-2"></script>
 <script src="js/customer-marketplace.js?v=operations-reviews-2"></script>
-<script src="js/opportunity-marketplace.js?v=operations-reviews-2"></script>
+<script src="js/opportunity-marketplace.js?v=host-opportunity-count-1"></script>
 <script src="js/live-orders.js?v=operations-reviews-2"></script>
 <script src="js/customer-payments.js?v=stripe-checkout-1"></script>
 <script src="js/menu-import.js?v=bulk-menu-1"></script>
-<script src="js/app.js?v=operations-reviews-2"></script>
+<script src="js/app.js?v=health-permit-badge-1"></script>
 <script src="js/vendor-cash-sales.js?v=complete-cash-menu-2"></script>
 <script src="js/vendor-reports.js?v=print-fix-1"></script>
 <script src="js/vendor-settings.js?v=operations-reviews-2"></script>

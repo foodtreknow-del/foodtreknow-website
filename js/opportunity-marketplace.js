@@ -294,17 +294,12 @@
 
   function renderVendorDashboardAlert() {
     const panel = document.getElementById('vendorOpportunityDashboardAlert');
-    const title = document.getElementById('vendorOpportunityDashboardTitle');
-    const detail = document.getElementById('vendorOpportunityDashboardDetail');
     const count = document.getElementById('vendorOpportunityDashboardCount');
-    if (!panel || !title || !detail || !count) return;
-    const unread = (state.vendor.notifications || []).filter(item => !item.is_read);
-    const newest = unread[0];
-    count.textContent = String(unread.length);
-    count.classList.toggle('has-alerts', unread.length > 0);
-    title.textContent = newest?.title || 'No unread event alerts';
-    detail.textContent = newest?.body || 'Open Find Locations to view upcoming events.';
-    panel.dataset.notificationId = newest?.id || '';
+    if (!panel || !count) return;
+    const available = activeVendorOpportunities().length;
+    count.textContent = String(available);
+    count.classList.toggle('has-alerts', available > 0);
+    panel.setAttribute('aria-label', `View ${available} available host opportunit${available === 1 ? 'y' : 'ies'}`);
   }
 
   async function loadHostData() {
@@ -1071,7 +1066,7 @@
     const dashboardAlert = event.target.closest('#vendorOpportunityDashboardAlert');
     if (dashboardAlert) {
       document.querySelector('.nav-link[data-page="opportunities"]')?.click();
-      state.vendor.tab = 'notifications';
+      state.vendor.tab = 'discover';
       renderVendorRoot();
       return;
     }

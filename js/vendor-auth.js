@@ -30,7 +30,7 @@
     let portalAccess = {};
     const { data: access, error: portalError } = await client.rpc('current_portal_access');
     if (!portalError && access) portalAccess = access;
-    return { user: { id: user.id, email: user.email }, profile, vendor, truck, isPlatformAdmin: Boolean(isPlatformAdmin), hostApproved: Boolean(portalAccess.host_approved) };
+    return { user: { id: user.id, email: user.email }, profile, vendor, truck, isPlatformAdmin: Boolean(isPlatformAdmin), hostApproved: Boolean(portalAccess.host_approved), healthPermitVerified: Boolean(accessState?.health_permit_verified), healthPermitVerifiedAt: accessState?.health_permit_verified_at || null };
   }
 
   window.FoodTrekNowVendorStorageKey = baseKey => {

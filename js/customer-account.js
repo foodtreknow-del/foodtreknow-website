@@ -2868,6 +2868,7 @@
       ${vendor.isFrozen ? `<div class="admin-vendor-freeze-notice"><strong>Access frozen</strong><p>${escapeHtml(vendor.freezeReason || 'No reason recorded.')}</p></div>` : ''}
       <div class="admin-vendor-metrics"><span><small>Net sales</small><strong>${customerMoney(totalSales)}</strong></span><span><small>Paid orders</small><strong>${totalOrders}</strong></span><span><small>Average order</small><strong>${customerMoney(totalOrders ? totalSales / totalOrders : 0)}</strong></span><span><small>Taking orders</small><strong>${vendor.acceptingOrders ? 'Yes' : 'No'}</strong></span></div>
       <details class="admin-vendor-daily" open><summary>Daily sales report</summary>${adminVendorSalesTable(daily)}</details>
+      <section class="admin-health-permit-control ${vendor.healthPermitVerified ? 'verified' : ''}"><img src="assets/health-permit-verified-badge.png" alt=""><div><strong>Health permit verification</strong><p>${vendor.healthPermitVerified ? `Verified by the FoodTrekNow administrator${vendor.healthPermitVerifiedAt ? ` on ${escapeHtml(new Date(vendor.healthPermitVerifiedAt).toLocaleDateString())}` : ''}. The badge is visible beside the truck name.` : 'Review the current government-issued health permit before activating this badge.'}</p></div><button class="customer-small-button ${vendor.healthPermitVerified ? 'danger' : 'primary'}" data-admin-health-permit="${vendor.healthPermitVerified ? 'false' : 'true'}" data-vendor-profile-id="${escapeHtml(vendor.vendorProfileId)}" type="button">${vendor.healthPermitVerified ? 'Remove Verification' : 'Verify Health Permit'}</button></section>
       <section class="admin-vendor-access"><div><strong>Administrative access control</strong><p>${vendor.isFrozen ? 'Restore access only after the account is cleared. Subscription rules still apply.' : 'Freezing immediately removes the truck from customer discovery and blocks vendor operations.'}</p></div>${vendor.isFrozen ? `<button class="customer-small-button primary" data-admin-vendor-freeze="false" data-vendor-profile-id="${escapeHtml(vendor.vendorProfileId)}" type="button">Restore Access</button>` : `<label>Reason for freeze<textarea class="customer-textarea" data-admin-freeze-reason rows="2" maxlength="500" placeholder="Example: Subscription payment is overdue"></textarea></label><button class="customer-small-button danger" data-admin-vendor-freeze="true" data-vendor-profile-id="${escapeHtml(vendor.vendorProfileId)}" type="button">Freeze Vendor</button>`}</section>
     </article>`;
   }
@@ -3444,6 +3445,24 @@
       } catch (error) {
         customerToast(error.message);
         vendorFreeze.disabled = false;
+      }
+      return;
+    }
+    const healthPermitButton = event.target.closest('[data-admin-health-permit]');
+    if (healthPermitButton) {
+      const shouldVerify = healthPermitButton.dataset.adminHealthPermit === 'true';
+      const card = healthPermitButton.closest('[data-admin-vendor-card]');
+      const truckName = card?.querySelector('h2')?.textContent || 'this vendor';
+      const action = shouldVerify ? `confirm that you reviewed a current health permit for ${truckName}` : `remove health permit verification from ${truckName}`;
+      if (!confirm(`Are you sure you want to ${action}?`)) return;
+      healthPermitButton.disabled = true;
+      try {
+        await window.FoodTrekNowAdminVendorManagement.setHealthPermitVerified(healthPermitButton.dataset.vendorProfileId, shouldVerify);
+        customerToast(shouldVerify ? `${truckName} is now Health Permit Verified.` : `Health permit verification was removed from ${truckName}.`);
+        await loadVendorManagement();
+      } catch (error) {
+        customerToast(error.message);
+        healthPermitButton.disabled = false;
       }
       return;
     }

@@ -31,6 +31,9 @@ test('picked-up orders stay off the vendor dashboard and event alerts are promin
   assert.match(app, /const lists=\{new:.*preparing:.*ready:/);
   assert.doesNotMatch(app, /pickedup:document\.getElementById\('pickedUpOrders'\)/);
   assert.match(marketplace, /renderVendorDashboardAlert/);
+  assert.doesNotMatch(html, /vendorOpportunityDashboardTitle|vendorOpportunityDashboardDetail/);
+  assert.match(marketplace, /const available = activeVendorOpportunities\(\)\.length/);
+  assert.match(marketplace, /state\.vendor\.tab = 'discover'/);
 });
 
 test('customers can check in and review trucks and events while the sole admin moderates reviews', async () => {

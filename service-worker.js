@@ -1,4 +1,4 @@
-const CACHE_NAME = 'foodtreknow-shell-v81';
+const CACHE_NAME = 'foodtreknow-shell-v83';
 const APP_SHELL = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const APP_SHELL = [
   './privacy.html',
   './manifest.webmanifest',
   './assets/foodtreknow-logo.png',
+  './assets/health-permit-verified-badge.png',
   './assets/menu/french-fries.jpg',
   './assets/menu/water.jpg',
   './assets/menu/coke.jpg',
