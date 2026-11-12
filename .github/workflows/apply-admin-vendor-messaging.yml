@@ -1,0 +1,29 @@
+name: Apply administrator vendor messaging release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/apply-admin-vendor-messaging.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply tested release commits
+        shell: bash
+        run: |
+          base64 --decode .github/patches/admin-vendor-messaging-1.0.28.patch.gz.b64 | gunzip > /tmp/admin-vendor-messaging-1.0.28.patch
+          git config user.name "foodtreknow-del"
+          git config user.email "foodtreknow@gmail.com"
+          git am /tmp/admin-vendor-messaging-1.0.28.patch
+          git push origin HEAD:main
