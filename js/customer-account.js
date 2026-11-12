@@ -1668,6 +1668,7 @@
     document.getElementById('adminVendorReviewNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminHostReviewNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminVendorManagementNav').classList.toggle('hidden-view', !isPlatformAdmin);
+    document.getElementById('adminVendorMessagingNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminContactDirectoryNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminReviewModerationNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === currentPage));
@@ -2495,7 +2496,7 @@
   }
 
   function renderCustomerPage(page) {
-    if (['vendorReviews', 'hostReviews', 'vendorManagement', 'adminDirectory', 'adminReviews'].includes(page) && !currentAccount?.isPlatformAdmin) page = 'overview';
+    if (['vendorReviews', 'hostReviews', 'vendorManagement', 'adminVendorMessages', 'adminDirectory', 'adminReviews'].includes(page) && !currentAccount?.isPlatformAdmin) page = 'overview';
     currentPage = page;
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === page));
     document.querySelectorAll('[data-bottom-page]').forEach(button => button.classList.toggle('active', button.dataset.bottomPage === page));
@@ -2522,6 +2523,7 @@
       vendorReviews: renderVendorReviews,
       hostReviews: renderHostReviews,
       vendorManagement: renderVendorManagement,
+      adminVendorMessages: renderAdminVendorMessages,
       adminDirectory: renderAdminDirectory
       ,adminReviews: renderAdminReviews
     };
@@ -2531,6 +2533,7 @@
     if (page === 'vendorReviews' && currentAccount.isPlatformAdmin) loadVendorReviews();
     if (page === 'hostReviews' && currentAccount.isPlatformAdmin) loadHostReviews();
     if (page === 'vendorManagement' && currentAccount.isPlatformAdmin) loadVendorManagement();
+    if (page === 'adminVendorMessages' && currentAccount.isPlatformAdmin) loadAdminVendorMessages();
     if (page === 'adminDirectory' && currentAccount.isPlatformAdmin) loadAdminDirectory();
     if (page === 'adminReviews' && currentAccount.isPlatformAdmin) loadAdminReviews();
     updateCartBadge();
@@ -2883,6 +2886,38 @@
       container.innerHTML = vendors.length ? `<div class="admin-vendor-list">${vendors.map(adminVendorManagementCard).join('')}</div>` : '<div class="customer-card empty-customer-state"><span>🚚</span><h2>No approved vendors yet</h2><p>Approved food trucks will appear here.</p></div>';
     } catch (error) {
       container.innerHTML = `<div class="customer-card"><p class="form-message">${escapeHtml(error.message)}</p></div>`;
+    }
+  }
+
+  function renderAdminVendorMessages() {
+    return `${pageHeader('Administrator', 'Vendor Messages', 'Send an important FoodTrekNow announcement to every food truck account.')}
+      <section class="customer-card admin-vendor-message-security"><span aria-hidden="true">🔐</span><div><strong>Main-account broadcast</strong><p>Only the FoodTrekNow platform administrator can send these messages. Every food truck receives a separate unread notification; vendor contact information is never shared.</p></div></section>
+      <section class="customer-card admin-vendor-message-composer">
+        <form id="adminVendorBroadcastForm">
+          <label for="adminVendorMessageTitle">Message title</label>
+          <input id="adminVendorMessageTitle" class="customer-input" name="title" required minlength="3" maxlength="120" placeholder="Important FoodTrekNow update">
+          <label for="adminVendorMessageBody">Message</label>
+          <textarea id="adminVendorMessageBody" class="customer-textarea" name="body" required maxlength="2000" rows="7" placeholder="Write the announcement every food truck should receive."></textarea>
+          <p id="adminVendorMessageStatus" class="form-message" aria-live="polite"></p>
+          <button class="primary-button" type="submit">Send to All Food Trucks</button>
+        </form>
+      </section>
+      <section id="adminVendorMessageHistory" class="customer-card" aria-live="polite"><p class="muted">Loading sent messages…</p></section>`;
+  }
+
+  function adminVendorMessageHistoryMarkup(items) {
+    if (!items.length) return '<div class="empty-customer-state"><span>✉</span><strong>No vendor broadcasts yet</strong><p>Messages sent from this page will be recorded here.</p></div>';
+    return `<div class="admin-vendor-message-history"><h2>Sent Messages</h2>${items.map(item => `<article><div><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.body)}</p><small>${new Date(item.createdAt).toLocaleString()}</small></div><span>${Number(item.recipientCount || 0)} recipient${Number(item.recipientCount || 0) === 1 ? '' : 's'}</span></article>`).join('')}</div>`;
+  }
+
+  async function loadAdminVendorMessages() {
+    const container = document.getElementById('adminVendorMessageHistory');
+    if (!container) return;
+    try {
+      const history = await window.FoodTrekNowAdminVendorMessaging.load();
+      container.innerHTML = adminVendorMessageHistoryMarkup(history);
+    } catch (error) {
+      container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`;
     }
   }
 
@@ -3804,6 +3839,31 @@
   });
 
   accountContent.addEventListener('submit', async event => {
+    if (event.target.id === 'adminVendorBroadcastForm') {
+      event.preventDefault();
+      const form = event.target;
+      const button = form.querySelector('button[type="submit"]');
+      const message = document.getElementById('adminVendorMessageStatus');
+      const data = new FormData(form);
+      const title = String(data.get('title') || '').trim();
+      const body = String(data.get('body') || '').trim();
+      if (title.length < 3 || !body) { message.textContent = 'Enter a title and message before sending.'; return; }
+      if (!confirm('Send this message to every signed-up food truck?')) return;
+      button.disabled = true;
+      message.textContent = 'Sending separate notifications to all food trucks…';
+      try {
+        const result = await window.FoodTrekNowAdminVendorMessaging.send(title, body);
+        form.reset();
+        message.textContent = `Message sent to ${Number(result?.recipientCount || 0)} food truck account${Number(result?.recipientCount || 0) === 1 ? '' : 's'}.`;
+        customerToast('Vendor announcement sent.');
+        await loadAdminVendorMessages();
+      } catch (error) {
+        message.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
     if (event.target.id === 'customerEventReviewForm') {
       event.preventDefault(); const data=new FormData(event.target),button=event.target.querySelector('button[type="submit"]'),message=event.target.querySelector('.form-message');button.disabled=true;
       try { await window.FoodTrekNowCustomerMarketplace.reviewEvent(event.target.dataset.opportunityId,data.get('rating'),data.get('comment'));closeModal();await refreshCustomerMarketplace(true);customerToast('Your event review was posted.'); }

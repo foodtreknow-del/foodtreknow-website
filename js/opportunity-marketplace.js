@@ -575,7 +575,7 @@
 
   function notificationsMarkup(items) {
     if (!items.length) return empty('🔔', 'No marketplace alerts yet', 'Nearby opportunities, decisions, reminders, and host messages will appear here.');
-    return `<div class="marketplace-notifications">${items.map(item => `<article class="${item.is_read ? '' : 'unread'}"><button class="marketplace-notification-link" data-vendor-alert-opportunity="${escapeHtml(item.opportunity_id || '')}" data-vendor-alert-application="${escapeHtml(item.application_id || '')}" data-marketplace-notification-id="${escapeHtml(item.id)}" type="button"><span class="marketplace-notification-icon">${item.kind === 'message' ? '💬' : item.kind === 'booking' ? '✅' : item.kind === 'payment' ? '💳' : '📣'}</span><span class="marketplace-notification-copy"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span><small>${escapeHtml(dateTime(item.created_at))}</small><b>View opportunity details →</b></span></button></article>`).join('')}</div><button class="secondary-button" data-marketplace-read-all type="button">Mark All Read</button>`;
+    return `<div class="marketplace-notifications">${items.map(item => { const adminMessage = item.kind === 'admin_message'; return `<article class="${item.is_read ? '' : 'unread'}${adminMessage ? ' admin-message' : ''}"><button class="marketplace-notification-link" data-vendor-alert-opportunity="${escapeHtml(item.opportunity_id || '')}" data-vendor-alert-application="${escapeHtml(item.application_id || '')}" data-marketplace-notification-id="${escapeHtml(item.id)}" type="button"><span class="marketplace-notification-icon">${adminMessage ? '📢' : item.kind === 'message' ? '💬' : item.kind === 'booking' ? '✅' : item.kind === 'payment' ? '💳' : '📣'}</span><span class="marketplace-notification-copy">${adminMessage ? '<em>Message from FoodTrekNow</em>' : ''}<strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span><small>${escapeHtml(dateTime(item.created_at))}</small><b>${adminMessage ? (item.is_read ? 'Message read' : 'Mark as read') : 'View opportunity details →'}</b></span></button></article>`; }).join('')}</div><button class="secondary-button" data-marketplace-read-all type="button">Mark All Read</button>`;
   }
 
   function empty(icon, title, copy) {
@@ -1102,10 +1102,10 @@
         const opportunityId = vendorAlert.dataset.vendorAlertOpportunity;
         const applicationId = vendorAlert.dataset.vendorAlertApplication;
         const notificationId = vendorAlert.dataset.marketplaceNotificationId;
+        const notification = state.vendor.notifications.find(entry => String(entry.id) === String(notificationId));
         const item = opportunityId ? await loadVendorOpportunityDetail(opportunityId) : null;
         if (notificationId) {
           await rpc('mark_marketplace_notifications_read', { p_notification_ids: [notificationId] });
-          const notification = state.vendor.notifications.find(entry => String(entry.id) === String(notificationId));
           if (notification) notification.is_read = true;
         }
         renderVendorRoot();
@@ -1116,6 +1116,8 @@
           renderVendorRoot();
           document.querySelector(`[data-vendor-application-record="${CSS.escape(applicationId)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           toast('This opportunity is no longer available. Its application record is shown instead.');
+        } else if (notification?.kind === 'admin_message') {
+          toast('Administrator message marked as read.');
         } else {
           toast('This opportunity is no longer available.', true);
         }

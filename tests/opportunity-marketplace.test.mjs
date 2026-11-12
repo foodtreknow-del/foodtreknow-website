@@ -49,7 +49,7 @@ test('vendor and dedicated host portals load the modular responsive marketplace'
   assert.match(html, /id="hostPortalView"/);
   assert.match(html, /id="hostOpportunityMarketplace"/);
   assert.doesNotMatch(html, /data-customer-page="hostOpportunities"/);
-  assert.match(html, /js\/opportunity-marketplace\.js\?v=host-opportunity-count-1/);
+  assert.match(html, /js\/opportunity-marketplace\.js\?v=admin-vendor-messaging-1/);
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/app.js'));
   assert.ok(html.indexOf('js/opportunity-marketplace.js') < html.indexOf('js/customer-account.js'));
   assert.match(app, /FoodTrekNowOpportunityMarketplace\?\.renderVendor/);
@@ -483,7 +483,7 @@ test('Host truck names open the existing customer storefront with a return path'
   const hostBookings = marketplace.slice(marketplace.indexOf('function hostBookingsMarkup'), marketplace.indexOf('function hostPaymentsMarkup'));
   assert.doesNotMatch(hostBookings, /data-booking-contact/);
   assert.match(hostBookings, /data-marketplace-message/);
-  assert.match(html, /js\/customer-account\.js\?v=operations-reviews-2/);
+  assert.match(html, /js\/customer-account\.js\?v=admin-vendor-messaging-1/);
 });
 
 test('Hosts can securely cancel an unresponsive approved food truck', async () => {
