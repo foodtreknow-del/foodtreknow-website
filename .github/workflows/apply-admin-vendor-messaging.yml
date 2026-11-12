@@ -22,6 +22,7 @@ jobs:
       - name: Apply tested release commits
         shell: bash
         run: |
+          # Release 1.0.28 retry with verified line-preserving patch.
           base64 --decode .github/patches/admin-vendor-messaging-1.0.28.patch.gz.b64 | gunzip > /tmp/admin-vendor-messaging-1.0.28.patch
           git config user.name "foodtreknow-del"
           git config user.email "foodtreknow@gmail.com"
