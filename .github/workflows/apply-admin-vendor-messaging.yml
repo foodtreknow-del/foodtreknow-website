@@ -26,5 +26,5 @@ jobs:
           sed -i 's/\r$//' /tmp/admin-vendor-messaging-1.0.28.patch
           git config user.name "foodtreknow-del"
           git config user.email "foodtreknow@gmail.com"
-          git am /tmp/admin-vendor-messaging-1.0.28.patch
+          git am -3 /tmp/admin-vendor-messaging-1.0.28.patch
           git push origin HEAD:main
