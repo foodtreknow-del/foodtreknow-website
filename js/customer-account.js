@@ -1033,6 +1033,7 @@
   let currentPage = 'overview';
   let portalAccess = { vendor_approved: false, host_approved: false, is_admin: false };
   let adminDirectorySnapshot = { customers: [], vendors: [], hosts: [] };
+  let adminDirectSelection = null;
   let orderHistoryFilter = 'current';
   let selectedTruckId = TRUCK.id;
   let lastPlacedOrderId = null;
@@ -1669,6 +1670,7 @@
     document.getElementById('adminHostReviewNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminVendorManagementNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminVendorMessagingNav').classList.toggle('hidden-view', !isPlatformAdmin);
+    document.getElementById('adminDirectMessagingNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminContactDirectoryNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.getElementById('adminReviewModerationNav').classList.toggle('hidden-view', !isPlatformAdmin);
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === currentPage));
@@ -2497,6 +2499,7 @@
 
   function renderCustomerPage(page) {
     if (['vendorReviews', 'hostReviews', 'vendorManagement', 'adminVendorMessages', 'adminDirectory', 'adminReviews'].includes(page) && !currentAccount?.isPlatformAdmin) page = 'overview';
+    if (page === 'adminDirectMessages' && !currentAccount?.isPlatformAdmin) page = 'overview';
     currentPage = page;
     document.querySelectorAll('.customer-nav-link').forEach(button => button.classList.toggle('active', button.dataset.customerPage === page));
     document.querySelectorAll('[data-bottom-page]').forEach(button => button.classList.toggle('active', button.dataset.bottomPage === page));
@@ -2524,6 +2527,7 @@
       hostReviews: renderHostReviews,
       vendorManagement: renderVendorManagement,
       adminVendorMessages: renderAdminVendorMessages,
+      adminDirectMessages: renderAdminDirectMessages,
       adminDirectory: renderAdminDirectory
       ,adminReviews: renderAdminReviews
     };
@@ -2534,8 +2538,10 @@
     if (page === 'hostReviews' && currentAccount.isPlatformAdmin) loadHostReviews();
     if (page === 'vendorManagement' && currentAccount.isPlatformAdmin) loadVendorManagement();
     if (page === 'adminVendorMessages' && currentAccount.isPlatformAdmin) loadAdminVendorMessages();
+    if (page === 'adminDirectMessages' && currentAccount.isPlatformAdmin) loadAdminDirectMessages();
     if (page === 'adminDirectory' && currentAccount.isPlatformAdmin) loadAdminDirectory();
     if (page === 'adminReviews' && currentAccount.isPlatformAdmin) loadAdminReviews();
+    if (page === 'messages') loadCustomerAdminDirectMessages();
     updateCartBadge();
     updateCustomerNotificationBadge();
     document.querySelector('.customer-sidebar')?.classList.remove('open');
@@ -2658,7 +2664,29 @@
       const unread = messageNotifications.filter(notification => notification.order_id === order.supabaseOrderId && !notification.is_read).length;
       return `<article class="customer-card customer-order-card"><div><p class="eyebrow">${orderNumberLabel(order.id)} · ${formatDate(order.createdAt)}</p><h3>${escapeHtml(order.truckName)}</h3><p class="muted">${unread ? `${unread} unread message${unread === 1 ? '' : 's'}` : 'Open this conversation to send or review messages.'}</p><span class="status-pill ${['completed','cancelled'].includes(order.status) ? 'past' : ''}">${escapeHtml(order.statusLabel || order.status || 'Order')}</span></div><div class="customer-card-actions"><button class="customer-small-button primary" data-order-details="${escapeHtml(order.id)}" type="button">Open Conversation</button></div></article>`;
     }).join('');
-    return `${pageHeader('Quick Access', 'Messenger', 'Send pickup questions and review conversations with food trucks from your orders.')}<div class="customer-list">${cards || '<div class="customer-card empty-customer-state"><span>💬</span><strong>No conversations yet</strong><p>After you place an order, its food-truck conversation will appear here.</p><button class="secondary-button" data-home-target="order" type="button">Order Food</button></div>'}</div>`;
+    return `${pageHeader('Quick Access', 'Messenger', 'Chat privately with FoodTrekNow or send pickup questions to food trucks.')}
+      <section id="customerAdminDirectMessages" class="customer-card" aria-live="polite"><p class="muted">Loading FoodTrekNow messages…</p></section>
+      <h2>Food Truck Conversations</h2><div class="customer-list">${cards || '<div class="customer-card empty-customer-state"><span>💬</span><strong>No food truck conversations yet</strong><p>After you place an order, its food-truck conversation will appear here.</p><button class="secondary-button" data-home-target="order" type="button">Order Food</button></div>'}</div>`;
+  }
+
+  async function loadCustomerAdminDirectMessages() {
+    const container = document.getElementById('customerAdminDirectMessages');
+    if (!container) return;
+    try {
+      const threads = await window.FoodTrekNowAdminDirectMessaging.loadMine();
+      if (!threads.length) {
+        container.innerHTML = '<div class="empty-customer-state compact"><span>🔐</span><strong>FoodTrekNow Main Account</strong><p>Private messages from the FoodTrekNow administrator will appear here.</p></div>';
+        return;
+      }
+      container.innerHTML = `<div class="communication-section-heading"><div><p class="eyebrow">Private Support</p><h2>FoodTrekNow Main Account</h2></div><span>${threads.reduce((sum, thread) => sum + Number(thread.unreadCount || 0), 0)} unread</span></div>${threads.map(thread => {
+        const messages = Array.isArray(thread.messages) ? thread.messages : [];
+        const bubbles = messages.map(message => `<div class="admin-direct-bubble ${message.senderRole === 'account' ? 'mine' : 'theirs'}"><p>${escapeHtml(message.body)}</p><small>${message.senderRole === 'account' ? 'You' : 'FoodTrekNow Admin'} · ${new Date(message.createdAt).toLocaleString()}</small></div>`).join('');
+        return `<article class="customer-admin-thread"><h3>${escapeHtml(thread.audienceRole)} account conversation</h3><div class="admin-direct-message-list">${bubbles}</div><form data-admin-account-reply="${escapeHtml(thread.threadId)}"><label>Reply to FoodTrekNow</label><div class="message-composer"><textarea class="customer-textarea" maxlength="2000" rows="2" required placeholder="Write a private reply"></textarea><button class="primary-button" type="submit">Send</button></div><p class="form-message" aria-live="polite"></p></form></article>`;
+      }).join('')}`;
+      await Promise.all(threads.map(thread => window.FoodTrekNowAdminDirectMessaging.markRead(thread.threadId)));
+    } catch (error) {
+      container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`;
+    }
   }
 
   function renderOrders() {
@@ -2916,6 +2944,55 @@
     try {
       const history = await window.FoodTrekNowAdminVendorMessaging.load();
       container.innerHTML = adminVendorMessageHistoryMarkup(history);
+    } catch (error) {
+      container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`;
+    }
+  }
+
+  function renderAdminDirectMessages() {
+    return `${pageHeader('Administrator', 'Direct Messages', 'Chat privately with individual customers, Hosts, and Vendors from the Main Account.')}
+      <section class="customer-card admin-directory-security"><span aria-hidden="true">🔐</span><div><strong>Private Main Account conversations</strong><p>Only the FoodTrekNow administrator and the selected account holder can read this conversation. Other customers, Hosts, and Vendors cannot see it.</p></div></section>
+      <section class="admin-direct-layout">
+        <aside id="adminDirectContactList" class="customer-card admin-direct-contacts" aria-live="polite"><p class="muted">Loading accounts…</p></aside>
+        <section id="adminDirectConversation" class="customer-card admin-direct-conversation" aria-live="polite"><div class="empty-customer-state"><span>💬</span><strong>Select an account</strong><p>Choose a customer, Host, or Vendor to begin a private conversation.</p></div></section>
+      </section>`;
+  }
+
+  function adminDirectContactMarkup(snapshot) {
+    const groups = [
+      ['Customers', (snapshot.customers || []).map(item => ({ id: item.profileId, role: 'customer', label: item.displayName || item.username, detail: item.username }))],
+      ['Vendors', (snapshot.vendors || []).map(item => ({ id: item.ownerProfileId, role: 'vendor', label: item.businessName || item.vendorName, detail: item.loginEmail || item.username }))],
+      ['Hosts', (snapshot.hosts || []).map(item => ({ id: item.ownerProfileId, role: 'host', label: item.businessName || item.hostName, detail: item.loginEmail || item.username }))]
+    ];
+    return groups.map(([title, contacts]) => `<div class="admin-direct-contact-group"><h3>${title}</h3>${contacts.length ? contacts.map(contact => `<button class="admin-direct-contact${adminDirectSelection?.id === contact.id && adminDirectSelection?.role === contact.role ? ' active' : ''}" data-admin-direct-contact="${escapeHtml(contact.id)}" data-admin-direct-role="${contact.role}" data-admin-direct-label="${escapeHtml(contact.label)}" type="button"><strong>${escapeHtml(contact.label)}</strong><small>${escapeHtml(contact.detail || '')}</small></button>`).join('') : '<p class="muted">No accounts</p>'}</div>`).join('');
+  }
+
+  function adminDirectThreadMarkup(thread, selection) {
+    const messages = Array.isArray(thread.messages) ? thread.messages : [];
+    const bubbles = messages.length ? messages.map(message => `<div class="admin-direct-bubble ${message.senderRole === 'admin' ? 'mine' : 'theirs'}"><p>${escapeHtml(message.body)}</p><small>${message.senderRole === 'admin' ? 'FoodTrekNow Admin' : escapeHtml(selection.label)} · ${new Date(message.createdAt).toLocaleString()}</small></div>`).join('') : '<div class="empty-customer-state compact"><span>💬</span><strong>No messages yet</strong><p>Send the first private message to this account.</p></div>';
+    return `<header class="admin-direct-thread-header"><div><p class="eyebrow">${escapeHtml(selection.role)} account</p><h2>${escapeHtml(selection.label)}</h2></div><span>Private</span></header><div class="admin-direct-message-list">${bubbles}</div><form id="adminDirectMessageForm"><label for="adminDirectMessageBody">Message</label><textarea id="adminDirectMessageBody" class="customer-textarea" rows="4" maxlength="2000" required placeholder="Write a private message to ${escapeHtml(selection.label)}"></textarea><p id="adminDirectMessageStatus" class="form-message" aria-live="polite"></p><button class="primary-button" type="submit">Send Message</button></form>`;
+  }
+
+  async function loadAdminDirectMessages() {
+    const contacts = document.getElementById('adminDirectContactList');
+    if (!contacts) return;
+    try {
+      adminDirectorySnapshot = await window.FoodTrekNowAdminContactDirectory.load();
+      contacts.innerHTML = adminDirectContactMarkup(adminDirectorySnapshot);
+      if (adminDirectSelection) await loadAdminDirectThread();
+    } catch (error) {
+      contacts.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`;
+    }
+  }
+
+  async function loadAdminDirectThread() {
+    const container = document.getElementById('adminDirectConversation');
+    if (!container || !adminDirectSelection) return;
+    container.innerHTML = '<p class="muted">Loading private conversation…</p>';
+    try {
+      const thread = await window.FoodTrekNowAdminDirectMessaging.loadAdminThread(adminDirectSelection.id, adminDirectSelection.role);
+      if (thread.threadId) await window.FoodTrekNowAdminDirectMessaging.markRead(thread.threadId);
+      container.innerHTML = adminDirectThreadMarkup(thread, adminDirectSelection);
     } catch (error) {
       container.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`;
     }
@@ -3453,6 +3530,17 @@
       finally { refreshVendorManagement.disabled = false; }
       return;
     }
+    const adminDirectContact = event.target.closest('[data-admin-direct-contact]');
+    if (adminDirectContact) {
+      adminDirectSelection = {
+        id: adminDirectContact.dataset.adminDirectContact,
+        role: adminDirectContact.dataset.adminDirectRole,
+        label: adminDirectContact.dataset.adminDirectLabel
+      };
+      document.querySelectorAll('.admin-direct-contact').forEach(button => button.classList.toggle('active', button === adminDirectContact));
+      await loadAdminDirectThread();
+      return;
+    }
     const adminContact = event.target.closest('[data-admin-contact-type]');
     if (adminContact) {
       const record = adminContactRecord(adminContact.dataset.adminContactType, adminContact.dataset.adminContactId);
@@ -3839,6 +3927,41 @@
   });
 
   accountContent.addEventListener('submit', async event => {
+    const adminAccountReply = event.target?.dataset?.adminAccountReply ? event.target : null;
+    if (adminAccountReply) {
+      event.preventDefault();
+      const button = adminAccountReply.querySelector('button[type="submit"]');
+      const message = adminAccountReply.querySelector('.form-message');
+      const body = adminAccountReply.querySelector('textarea').value.trim();
+      button.disabled = true;
+      try {
+        await window.FoodTrekNowAdminDirectMessaging.reply(adminAccountReply.dataset.adminAccountReply, body);
+        await loadCustomerAdminDirectMessages();
+        customerToast('Reply sent to the FoodTrekNow Main Account.');
+      } catch (error) {
+        message.textContent = error.message;
+        button.disabled = false;
+      }
+      return;
+    }
+    if (event.target.id === 'adminDirectMessageForm') {
+      event.preventDefault();
+      if (!adminDirectSelection) return;
+      const button = event.target.querySelector('button[type="submit"]');
+      const message = document.getElementById('adminDirectMessageStatus');
+      const body = document.getElementById('adminDirectMessageBody').value.trim();
+      button.disabled = true;
+      message.textContent = 'Sending…';
+      try {
+        await window.FoodTrekNowAdminDirectMessaging.sendFromAdmin(adminDirectSelection.id, adminDirectSelection.role, body);
+        await loadAdminDirectThread();
+        customerToast(`Private message sent to ${adminDirectSelection.label}.`);
+      } catch (error) {
+        message.textContent = error.message;
+        button.disabled = false;
+      }
+      return;
+    }
     if (event.target.id === 'adminVendorBroadcastForm') {
       event.preventDefault();
       const form = event.target;
