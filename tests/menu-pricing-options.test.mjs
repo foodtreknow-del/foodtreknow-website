@@ -15,7 +15,7 @@ test('vendors can configure independently priced sizes and paid item add-ons', a
   assert.match(html, /id="createCategoryFromItem"/);
   assert.match(vendor, /sizeOptions=readMenuOptions\('menuSizeOptions'\)/);
   assert.match(vendor, /addOns=readMenuOptions\('menuAddOns'\)/);
-  assert.match(vendor, /Math\.min\(\.\.\.sizeOptions\.map\(option=>option\.price\)\)/);
+  assert.match(vendor, /const price=enteredPrice;/);
   assert.match(data, /size_options: uniquePriceOptions\(item\.sizeOptions\)/);
   assert.match(data, /add_ons: uniquePriceOptions\(item\.addOns\)/);
   assert.match(styles, /\.menu-option-row/);
