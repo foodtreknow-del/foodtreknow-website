@@ -7,6 +7,7 @@ const source = fs.readFileSync(new URL('../js/vendor-auth.js', import.meta.url),
 const appSource = fs.readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
 const settingsSource = fs.readFileSync(new URL('../js/vendor-settings.js', import.meta.url), 'utf8');
 const reportsSource = fs.readFileSync(new URL('../js/vendor-reports.js', import.meta.url), 'utf8');
+const cashSalesSource = fs.readFileSync(new URL('../js/vendor-cash-sales.js', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 class StorageMock {
@@ -83,6 +84,16 @@ test('vendor browser persistence is namespaced by approved truck id', async () =
   assert.match(appSource, /vendorStorageKey\(MENU_STORAGE_KEY\)/);
   assert.match(settingsSource, /storageKey\(SETTINGS_STORAGE_KEY\)/);
   assert.match(reportsSource, /orderStorageKey\(\)/);
+});
+
+test('vendor menu cache recovers from mobile and website storage quota failures', () => {
+  assert.match(appSource, /function saveVendorCache\(baseKey,value\)/);
+  assert.match(appSource, /isVendorStorageQuotaError/);
+  assert.match(appSource, /compactVendorCacheValue/);
+  assert.match(appSource, /localStorage\.removeItem\(key\)/);
+  assert.match(appSource, /saveVendorCache\(MENU_STORAGE_KEY,menuItems\)/);
+  assert.match(cashSalesSource, /FoodTrekNowSaveVendorCache/);
+  assert.doesNotMatch(cashSalesSource, /localStorage\.setItem\(vendorStorageKey\(MENU_STORAGE_KEY\)/);
 });
 
 test('vendor password recovery validates the email and uses the secure Supabase flow', async () => {

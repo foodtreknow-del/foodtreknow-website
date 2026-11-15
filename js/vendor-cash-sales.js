@@ -165,8 +165,8 @@
         if (remote?.items?.length) {
           menuItems = remote.items;
           if (remote.categories?.length) categories = remote.categories;
-          localStorage.setItem(vendorStorageKey(MENU_STORAGE_KEY), JSON.stringify(menuItems));
-          localStorage.setItem(vendorStorageKey(CATEGORY_STORAGE_KEY), JSON.stringify(categories));
+          window.FoodTrekNowSaveVendorCache?.(MENU_STORAGE_KEY, menuItems);
+          window.FoodTrekNowSaveVendorCache?.(CATEGORY_STORAGE_KEY, categories);
           if (typeof renderMenu === 'function') renderMenu();
         }
       }

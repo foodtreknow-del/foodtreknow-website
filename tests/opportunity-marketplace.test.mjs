@@ -483,7 +483,7 @@ test('Host truck names open the existing customer storefront with a return path'
   const hostBookings = marketplace.slice(marketplace.indexOf('function hostBookingsMarkup'), marketplace.indexOf('function hostPaymentsMarkup'));
   assert.doesNotMatch(hostBookings, /data-booking-contact/);
   assert.match(hostBookings, /data-marketplace-message/);
-  assert.match(html, /js\/customer-account\.js\?v=admin-vendor-messaging-1/);
+  assert.match(html, /js\/customer-account\.js\?v=customer-storage-recovery-1/);
 });
 
 test('Hosts can securely cancel an unresponsive approved food truck', async () => {
