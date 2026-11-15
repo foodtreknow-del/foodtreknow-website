@@ -192,7 +192,7 @@ test("production I'm Hungry entry always opens customer sign-in and account crea
   assert.match(html, /id="showCustomerSignInButton"[^>]*>Sign In<\/button>/);
   assert.match(html, /id="showCreateAccountButton"[^>]*>Create Account<\/button>/);
   assert.match(html, /id="guestCheckoutButton"/);
-  assert.match(html, /js\/customer-account\.js\?v=admin-vendor-messaging-1/);
+  assert.match(html, /js\/customer-account\.js\?v=customer-storage-recovery-1/);
 });
 
 test('mobile host account menu has a visible internal close control', () => {
@@ -886,6 +886,38 @@ test('roadmap marks Phase 3.2 complete and names live communication as Phase 4',
   assert.match(roadmap, /\[x\] Phase 3\.1 – Customer Home Experience Polish/);
   assert.match(roadmap, /\[x\] Phase 3\.2 – Complete Customer Ordering Experience/);
   assert.match(roadmap, /Phase 4 – Live Vendor & Customer Communication/);
+});
+
+test('customer account storage recovers from a mobile quota error without losing the account', async () => {
+  const originalSetItem = localStorage.setItem.bind(localStorage);
+  let accountWriteAttempts = 0;
+  localStorage.setItem = (key, value) => {
+    if (key === 'ftnCustomerAccountsV1' && accountWriteAttempts++ === 0) {
+      const error = new Error("Setting the value of 'ftnCustomerAccountsV1' exceeded the quota.");
+      error.name = 'QuotaExceededError';
+      throw error;
+    }
+    originalSetItem(key, value);
+  };
+
+  try {
+    const account = await window.FoodTrekNowCustomerAuth.signIn('avery@example.com', 'new-password');
+    const updated = await window.FoodTrekNowCustomerAuth.updateProfile(account.id, { preferredName: 'Avery' });
+    assert.equal(updated.id, account.id);
+    assert.equal(accountWriteAttempts, 2);
+    assert.ok(JSON.parse(localStorage.getItem('ftnCustomerAccountsV1')).some(item => item.id === account.id));
+  } finally {
+    localStorage.setItem = originalSetItem;
+  }
+});
+
+test('live Supabase orders are not duplicated into the phone account cache', () => {
+  const hydrateStart = source.indexOf('async function hydrateLiveCustomerOrders');
+  const hydrateEnd = source.indexOf('function updateCustomerNotificationBadge', hydrateStart);
+  const hydrateSource = source.slice(hydrateStart, hydrateEnd);
+  assert.doesNotMatch(hydrateSource, /saveCustomerState\(currentAccount\)/);
+  assert.match(source, /filter\(order => !order\?\.supabaseOrderId\)/);
+  assert.match(source, /QuotaExceededError/);
 });
 
 test('account deletion removes the local account', async () => {

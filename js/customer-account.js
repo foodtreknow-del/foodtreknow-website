@@ -8,6 +8,8 @@
   const GUEST_SESSION_KEY = 'ftnGuestSessionActiveV1';
   const MENU_STORAGE_KEY = 'ftnVendorMenuV0400';
   const ORDER_NUMBER_STORAGE_KEY = 'ftnLastOrderNumberV1';
+  const MAX_STORED_CUSTOMER_ORDERS = 40;
+  const MAX_STORED_FAVORITE_ORDERS = 20;
   const TRUCK = {
     id: 'capital-city-eats',
     name: 'Capital City Eats',
@@ -620,6 +622,30 @@
     return btoa(unescape(encodeURIComponent(value)));
   }
 
+  function compactStorageValue(value, aggressive = false) {
+    if (Array.isArray(value)) return value.map(item => compactStorageValue(item, aggressive));
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => {
+      const isEmbeddedImage = typeof item === 'string'
+        && /^data:image\//i.test(item)
+        && (aggressive || item.length > 64 * 1024);
+      return [key, isEmbeddedImage ? '' : compactStorageValue(item, aggressive)];
+    }));
+  }
+
+  function compactCustomerAccountForStorage(account, aggressive = false) {
+    const stored = compactStorageValue(account, aggressive);
+    // Supabase is the source of truth for live orders. Keeping another full copy
+    // inside one localStorage record eventually exceeds mobile WebView quotas.
+    // Local/demo orders remain cached so offline test flows continue to work.
+    stored.orders = (Array.isArray(stored.orders) ? stored.orders : [])
+      .filter(order => !order?.supabaseOrderId)
+      .slice(0, aggressive ? 10 : MAX_STORED_CUSTOMER_ORDERS);
+    stored.favoriteOrders = (Array.isArray(stored.favoriteOrders) ? stored.favoriteOrders : [])
+      .slice(0, aggressive ? 10 : MAX_STORED_FAVORITE_ORDERS);
+    return stored;
+  }
+
   class CustomerAccountRepository {
     getAll() {
       try {
@@ -631,7 +657,17 @@
     }
 
     saveAll(accounts) {
-      localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(accounts));
+      const compactAccounts = accounts.map(account => compactCustomerAccountForStorage(account));
+      try {
+        localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(compactAccounts));
+      } catch (error) {
+        const quotaExceeded = error?.name === 'QuotaExceededError'
+          || error?.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+          || /quota/i.test(String(error?.message || ''));
+        if (!quotaExceeded) throw error;
+        const smallestSafeAccounts = accounts.map(account => compactCustomerAccountForStorage(account, true));
+        localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(smallestSafeAccounts));
+      }
     }
 
     findByIdentifier(identifier) {
@@ -1533,7 +1569,6 @@
       const localOrders = (currentAccount.orders || []).filter(order => !order.supabaseOrderId);
       const remoteOrders = remoteRows.map(databaseOrderToCustomerOrder);
       currentAccount.orders = [...remoteOrders, ...localOrders].sort((a, b) => Number(b.createdAt) - Number(a.createdAt));
-      saveCustomerState(currentAccount);
       if (!accountView.classList.contains('hidden-view')) {
         renderCustomerShell();
         if (!preserveActiveCustomerForm()) renderCustomerPage(currentPage);
