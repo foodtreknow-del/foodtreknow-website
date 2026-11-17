@@ -428,6 +428,17 @@ test('Host portal counts incoming work, groups event conversations, and archives
   assert.match(migration, /create or replace function public\.restore_host_opportunity_archive/);
 });
 
+test('Host opportunity and approved truck badges exclude events after their end time', async () => {
+  const marketplace = await read('js/opportunity-marketplace.js');
+  assert.match(marketplace, /function hostOpportunityIsUpcoming\(item\)/);
+  assert.match(marketplace, /endsAt > new Date\(\)/);
+  assert.match(marketplace, /const upcomingOpportunities = hostUpcomingOpportunities\(\)/);
+  assert.match(marketplace, /opportunities: upcomingOpportunities\.filter/);
+  assert.match(marketplace, /const activeOpportunityIds = new Set\(upcomingOpportunities\.map/);
+  assert.match(marketplace, /function hostDashboard\(\)[\s\S]*?const activeOpportunities = hostUpcomingOpportunities\(\)/);
+  assert.match(marketplace, /function hostLogisticsMarkup\(\)[\s\S]*?hostUpcomingOpportunities\(\)/);
+});
+
 test('Host unread message badge always resolves to a visible conversation', async () => {
   const [marketplace, styles] = await Promise.all([
     read('js/opportunity-marketplace.js'),

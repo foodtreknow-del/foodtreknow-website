@@ -630,6 +630,16 @@
     return state.host.opportunities.filter(item => item.archived_at);
   }
 
+  function hostOpportunityIsUpcoming(item) {
+    if (item.archived_at || ['cancelled', 'completed'].includes(item.status)) return false;
+    const endsAt = new Date(item.ends_at);
+    return !Number.isNaN(endsAt.getTime()) && endsAt > new Date();
+  }
+
+  function hostUpcomingOpportunities() {
+    return state.host.opportunities.filter(hostOpportunityIsUpcoming);
+  }
+
   function hostApplicationIsActive(application) {
     return !application.archived_at && !application.opportunities?.archived_at;
   }
@@ -654,9 +664,10 @@
   }
 
   function hostTabs() {
-    const activeOpportunityIds = new Set(hostActiveOpportunities().map(item => item.id));
+    const upcomingOpportunities = hostUpcomingOpportunities();
+    const activeOpportunityIds = new Set(upcomingOpportunities.map(item => item.id));
     const counts = {
-      opportunities: hostActiveOpportunities().filter(item => ['published', 'filled'].includes(item.status)).length,
+      opportunities: upcomingOpportunities.filter(item => ['published', 'filled'].includes(item.status)).length,
       applications: state.host.applications.filter(item => hostApplicationIsActive(item) && item.status !== 'approved').length,
       bookings: state.host.bookings.filter(item => activeOpportunityIds.has(item.opportunity_id) && item.status === 'confirmed').length,
       messages: unreadHostMessages(),
@@ -691,7 +702,7 @@
   }
 
   function hostDashboard() {
-    const activeOpportunities = hostActiveOpportunities();
+    const activeOpportunities = hostUpcomingOpportunities();
     const activeOpportunityIds = new Set(activeOpportunities.map(item => item.id));
     const open = activeOpportunities.filter(item => ['published', 'filled'].includes(item.status)).length;
     const pending = state.host.applications.filter(item => hostApplicationIsActive(item) && item.status === 'pending').length;
@@ -740,7 +751,7 @@
   }
 
   function hostLogisticsMarkup() {
-    const events = hostActiveOpportunities().filter(item => ['published', 'filled'].includes(item.status));
+    const events = hostUpcomingOpportunities().filter(item => ['published', 'filled'].includes(item.status));
     if (!events.length) return empty('🗺️', 'No active event logistics yet', 'Publish an opportunity, approve trucks, then build the on-site vendor map here.');
     return `<div class="event-logistics-list">${events.map(opportunity => {
       const bookings = state.host.bookings.filter(item => item.opportunity_id === opportunity.id && item.status === 'confirmed');
